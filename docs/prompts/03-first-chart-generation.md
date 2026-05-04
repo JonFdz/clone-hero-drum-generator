@@ -53,3 +53,46 @@
         pnpm build
         pnpm typecheck
         ```
+
+## Important chart encoding rule
+
+For 4-lane Clone Hero drums, serialize lanes as:
+
+```txt
+kick   -> N 0
+red    -> N 1
+yellow -> N 2
+blue   -> N 3
+green  -> N 4
+```
+
+Do not use `N 5` for green in this phase.
+
+## Do not implement yet
+
+Do not implement:
+
+- cymbal flags;
+- ghost notes;
+- accent notes;
+- double kick;
+- star power;
+- drum fills;
+- lower difficulties;
+- frontend UI.
+
+Those features belong to later phases.
+
+## Validation requirement
+
+Generated `notes.chart` must be inspected to confirm that standard green drum notes are emitted as:
+
+```txt
+N 4
+```
+
+not:
+
+```txt
+N 5
+```

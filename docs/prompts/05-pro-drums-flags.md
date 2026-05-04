@@ -51,3 +51,31 @@
         pnpm build
         pnpm typecheck
         ```
+
+## Confirmed cymbal flag encoding
+
+Use the confirmed cymbal flag encoding:
+
+```txt
+yellow cymbal = base N 2 0 + flag N 66 0
+blue cymbal   = base N 3 0 + flag N 67 0
+green cymbal  = base N 4 0 + flag N 68 0
+```
+
+## Confirmed ghost flag encoding
+
+Only red ghost is confirmed so far:
+
+```txt
+red ghost = base N 1 0 + flag N 40 0
+```
+
+Do not invent unconfirmed ghost flags for other lanes.
+
+## Accent notes
+
+Accent note encoding is not confirmed yet.
+
+If implementing accent notes, first confirm the encoding with a Moonscraper-generated example, a Clone Hero-compatible reference chart, or source-code review.
+
+If exact encoding is still unknown, document accent support as pending and do not implement it.
