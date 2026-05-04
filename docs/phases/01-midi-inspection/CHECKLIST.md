@@ -1,34 +1,34 @@
 # Checklist Phase 01: MIDI Inspection
 
-    ## Before implementation
+## Before implementation
 
-    - [ ] Read `AGENTS.md`.
-    - [ ] Read `docs/implementation/implementation-plan.md`.
-    - [ ] Read this phase PRD.
-    - [ ] Read this phase ADR.
-    - [ ] Inspect relevant files.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/implementation/implementation-plan.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Inspect relevant files.
 
-    ## Implementation
+## Implementation
 
-    - [ ] Add MIDI parser dependency
-- [ ] Read MIDI PPQ/resolution
-- [ ] Read tracks and names
-- [ ] Read channels
-- [ ] Read tempo events
-- [ ] Read time signatures
-- [ ] Aggregate note numbers and velocities
-- [ ] Guess drum pieces using mapping JSON
+- [x] Add MIDI parser dependency
+- [x] Read MIDI PPQ/resolution
+- [x] Read tracks and names
+- [x] Read channels
+- [x] Read tempo events
+- [x] Read time signatures
+- [x] Aggregate note numbers and velocities
+- [x] Guess drum pieces using mapping JSON
 
-    ## Validation
+## Validation
 
-    - [ ] pnpm chdg -- inspect-midi samples/demo.mid
-- [ ] Output shows note counts and velocity stats
-- [ ] Unknown notes are visible
-- [ ] No chart files are generated
+- [x] `pnpm chdg -- inspect-midi <file.mid>`
+- [x] Output shows note counts and velocity stats
+- [x] Unknown notes are visible
+- [x] No chart files are generated
 
-    ## Completion
+## Completion
 
-    - [ ] `pnpm build` passes.
-    - [ ] `pnpm typecheck` passes.
-    - [ ] Docs updated if behavior changed.
-    - [ ] No copyrighted MIDI/audio committed.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] Docs updated if behavior changed.
+- [x] No copyrighted MIDI/audio committed.

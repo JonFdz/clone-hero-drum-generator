@@ -12,6 +12,8 @@
     "test": "echo \"tests not configured yet\""
   },
   "dependencies": {
-    "@chdg/core": "workspace:*"
+    "@chdg/core": "workspace:*",
+    "@chdg/mappings": "workspace:*",
+    "@tonejs/midi": "^2.0.28"
   }
 }
