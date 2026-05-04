@@ -1,0 +1,4 @@
+#!/usr/bin/env node
+const [, , command, ...args] = process.argv;
+function printHelp(): void { console.log(`CHDG - Clone Hero Drum Generator\n\nUsage:\n  chdg inspect-midi <file.mid>\n  chdg generate <file.mid> --out <output-dir>\n\nStatus:\n  Scaffold only. Commands are placeholders for the first implementation pass.\n`); }
+switch (command) { case "inspect-midi": { const [file] = args; if (!file) { console.error("Missing MIDI file path."); process.exitCode = 1; break; } console.log(`MIDI inspection is not implemented yet. Requested file: ${file}`); break; } case "generate": { const [file] = args; if (!file) { console.error("Missing MIDI file path."); process.exitCode = 1; break; } console.log(`Chart generation is not implemented yet. Requested file: ${file}`); break; } case "--help": case "-h": case undefined: printHelp(); break; default: console.error(`Unknown command: ${command}`); printHelp(); process.exitCode = 1; }

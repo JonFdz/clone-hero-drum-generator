@@ -1,0 +1,33 @@
+{
+  "kick": {
+    "lane": "kick"
+  },
+  "snare": {
+    "lane": "red"
+  },
+  "hihat_closed": {
+    "lane": "yellow",
+    "cymbal": true
+  },
+  "hihat_open": {
+    "lane": "yellow",
+    "cymbal": true
+  },
+  "ride": {
+    "lane": "blue",
+    "cymbal": true
+  },
+  "crash": {
+    "lane": "green",
+    "cymbal": true
+  },
+  "tom_high": {
+    "lane": "yellow"
+  },
+  "tom_mid": {
+    "lane": "blue"
+  },
+  "tom_floor": {
+    "lane": "green"
+  }
+}
