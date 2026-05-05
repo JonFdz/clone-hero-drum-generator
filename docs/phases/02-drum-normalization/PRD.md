@@ -40,10 +40,14 @@
 - Unknown notes are not silently dropped
 - Mapping changes require only data/config updates
 
-    ## Definition of done
+## Notes
 
-    - Final result is achieved.
-    - Docs are updated.
-    - `pnpm build` passes.
-    - `pnpm typecheck` passes.
-    - Manual validation is completed when applicable.
+Normalization operates on a **selected strong drum track**, not the whole MIDI file. If multiple strong tracks are detected, the user must pass `--track <index>` to select one explicitly.
+
+## Definition of done
+
+- Final result is achieved.
+- Docs are updated.
+- `pnpm build` passes.
+- `pnpm typecheck` passes.
+- Manual validation is completed when applicable.
