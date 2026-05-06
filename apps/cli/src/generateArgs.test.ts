@@ -95,4 +95,28 @@ describe("parseGenerateArgs", () => {
     expect(result.options.outDir).toBe("output/demo");
     expect(result.options.trackIndex).toBe(2);
   });
+
+  it("parses --audio option", () => {
+    const result = parseGenerateArgs([
+      "samples/demo.mid",
+      "--out",
+      "output/demo",
+      "--audio",
+      "song.opus",
+    ]);
+    expect("help" in result).toBe(false);
+    if ("help" in result) return;
+    expect(result.options.audioFile).toBe("song.opus");
+  });
+
+  it("defaults audioFile to undefined when --audio is omitted", () => {
+    const result = parseGenerateArgs([
+      "samples/demo.mid",
+      "--out",
+      "output/demo",
+    ]);
+    expect("help" in result).toBe(false);
+    if ("help" in result) return;
+    expect(result.options.audioFile).toBeUndefined();
+  });
 });

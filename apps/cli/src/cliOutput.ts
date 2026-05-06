@@ -1,3 +1,5 @@
+import type { NoteStats } from "@chdg/midi";
+
 export function printHelp(): void {
   console.log(`CHDG - Clone Hero Drum Generator
 
@@ -18,8 +20,6 @@ Options:
 export function formatNumber(n: number, decimals = 1): string {
   return n.toFixed(decimals);
 }
-
-import type { NoteStats } from "@chdg/midi";
 
 export function printNoteStats(noteStats: Record<number, NoteStats>): void {
   console.log("  Note | Count | Avg Vel | Guessed Piece");

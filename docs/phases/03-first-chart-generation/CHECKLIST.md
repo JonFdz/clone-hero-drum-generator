@@ -30,6 +30,8 @@
 - [ ] Moonscraper opens chart (manual validation required)
 - [ ] Clone Hero detects ExpertDrums (manual validation required)
 
+> **Note:** Phase 03 output is a base `ExpertDrums` chart suitable for Moonscraper/Clone Hero review. It is not yet a fully-authored final chart. Cymbals, ghost notes, accents, double kick, star power and drum fills are out of scope for this phase.
+
 ## Completion
 
 - [x] `pnpm build` passes.
