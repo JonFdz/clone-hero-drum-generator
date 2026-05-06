@@ -17,6 +17,10 @@
 - [x] Write notes.chart
 - [x] Write song.ini
 - [x] Create output directory
+- [x] Deduplicate exact duplicate base notes (same tick/lane/length)
+- [x] Support `--audio <file>` option
+- [x] Robust generate argument parsing (options before/after file)
+- [x] Print warning for unknown MIDI notes during generation
 
 ## Validation
 

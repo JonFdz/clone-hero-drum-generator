@@ -7,8 +7,9 @@ import type { MidiDrumPieceMap, CloneHeroProDrumsMapping } from "@chdg/mappings"
 import { mapHitToCloneHeroNote } from "@chdg/mappings";
 import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json" with { type: "json" };
 import cloneHeroProDrumsUntyped from "@chdg/mappings/data/clone-hero-pro-drums.json" with { type: "json" };
-import { writeChart, writeSongIni } from "@chdg/chart";
+import { writeChart, writeSongIni, deduplicateBaseNotes } from "@chdg/chart";
 import type { CloneHeroDrumNote, DrumChart } from "@chdg/core";
+import { parseGenerateArgs } from "./generateArgs.js";
 
 const generalMidiDrums: MidiDrumPieceMap = generalMidiDrumsUntyped as MidiDrumPieceMap;
 const cloneHeroProDrums: CloneHeroProDrumsMapping = cloneHeroProDrumsUntyped as CloneHeroProDrumsMapping;
@@ -35,6 +36,7 @@ Options:
   --track <index>   Select a specific track (for generate, inspect-midi, normalize-drums)
   --drums-only      Show only strong drum tracks
   --out <dir>       Output directory for generate command
+  --audio <file>    Audio filename for song.ini (default: song.ogg)
   --help            Show this help
 `);
 }
@@ -133,65 +135,7 @@ function parseNormalizeDrumsArgs(
   return { file, options };
 }
 
-type GenerateOptions = {
-  trackIndex?: number;
-  outDir: string;
-};
 
-function parseGenerateArgs(
-  rawArgs: string[]
-): { file: string; options: GenerateOptions } | { help: true } {
-  const helpFlags = new Set(["--help", "-h"]);
-  if (rawArgs.some((a) => helpFlags.has(a))) {
-    return { help: true };
-  }
-
-  // Find the first non-option argument as the file path
-  let fileIndex = -1;
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (!rawArgs[i].startsWith("-")) {
-      fileIndex = i;
-      break;
-    }
-  }
-
-  if (fileIndex === -1) {
-    throw new Error("Missing MIDI file path.");
-  }
-
-  const file = rawArgs[fileIndex];
-  const optionArgs = rawArgs.slice(0, fileIndex).concat(rawArgs.slice(fileIndex + 1));
-
-  const options: GenerateOptions = { outDir: "" };
-  for (let i = 0; i < optionArgs.length; i++) {
-    const arg = optionArgs[i];
-    if (arg === "--track") {
-      const next = optionArgs[++i];
-      if (next === undefined) {
-        throw new Error("--track requires a track index.");
-      }
-      const idx = Number(next);
-      if (!Number.isInteger(idx)) {
-        throw new Error(`Invalid track index: ${next}`);
-      }
-      options.trackIndex = idx;
-    } else if (arg === "--out") {
-      const next = optionArgs[++i];
-      if (next === undefined) {
-        throw new Error("--out requires an output directory.");
-      }
-      options.outDir = next;
-    } else {
-      throw new Error(`Unknown option: ${arg}`);
-    }
-  }
-
-  if (!options.outDir) {
-    throw new Error("--out <output-dir> is required.");
-  }
-
-  return { file, options };
-}
 
 function printNoteStats(noteStats: Record<number, NoteStats>): void {
   console.log("  Note | Count | Avg Vel | Guessed Piece");
@@ -382,20 +326,33 @@ switch (command) {
 
     normalizeDrumsFromFile(file, generalMidiDrums, { trackIndex: options.trackIndex })
       .then(async (result) => {
+        if (result.unknownNotes.length > 0) {
+          console.warn(
+            `Warning: unknown MIDI notes skipped: ${result.unknownNotes.join(", ")}`
+          );
+        }
+
         const expertDrums: CloneHeroDrumNote[] = result.hits
           .map((hit) => mapHitToCloneHeroNote(hit, cloneHeroProDrums))
           .filter((n): n is CloneHeroDrumNote => n !== null);
+
+        const deduplicated = deduplicateBaseNotes(expertDrums);
 
         const chart: DrumChart = {
           resolution: result.resolution,
           tempos: result.tempos,
           timeSignatures: result.timeSignatures,
-          expertDrums,
+          expertDrums: deduplicated,
         };
 
         const songName = basename(file, extname(file));
+        const audioFile = options.audioFile ?? "song.ogg";
         const chartText = writeChart(chart, { name: songName });
-        const songIniText = writeSongIni({ name: songName, artist: "Unknown Artist" });
+        const songIniText = writeSongIni({
+          name: songName,
+          artist: "Unknown Artist",
+          songFile: audioFile,
+        });
 
         await mkdir(options.outDir, { recursive: true });
         await writeFile(join(options.outDir, "notes.chart"), chartText);
@@ -407,6 +364,9 @@ switch (command) {
         console.log(`Track: [${result.track.index}] "${result.track.name}"`);
         console.log(`Hits: ${result.hits.length}`);
         console.log(`Mapped notes: ${expertDrums.length}`);
+        if (deduplicated.length < expertDrums.length) {
+          console.log(`Deduplicated notes: ${expertDrums.length - deduplicated.length}`);
+        }
         console.log(`Output: ${options.outDir}`);
         console.log(`  - notes.chart`);
         console.log(`  - song.ini`);
