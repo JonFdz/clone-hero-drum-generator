@@ -27,10 +27,12 @@
 - [x] `pnpm chdg generate samples/demo.mid --out output/demo`
 - [x] `output/demo/notes.chart` exists
 - [x] `output/demo/song.ini` exists
-- [ ] Moonscraper opens chart (manual validation required)
-- [ ] Clone Hero detects ExpertDrums (manual validation required)
+- [ ] ~~Moonscraper opens chart~~ — deferred to Phase 04 manual validation
+- [ ] ~~Clone Hero detects ExpertDrums~~ — deferred to Phase 04 manual validation
 
 > **Note:** Phase 03 output is a base `ExpertDrums` chart suitable for Moonscraper/Clone Hero review. It is not yet a fully-authored final chart. Cymbals, ghost notes, accents, double kick, star power and drum fills are out of scope for this phase.
+>
+> Manual validation in Moonscraper and Clone Hero will be performed in Phase 04.
 
 ## Completion
 
