@@ -26,6 +26,7 @@
 
 - [x] `pnpm build` passes.
 - [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
 - [x] Docs updated if behavior changed.
 - [x] No copyrighted MIDI/audio committed.
 
