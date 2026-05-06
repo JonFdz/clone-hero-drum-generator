@@ -35,20 +35,46 @@ describe("deduplicateBaseNotes", () => {
 
   it("keeps different lengths on same tick and lane", () => {
     const notes: CloneHeroDrumNote[] = [
-      { tick: 0, lane: "snare", length: 0 },
-      { tick: 0, lane: "snare", length: 120 },
+      { tick: 0, lane: "red", length: 0 },
+      { tick: 0, lane: "red", length: 120 },
     ];
     const result = deduplicateBaseNotes(notes);
     expect(result).toHaveLength(2);
   });
 
-  it("does not deduplicate based on cymbal/ghost/accent flags", () => {
+  it("deduplicates exact duplicate with same tick/lane/length/flags", () => {
+    const notes: CloneHeroDrumNote[] = [
+      { tick: 0, lane: "yellow", length: 0 },
+      { tick: 0, lane: "yellow", length: 0 },
+    ];
+    const result = deduplicateBaseNotes(notes);
+    expect(result).toHaveLength(1);
+  });
+
+  it("preserves notes that differ only by cymbal flag", () => {
     const notes: CloneHeroDrumNote[] = [
       { tick: 0, lane: "yellow", length: 0 },
       { tick: 0, lane: "yellow", length: 0, cymbal: true },
     ];
     const result = deduplicateBaseNotes(notes);
-    // Both have same tick/lane/length, so they ARE deduplicated regardless of flags
-    expect(result).toHaveLength(1);
+    expect(result).toHaveLength(2);
+  });
+
+  it("preserves notes that differ only by ghost flag", () => {
+    const notes: CloneHeroDrumNote[] = [
+      { tick: 480, lane: "red", length: 0 },
+      { tick: 480, lane: "red", length: 0, ghost: true },
+    ];
+    const result = deduplicateBaseNotes(notes);
+    expect(result).toHaveLength(2);
+  });
+
+  it("preserves notes that differ only by accent flag", () => {
+    const notes: CloneHeroDrumNote[] = [
+      { tick: 960, lane: "blue", length: 0 },
+      { tick: 960, lane: "blue", length: 0, accent: true },
+    ];
+    const result = deduplicateBaseNotes(notes);
+    expect(result).toHaveLength(2);
   });
 });
