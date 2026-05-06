@@ -1,12 +1,27 @@
 #!/usr/bin/env node
+import { mkdir, writeFile } from "node:fs/promises";
+import { basename, extname, join } from "node:path";
 import { inspectMidi, normalizeDrumsFromFile } from "@chdg/midi";
 import type { InspectMidiOptions, NoteStats, NormalizeDrumsOptions } from "@chdg/midi";
-import type { MidiDrumPieceMap } from "@chdg/mappings";
+import type { MidiDrumPieceMap, CloneHeroProDrumsMapping } from "@chdg/mappings";
+import { mapHitToCloneHeroNote } from "@chdg/mappings";
 import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json" with { type: "json" };
+import cloneHeroProDrumsUntyped from "@chdg/mappings/data/clone-hero-pro-drums.json" with { type: "json" };
+import { writeChart, writeSongIni } from "@chdg/chart";
+import type { CloneHeroDrumNote, DrumChart } from "@chdg/core";
 
 const generalMidiDrums: MidiDrumPieceMap = generalMidiDrumsUntyped as MidiDrumPieceMap;
+const cloneHeroProDrums: CloneHeroProDrumsMapping = cloneHeroProDrumsUntyped as CloneHeroProDrumsMapping;
 
-const [, , command, ...args] = process.argv;
+let [, , command, ...args] = process.argv;
+
+// Handle pnpm passing through "--" separator
+if (command === "--") {
+  const next = args.shift();
+  if (next !== undefined) {
+    command = next;
+  }
+}
 
 function printHelp(): void {
   console.log(`CHDG - Clone Hero Drum Generator
@@ -14,11 +29,12 @@ function printHelp(): void {
 Usage:
   chdg inspect-midi [options] <file.mid>
   chdg normalize-drums [options] <file.mid>
-  chdg generate <file.mid> --out <output-dir>
+  chdg generate [options] <file.mid> --out <output-dir>
 
 Options:
-  --track <index>   Inspect a specific track only (overrides --drums-only)
+  --track <index>   Select a specific track (for generate, inspect-midi, normalize-drums)
   --drums-only      Show only strong drum tracks
+  --out <dir>       Output directory for generate command
   --help            Show this help
 `);
 }
@@ -112,6 +128,66 @@ function parseNormalizeDrumsArgs(
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
+  }
+
+  return { file, options };
+}
+
+type GenerateOptions = {
+  trackIndex?: number;
+  outDir: string;
+};
+
+function parseGenerateArgs(
+  rawArgs: string[]
+): { file: string; options: GenerateOptions } | { help: true } {
+  const helpFlags = new Set(["--help", "-h"]);
+  if (rawArgs.some((a) => helpFlags.has(a))) {
+    return { help: true };
+  }
+
+  // Find the first non-option argument as the file path
+  let fileIndex = -1;
+  for (let i = 0; i < rawArgs.length; i++) {
+    if (!rawArgs[i].startsWith("-")) {
+      fileIndex = i;
+      break;
+    }
+  }
+
+  if (fileIndex === -1) {
+    throw new Error("Missing MIDI file path.");
+  }
+
+  const file = rawArgs[fileIndex];
+  const optionArgs = rawArgs.slice(0, fileIndex).concat(rawArgs.slice(fileIndex + 1));
+
+  const options: GenerateOptions = { outDir: "" };
+  for (let i = 0; i < optionArgs.length; i++) {
+    const arg = optionArgs[i];
+    if (arg === "--track") {
+      const next = optionArgs[++i];
+      if (next === undefined) {
+        throw new Error("--track requires a track index.");
+      }
+      const idx = Number(next);
+      if (!Number.isInteger(idx)) {
+        throw new Error(`Invalid track index: ${next}`);
+      }
+      options.trackIndex = idx;
+    } else if (arg === "--out") {
+      const next = optionArgs[++i];
+      if (next === undefined) {
+        throw new Error("--out requires an output directory.");
+      }
+      options.outDir = next;
+    } else {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+  }
+
+  if (!options.outDir) {
+    throw new Error("--out <output-dir> is required.");
   }
 
   return { file, options };
@@ -287,13 +363,59 @@ switch (command) {
   }
 
   case "generate": {
-    const [file] = args;
-    if (!file) {
-      console.error("Missing MIDI file path.");
+    let parsed: ReturnType<typeof parseGenerateArgs>;
+    try {
+      parsed = parseGenerateArgs(args);
+    } catch (err) {
+      console.error((err as Error).message);
+      printHelp();
       process.exitCode = 1;
       break;
     }
-    console.log(`Chart generation is not implemented yet. Requested file: ${file}`);
+
+    if ("help" in parsed) {
+      printHelp();
+      break;
+    }
+
+    const { file, options } = parsed;
+
+    normalizeDrumsFromFile(file, generalMidiDrums, { trackIndex: options.trackIndex })
+      .then(async (result) => {
+        const expertDrums: CloneHeroDrumNote[] = result.hits
+          .map((hit) => mapHitToCloneHeroNote(hit, cloneHeroProDrums))
+          .filter((n): n is CloneHeroDrumNote => n !== null);
+
+        const chart: DrumChart = {
+          resolution: result.resolution,
+          tempos: result.tempos,
+          timeSignatures: result.timeSignatures,
+          expertDrums,
+        };
+
+        const songName = basename(file, extname(file));
+        const chartText = writeChart(chart, { name: songName });
+        const songIniText = writeSongIni({ name: songName, artist: "Unknown Artist" });
+
+        await mkdir(options.outDir, { recursive: true });
+        await writeFile(join(options.outDir, "notes.chart"), chartText);
+        await writeFile(join(options.outDir, "song.ini"), songIniText);
+
+        console.log("CHDG Chart Generation");
+        console.log("=====================");
+        console.log(`File: ${file}`);
+        console.log(`Track: [${result.track.index}] "${result.track.name}"`);
+        console.log(`Hits: ${result.hits.length}`);
+        console.log(`Mapped notes: ${expertDrums.length}`);
+        console.log(`Output: ${options.outDir}`);
+        console.log(`  - notes.chart`);
+        console.log(`  - song.ini`);
+      })
+      .catch((err: Error) => {
+        console.error(`Error generating chart: ${err.message}`);
+        process.exitCode = 1;
+      });
+
     break;
   }
 

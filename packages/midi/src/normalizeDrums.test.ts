@@ -40,7 +40,8 @@ describe("normalizeDrums", () => {
         ],
       }),
     ];
-    const result = normalizeDrums(fakeMidiResult(tracks), testMap);
+    const midiResult = fakeMidiResult(tracks);
+    const result = normalizeDrums(midiResult, testMap);
     expect(result.hits).toHaveLength(2);
     expect(result.hits[0]).toMatchObject({
       tick: 0,
@@ -54,6 +55,9 @@ describe("normalizeDrums", () => {
       velocity: 80,
       durationTicks: 20,
     });
+    expect(result.resolution).toBe(midiResult.resolution);
+    expect(result.tempos).toEqual(midiResult.tempos);
+    expect(result.timeSignatures).toEqual(midiResult.timeSignatures);
   });
 
   it("preserves source metadata", () => {
@@ -71,6 +75,24 @@ describe("normalizeDrums", () => {
       trackName: "Drums",
       channel: 9,
     });
+  });
+
+  it("includes MIDI resolution, tempos and time signatures", () => {
+    const tracks = [
+      fakeTrack({
+        name: "Drums",
+        channel: 9,
+        notes: [{ midi: 36, velocity: 100, ticks: 0, durationTicks: 0 }],
+      }),
+    ];
+    const midiResult = fakeMidiResult(tracks);
+    midiResult.resolution = 480;
+    midiResult.tempos = [{ tick: 0, bpm: 140 }];
+    midiResult.timeSignatures = [{ tick: 0, numerator: 3, denominator: 4 }];
+    const result = normalizeDrums(midiResult, testMap);
+    expect(result.resolution).toBe(480);
+    expect(result.tempos).toEqual([{ tick: 0, bpm: 140 }]);
+    expect(result.timeSignatures).toEqual([{ tick: 0, numerator: 3, denominator: 4 }]);
   });
 
   it("preserves and reports unknown notes", () => {

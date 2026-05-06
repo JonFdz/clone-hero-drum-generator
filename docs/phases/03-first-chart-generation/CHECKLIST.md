@@ -1,34 +1,35 @@
 # Checklist Phase 03: First Chart Generation
 
-    ## Before implementation
+## Before implementation
 
-    - [ ] Read `AGENTS.md`.
-    - [ ] Read `docs/implementation/implementation-plan.md`.
-    - [ ] Read this phase PRD.
-    - [ ] Read this phase ADR.
-    - [ ] Inspect relevant files.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/implementation/implementation-plan.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Inspect relevant files.
 
-    ## Implementation
+## Implementation
 
-    - [ ] Implement generate command
-- [ ] Read MIDI
-- [ ] Normalize DrumHit objects
-- [ ] Map hits to Clone Hero lanes
-- [ ] Write notes.chart
-- [ ] Write song.ini
-- [ ] Create output directory
+- [x] Implement generate command
+- [x] Read MIDI
+- [x] Normalize DrumHit objects
+- [x] Map hits to Clone Hero lanes
+- [x] Write notes.chart
+- [x] Write song.ini
+- [x] Create output directory
 
-    ## Validation
+## Validation
 
-    - [ ] pnpm chdg -- generate samples/demo.mid --out output/demo
-- [ ] output/demo/notes.chart exists
-- [ ] output/demo/song.ini exists
-- [ ] Moonscraper opens chart
-- [ ] Clone Hero detects ExpertDrums
+- [x] `pnpm chdg generate samples/demo.mid --out output/demo`
+- [x] `output/demo/notes.chart` exists
+- [x] `output/demo/song.ini` exists
+- [ ] Moonscraper opens chart (manual validation required)
+- [ ] Clone Hero detects ExpertDrums (manual validation required)
 
-    ## Completion
+## Completion
 
-    - [ ] `pnpm build` passes.
-    - [ ] `pnpm typecheck` passes.
-    - [ ] Docs updated if behavior changed.
-    - [ ] No copyrighted MIDI/audio committed.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] Docs updated if behavior changed.
+- [x] No copyrighted MIDI/audio committed.
