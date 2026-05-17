@@ -18,6 +18,7 @@
     "@chdg/audio": "workspace:*",
     "@chdg/chart": "workspace:*",
     "@chdg/core": "workspace:*",
+    "@chdg/guitarpro": "workspace:*",
     "@chdg/mappings": "workspace:*",
     "@chdg/midi": "workspace:*",
     "@chdg/validation": "workspace:*"

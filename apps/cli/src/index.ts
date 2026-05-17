@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { printHelp } from "./cliOutput.js";
+import { runInspectGpCommand } from "./commands/inspectGpCommand.js";
 import { runInspectMidiCommand } from "./commands/inspectMidiCommand.js";
 import { runNormalizeDrumsCommand } from "./commands/normalizeDrumsCommand.js";
 import { runGenerateCommand } from "./commands/generateCommand.js";
@@ -19,6 +20,11 @@ async function main(): Promise<void> {
     switch (command) {
       case "inspect-midi": {
         await runInspectMidiCommand(args);
+        break;
+      }
+
+      case "inspect-gp": {
+        await runInspectGpCommand(args);
         break;
       }
 
