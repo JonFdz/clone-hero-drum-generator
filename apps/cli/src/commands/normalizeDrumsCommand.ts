@@ -96,8 +96,9 @@ export function runNormalizeDrumsCommand(rawArgs: string[]): Promise<void> {
     console.log("First Hits:");
     const firstHits = result.hits.slice(0, 10);
     for (const hit of firstHits) {
+      const midiNote = "midiNote" in hit.source ? hit.source.midiNote : "unknown";
       console.log(
-        `  tick ${hit.tick}: ${hit.piece} vel ${hit.velocity} midi ${hit.source.midiNote}`
+        `  tick ${hit.tick}: ${hit.piece} vel ${hit.velocity} midi ${midiNote}`
       );
     }
     if (result.hits.length > 10) {

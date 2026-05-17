@@ -1,10 +1,20 @@
 export type DrumPiece = "kick" | "snare" | "hihat_closed" | "hihat_open" | "crash" | "ride" | "tom_high" | "tom_mid" | "tom_floor" | "unknown";
+export type MidiDrumHitSource = { midiNote: number; trackIndex: number; trackName: string; channel: number };
+export type GpifDrumHitSource = {
+  kind: "gpif";
+  trackIndex: number;
+  trackName?: string;
+  rawArticulation?: string;
+  measureIndex?: number;
+  beatIndex?: number;
+  noteIndex?: number;
+};
 export type DrumHit = {
   tick: number;
   piece: DrumPiece;
   velocity: number;
   durationTicks: number;
-  source: { midiNote: number; trackIndex: number; trackName: string; channel: number };
+  source: MidiDrumHitSource | GpifDrumHitSource;
 };
 export type CloneHeroDrumLane = "kick" | "red" | "yellow" | "blue" | "green";
 export type CloneHeroDrumNote = { tick: number; lane: CloneHeroDrumLane; length: number; cymbal?: boolean; ghost?: boolean; accent?: boolean };

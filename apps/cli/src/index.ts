@@ -3,6 +3,7 @@ import { printHelp } from "./cliOutput.js";
 import { runInspectGpCommand } from "./commands/inspectGpCommand.js";
 import { runInspectMidiCommand } from "./commands/inspectMidiCommand.js";
 import { runNormalizeDrumsCommand } from "./commands/normalizeDrumsCommand.js";
+import { runNormalizeGpDrumsCommand } from "./commands/normalizeGpDrumsCommand.js";
 import { runGenerateCommand } from "./commands/generateCommand.js";
 
 let [, , command, ...args] = process.argv;
@@ -30,6 +31,11 @@ async function main(): Promise<void> {
 
       case "normalize-drums": {
         await runNormalizeDrumsCommand(args);
+        break;
+      }
+
+      case "normalize-gp-drums": {
+        await runNormalizeGpDrumsCommand(args);
         break;
       }
 
