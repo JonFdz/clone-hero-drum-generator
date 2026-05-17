@@ -2,24 +2,24 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/implementation/implementation-plan.md`.
-- [ ] Read this phase PRD.
-- [ ] Read this phase ADR.
-- [ ] Inspect current `generate` command.
-- [ ] Inspect current `song.ini` writer.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/implementation/implementation-plan.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Inspect current `generate` command.
+- [x] Inspect current `song.ini` writer.
 
 ## Implementation
 
-- [ ] Add `--audio-source <path>` to generate command.
-- [ ] Preserve or clarify existing `--audio <filename>` behavior.
-- [ ] Create audio preparation logic.
-- [ ] Copy `.ogg` inputs to final audio file when possible.
-- [ ] Convert non-`.ogg` inputs to `song.ogg` with ffmpeg.
-- [ ] Write `song.ini` with final audio filename.
-- [ ] Create output directory if needed.
-- [ ] Emit clear errors for missing source audio.
-- [ ] Emit clear errors for missing ffmpeg.
+- [x] Add `--audio-source <path>` to generate command.
+- [x] Preserve or clarify existing `--audio <filename>` behavior.
+- [x] Create audio preparation logic.
+- [x] Copy `.ogg` inputs to final audio file when possible.
+- [x] Convert non-`.ogg` inputs to `song.ogg` with ffmpeg.
+- [x] Write `song.ini` with final audio filename.
+- [x] Create output directory if needed.
+- [x] Emit clear errors for missing source audio.
+- [x] Emit clear errors for missing ffmpeg.
 
 ## Suggested package boundaries
 
@@ -35,23 +35,23 @@ CLI should orchestrate only.
 
 ## Tests
 
-- [ ] Unit test option parsing.
-- [ ] Unit test audio target filename behavior.
-- [ ] Unit test copy path for `.ogg`.
-- [ ] Unit test ffmpeg command construction without invoking real ffmpeg.
-- [ ] Avoid committing copyrighted audio.
+- [x] Unit test option parsing.
+- [x] Unit test audio target filename behavior.
+- [x] Unit test copy path for `.ogg`.
+- [x] Unit test ffmpeg command construction without invoking real ffmpeg.
+- [x] Avoid committing copyrighted audio.
 
 ## Validation
 
-- [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] Generate output from demo MIDI + local audio.
-- [ ] `output/demo/song.ogg` exists.
-- [ ] `output/demo/song.ini` contains `song = song.ogg`.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] Generate output from demo MIDI + local audio.
+- [x] `output/demo/song.ogg` exists.
+- [x] `output/demo/song.ini` contains `song = song.ogg`.
 - [ ] Moonscraper opens generated chart without `No audio`.
 
 ## Completion
 
-- [ ] Docs updated if behavior changed.
-- [ ] No copyrighted MIDI/audio committed.
+- [x] Docs updated if behavior changed.
+- [x] No copyrighted MIDI/audio committed.

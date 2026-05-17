@@ -11,9 +11,10 @@ Usage:
 Options:
   --track <index>   Select a specific track (for generate, inspect-midi, normalize-drums)
   --drums-only      Show only strong drum tracks
-  --out <dir>       Output directory for generate command
-  --audio <file>    Audio filename for song.ini (default: song.ogg)
-  --help            Show this help
+  --out <dir>              Output directory for generate command
+  --audio <file>           Final audio filename for song.ini (default: song.ogg)
+  --audio-source <path>    Source audio file to copy/convert into the output directory
+  --help                   Show this help
 `);
 }
 

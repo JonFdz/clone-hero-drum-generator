@@ -96,7 +96,7 @@ describe("parseGenerateArgs", () => {
     expect(result.options.trackIndex).toBe(2);
   });
 
-  it("parses --audio option", () => {
+  it("parses --audio option as the final audio filename", () => {
     const result = parseGenerateArgs([
       "samples/demo.mid",
       "--out",
@@ -109,7 +109,36 @@ describe("parseGenerateArgs", () => {
     expect(result.options.audioFile).toBe("song.opus");
   });
 
-  it("defaults audioFile to undefined when --audio is omitted", () => {
+  it("parses --audio-source option as the source audio path", () => {
+    const result = parseGenerateArgs([
+      "samples/demo.mid",
+      "--out",
+      "output/demo",
+      "--audio-source",
+      "samples/demo.mp3",
+    ]);
+    expect("help" in result).toBe(false);
+    if ("help" in result) return;
+    expect(result.options.audioSource).toBe("samples/demo.mp3");
+  });
+
+  it("keeps --audio as final filename when --audio-source is present", () => {
+    const result = parseGenerateArgs([
+      "samples/demo.mid",
+      "--out",
+      "output/demo",
+      "--audio-source",
+      "samples/demo.mp3",
+      "--audio",
+      "preview.ogg",
+    ]);
+    expect("help" in result).toBe(false);
+    if ("help" in result) return;
+    expect(result.options.audioSource).toBe("samples/demo.mp3");
+    expect(result.options.audioFile).toBe("preview.ogg");
+  });
+
+  it("defaults audioFile and audioSource to undefined when omitted", () => {
     const result = parseGenerateArgs([
       "samples/demo.mid",
       "--out",
@@ -118,5 +147,12 @@ describe("parseGenerateArgs", () => {
     expect("help" in result).toBe(false);
     if ("help" in result) return;
     expect(result.options.audioFile).toBeUndefined();
+    expect(result.options.audioSource).toBeUndefined();
+  });
+
+  it("throws when --audio-source value is missing", () => {
+    expect(() =>
+      parseGenerateArgs(["samples/demo.mid", "--out", "output/demo", "--audio-source"])
+    ).toThrow(/--audio-source requires/i);
   });
 });
