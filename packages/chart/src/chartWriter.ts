@@ -6,6 +6,20 @@ const CYMBAL_MODIFIER_NOTES = {
 	green: 68,
 } as const;
 
+const ACCENT_MODIFIER_NOTES = {
+	red: 34,
+	yellow: 35,
+	blue: 36,
+	green: 37,
+} as const;
+
+const GHOST_MODIFIER_NOTES = {
+	red: 40,
+	yellow: 41,
+	blue: 42,
+	green: 43,
+} as const;
+
 function laneToChartNote(lane: string): number {
 	switch (lane) {
 		case "kick":
@@ -31,11 +45,25 @@ function cymbalModifierNote(note: CloneHeroDrumNote): number | null {
 	return CYMBAL_MODIFIER_NOTES[note.lane];
 }
 
+function dynamicsModifierNote(note: CloneHeroDrumNote): number | null {
+	if (note.lane === "kick") return null;
+	if (note.lane !== "red" && note.lane !== "yellow" && note.lane !== "blue" && note.lane !== "green") {
+		return null;
+	}
+	if (note.accent) return ACCENT_MODIFIER_NOTES[note.lane];
+	if (note.ghost) return GHOST_MODIFIER_NOTES[note.lane];
+	return null;
+}
+
 function expertDrumLines(note: CloneHeroDrumNote): string[] {
 	const lines = [`  ${note.tick} = N ${laneToChartNote(note.lane)} ${note.length}`];
-	const modifier = cymbalModifierNote(note);
-	if (modifier !== null) {
-		lines.push(`  ${note.tick} = N ${modifier} 0`);
+	const cymbalModifier = cymbalModifierNote(note);
+	if (cymbalModifier !== null) {
+		lines.push(`  ${note.tick} = N ${cymbalModifier} 0`);
+	}
+	const dynamicsModifier = dynamicsModifierNote(note);
+	if (dynamicsModifier !== null) {
+		lines.push(`  ${note.tick} = N ${dynamicsModifier} 0`);
 	}
 	return lines;
 }

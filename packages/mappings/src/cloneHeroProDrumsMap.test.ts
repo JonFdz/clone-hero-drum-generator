@@ -26,14 +26,39 @@ function makeHit(piece: DrumPiece, velocity = 80): DrumHit {
 
 describe("mapHitToCloneHeroNote", () => {
   it.each([
-    ["hihat_closed", "yellow"],
-    ["hihat_open", "yellow"],
     ["ride", "blue"],
     ["crash", "green"],
   ] as const)("maps %s to %s cymbal", (piece, lane) => {
     expect(mapHitToCloneHeroNote(makeHit(piece), mapping)).toMatchObject({
       lane,
       cymbal: true,
+    });
+  });
+
+  it("maps hihat_closed to yellow cymbal without forced accent", () => {
+    expect(mapHitToCloneHeroNote(makeHit("hihat_closed", 80), mapping)).toMatchObject({
+      lane: "yellow",
+      cymbal: true,
+      ghost: false,
+      accent: false,
+    });
+  });
+
+  it("maps hihat_open to yellow cymbal with accent", () => {
+    expect(mapHitToCloneHeroNote(makeHit("hihat_open", 80), mapping)).toMatchObject({
+      lane: "yellow",
+      cymbal: true,
+      ghost: false,
+      accent: true,
+    });
+  });
+
+  it("preserves low-velocity hihat_open as accent/open representation instead of ghost", () => {
+    expect(mapHitToCloneHeroNote(makeHit("hihat_open", 20), mapping)).toMatchObject({
+      lane: "yellow",
+      cymbal: true,
+      ghost: false,
+      accent: true,
     });
   });
 
@@ -48,7 +73,7 @@ describe("mapHitToCloneHeroNote", () => {
     });
   });
 
-  it("applies default velocity thresholds", () => {
+  it("applies default velocity thresholds for non-open-hihat pieces", () => {
     const ghost = mapHitToCloneHeroNote(makeHit("snare", 45), mapping);
     const neutral = mapHitToCloneHeroNote(makeHit("snare", 80), mapping);
     const accent = mapHitToCloneHeroNote(makeHit("snare", 110), mapping);
