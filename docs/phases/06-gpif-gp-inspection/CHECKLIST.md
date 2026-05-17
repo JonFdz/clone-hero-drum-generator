@@ -53,8 +53,7 @@ Dependency choices:
 - [x] `pnpm typecheck` passes.
 - [x] `pnpm test` passes.
 - [x] Optional local `.gp` validation recorded if files exist.
-  - Validated `samples/demo.gp` locally: report printed GPIF entry, metadata, tracks, drum candidate, tempo automation (`Tempo: 147 2`), time signatures and drum structures.
-  - `samples/eat-my-dust.gp` was absent locally.
+    - Validated `samples/demo.gp` locally: report printed GPIF entry, metadata, tracks, drum candidate, tempo automation (`Tempo: 147 2`), time signatures and drum structures.
 - [x] No chart generation from `.gp` was added.
 - [x] No GPIF drum normalization was added.
 

@@ -80,7 +80,6 @@ Optional local validation if sample files exist:
 
 ```bash
 pnpm chdg inspect-gp /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.gp
-pnpm chdg inspect-gp /Users/jonfdz/Projects/clone-hero-drum-generator/samples/eat-my-dust.gp
 ```
 
 The command should not create `notes.chart`, `song.ini`, `song.ogg`, or output folders.
