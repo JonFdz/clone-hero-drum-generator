@@ -75,16 +75,60 @@ describe("writeChart", () => {
     expect(output).toContain("0 = B 195000");
   });
 
-  it("does not write cymbal flags even when notes have cymbal set", () => {
+  it("serializes yellow cymbal as base N 2 and modifier N 66", () => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 0, lane: "yellow", length: 0, cymbal: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("0 = N 2 0");
+    expect(output).toContain("0 = N 66 0");
+  });
+
+  it("serializes blue cymbal as base N 3 and modifier N 67", () => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 480, lane: "blue", length: 0, cymbal: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("480 = N 3 0");
+    expect(output).toContain("480 = N 67 0");
+  });
+
+  it("serializes green cymbal as base N 4 and modifier N 68", () => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 960, lane: "green", length: 0, cymbal: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("960 = N 4 0");
+    expect(output).toContain("960 = N 68 0");
+  });
+
+  it("does not serialize cymbal modifiers for tom lanes without cymbal flags", () => {
     const chart = makeChart({
       expertDrums: [
-        { tick: 0, lane: "yellow", length: 0, cymbal: true },
-        { tick: 480, lane: "green", length: 0, cymbal: true },
+        { tick: 0, lane: "yellow", length: 0 },
+        { tick: 480, lane: "blue", length: 0 },
+        { tick: 960, lane: "green", length: 0 },
       ],
     });
     const output = writeChart(chart);
     expect(output).toContain("0 = N 2 0");
-    expect(output).toContain("480 = N 4 0");
+    expect(output).toContain("480 = N 3 0");
+    expect(output).toContain("960 = N 4 0");
+    expect(output).not.toContain("N 66");
+    expect(output).not.toContain("N 67");
+    expect(output).not.toContain("N 68");
+  });
+
+  it("does not serialize cymbal modifiers for kick or red even when cymbal is set", () => {
+    const chart = makeChart({
+      expertDrums: [
+        { tick: 0, lane: "kick", length: 0, cymbal: true },
+        { tick: 480, lane: "red", length: 0, cymbal: true },
+      ],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("0 = N 0 0");
+    expect(output).toContain("480 = N 1 0");
     expect(output).not.toContain("N 66");
     expect(output).not.toContain("N 67");
     expect(output).not.toContain("N 68");
@@ -101,5 +145,8 @@ describe("writeChart", () => {
     expect(output).toContain("0 = N 1 0");
     expect(output).toContain("480 = N 1 0");
     expect(output).not.toContain("N 40");
+    expect(output).not.toContain("N 66");
+    expect(output).not.toContain("N 67");
+    expect(output).not.toContain("N 68");
   });
 });
