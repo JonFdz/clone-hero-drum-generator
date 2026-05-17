@@ -73,13 +73,14 @@ export function parseGenerateArgs(
 
 	const file = rawArgs[fileIndex];
 
-	// Validate that remaining unconsumed args are not unknown options
+	// Validate that remaining unconsumed args are not unknown options or extra positional arguments
 	for (let i = 0; i < rawArgs.length; i++) {
 		if (!consumed.has(i) && i !== fileIndex) {
 			const arg = rawArgs[i];
 			if (arg.startsWith("-")) {
 				throw new Error(`Unknown option: ${arg}`);
 			}
+			throw new Error(`Unexpected argument: ${arg}`);
 		}
 	}
 

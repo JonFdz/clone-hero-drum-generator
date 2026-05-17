@@ -174,4 +174,22 @@ describe("parseGenerateArgs", () => {
 			]),
 		).toThrow(/--audio-source requires/i);
 	});
+
+	it("throws when an extra positional GP source follows the first file", () => {
+		expect(() =>
+			parseGenerateArgs(["a.gp", "b.gp", "--track", "3", "--out", "output"]),
+		).toThrow(/unexpected argument: b\.gp/i);
+	});
+
+	it("throws when an extra positional GP source appears after options", () => {
+		expect(() =>
+			parseGenerateArgs(["a.gp", "--track", "3", "b.gp", "--out", "output"]),
+		).toThrow(/unexpected argument: b\.gp/i);
+	});
+
+	it("throws when an extra positional MIDI source follows the first file", () => {
+		expect(() =>
+			parseGenerateArgs(["a.mid", "b.mid", "--track", "53", "--out", "output"]),
+		).toThrow(/unexpected argument: b\.mid/i);
+	});
 });
