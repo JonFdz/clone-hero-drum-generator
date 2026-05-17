@@ -4,6 +4,7 @@ import { normalizeDrumsFromFile } from "@chdg/midi";
 import { mapHitToCloneHeroNote } from "@chdg/mappings";
 import { writeChart, writeSongIni, deduplicateBaseNotes } from "@chdg/chart";
 import type { CloneHeroDrumNote, DrumChart } from "@chdg/core";
+import { prepareAudio } from "@chdg/audio";
 import { generalMidiDrums, cloneHeroProDrums } from "../mappings.js";
 import { parseGenerateArgs } from "../generateArgs.js";
 
@@ -56,6 +57,14 @@ export function runGenerateCommand(rawArgs: string[]): Promise<void> {
       await writeFile(join(options.outDir, "notes.chart"), chartText);
       await writeFile(join(options.outDir, "song.ini"), songIniText);
 
+      const audioResult = options.audioSource
+        ? await prepareAudio({
+            sourcePath: options.audioSource,
+            outputDir: options.outDir,
+            outputFileName: audioFile,
+          })
+        : null;
+
       console.log("CHDG Chart Generation");
       console.log("=====================");
       console.log(`File: ${file}`);
@@ -68,5 +77,8 @@ export function runGenerateCommand(rawArgs: string[]): Promise<void> {
       console.log(`Output: ${options.outDir}`);
       console.log(`  - notes.chart`);
       console.log(`  - song.ini`);
+      if (audioResult) {
+        console.log(`  - ${audioResult.outputFileName} (${audioResult.action})`);
+      }
     });
 }

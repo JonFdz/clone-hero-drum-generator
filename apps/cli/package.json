@@ -15,6 +15,7 @@
     "chdg": "tsx src/index.ts"
   },
   "dependencies": {
+    "@chdg/audio": "workspace:*",
     "@chdg/chart": "workspace:*",
     "@chdg/core": "workspace:*",
     "@chdg/mappings": "workspace:*",

@@ -2,6 +2,7 @@ export type GenerateOptions = {
   trackIndex?: number;
   outDir: string;
   audioFile?: string;
+  audioSource?: string;
 };
 
 export function parseGenerateArgs(
@@ -44,6 +45,14 @@ export function parseGenerateArgs(
         throw new Error("--audio requires a filename.");
       }
       options.audioFile = next;
+      consumed.add(i - 1);
+      consumed.add(i);
+    } else if (arg === "--audio-source") {
+      const next = rawArgs[++i];
+      if (next === undefined) {
+        throw new Error("--audio-source requires a path.");
+      }
+      options.audioSource = next;
       consumed.add(i - 1);
       consumed.add(i);
     }
