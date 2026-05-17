@@ -53,6 +53,7 @@ function parseNormalizeGpDrumsArgs(
       if (arg.startsWith("-")) {
         throw new Error(`Unknown option: ${arg}`);
       }
+      throw new Error(`Unexpected argument: ${arg}`);
     }
   }
 
