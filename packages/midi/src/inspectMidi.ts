@@ -1,6 +1,7 @@
-import type { DrumPiece, TempoEvent, TimeSignatureEvent } from "@chdg/core";
+import type { DrumPiece, SongSection, TempoEvent, TimeSignatureEvent } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { mapMidiNoteToDrumPiece } from "@chdg/mappings";
+import type { MidiMetaEvent } from "./midiSections.js";
 import type { MidiNote } from "./readMidi.js";
 import { readMidi } from "./readMidi.js";
 import { classifyDrumTracks } from "./drumTrackSelection.js";
@@ -30,6 +31,8 @@ export type MidiInspection = {
   weakDrumTracks: number[];
   tempos: TempoEvent[];
   timeSignatures: TimeSignatureEvent[];
+  metaEvents: MidiMetaEvent[];
+  sections: SongSection[];
   noteStats: Record<number, NoteStats>;
   unknownNotes: number[];
 };
@@ -139,6 +142,8 @@ export async function inspectMidi(
     weakDrumTracks,
     tempos: result.tempos,
     timeSignatures: result.timeSignatures,
+    metaEvents: result.metaEvents,
+    sections: result.sections,
     noteStats,
     unknownNotes,
   };

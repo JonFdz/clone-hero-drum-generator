@@ -7,6 +7,7 @@ function makeChart(overrides: Partial<DrumChart> = {}): DrumChart {
     resolution: 192,
     tempos: [{ tick: 0, bpm: 120 }],
     timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+    sections: [],
     expertDrums: [],
     ...overrides,
   };
@@ -17,6 +18,53 @@ describe("writeChart", () => {
     const chart = makeChart();
     const output = writeChart(chart);
     expect(output).toContain("[ExpertDrums]");
+  });
+
+  it("keeps an empty [Events] block when there are no sections", () => {
+    const chart = makeChart();
+    const output = writeChart(chart);
+    expect(output).toContain(`[Events]\n{\n}\n`);
+  });
+
+  it("serializes one section as a global event", () => {
+    const chart = makeChart({ sections: [{ tick: 0, name: "Intro" }] });
+    const output = writeChart(chart);
+    expect(output).toContain(`0 = E "section Intro"`);
+  });
+
+  it("serializes sections in deterministic tick and name order", () => {
+    const chart = makeChart({
+      sections: [
+        { tick: 6144, name: "Verse 1" },
+        { tick: 0, name: "Intro" },
+        { tick: 6144, name: "Chorus" },
+      ],
+    });
+    const output = writeChart(chart);
+    expect(output.indexOf(`0 = E "section Intro"`)).toBeLessThan(
+      output.indexOf(`6144 = E "section Chorus"`),
+    );
+    expect(output.indexOf(`6144 = E "section Chorus"`)).toBeLessThan(
+      output.indexOf(`6144 = E "section Verse 1"`),
+    );
+  });
+
+  it("deduplicates normalized section tick/name pairs", () => {
+    const chart = makeChart({
+      sections: [
+        { tick: 0, name: "Intro" },
+        { tick: 0.2, name: "Intro" },
+      ],
+    });
+    const output = writeChart(chart);
+    expect(output.match(/0 = E "section Intro"/g)).toHaveLength(1);
+  });
+
+  it("safely serializes section names with quotes and extra whitespace", () => {
+    const chart = makeChart({ sections: [{ tick: 0, name: `  Verse "1"  ` }] });
+    const output = writeChart(chart);
+    expect(output).toContain(`0 = E "section Verse 1"`);
+    expect(output).not.toContain(`Verse "1"`);
   });
 
   it("serializes kick as N 0", () => {

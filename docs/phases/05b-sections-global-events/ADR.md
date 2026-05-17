@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed.
+Implemented.
 
 ## Context
 
@@ -64,6 +64,6 @@ Positive:
 
 Negative:
 
-- MIDI meta-event parsing requires either a low-level parser or a small new dependency.
+- MIDI meta-event parsing uses the focused `midi-file` dependency only for raw marker/text/cue events; `@tonejs/midi` remains the high-level parser for notes, tempo, and time-signature data.
 - Section detection from MIDI needs conservative heuristics.
 - Some MIDI files may not include semantic sections.

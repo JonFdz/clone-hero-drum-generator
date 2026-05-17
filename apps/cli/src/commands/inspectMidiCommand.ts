@@ -109,6 +109,16 @@ export function runInspectMidiCommand(rawArgs: string[]): Promise<void> {
     }
     console.log();
 
+    if (inspection.sections.length > 0) {
+      console.log("Sections:");
+      for (const section of inspection.sections) {
+        console.log(`  - tick ${section.tick}: ${section.name}`);
+      }
+    } else {
+      console.log("Sections: none");
+    }
+    console.log();
+
     console.log("--- Global Note Statistics ---");
     const globalNoteCount = Object.keys(inspection.noteStats).length;
     if (globalNoteCount > 0) {
