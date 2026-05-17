@@ -17,7 +17,6 @@ export const DISQUALIFYING_NAME_FRAGMENTS = [
 
 export const STRONG_DRUM_NAME_FRAGMENTS = [
   "drum",
-  "kit",
   "percussion",
   "perc",
   "cymbal",

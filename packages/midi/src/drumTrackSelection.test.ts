@@ -183,6 +183,22 @@ describe("classifyDrumTracks", () => {
     expect(weak).toEqual([]);
   });
 
+  it("does not classify generic names containing kit as strong", () => {
+    const tracks = [
+      fakeTrack({
+        name: "Toolkit",
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([]);
+  });
+
   it("classifies the Eat My Dust-style candidates as one strong and two weak", () => {
     const tracks = Array.from({ length: 54 }, () => fakeTrack());
     tracks[10] = fakeTrack({
