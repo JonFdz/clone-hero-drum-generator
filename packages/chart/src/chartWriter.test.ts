@@ -134,19 +134,66 @@ describe("writeChart", () => {
     expect(output).not.toContain("N 68");
   });
 
-  it("does not write ghost or accent flags even when notes have them set", () => {
+  it.each([
+    ["red", 1, 34],
+    ["yellow", 2, 35],
+    ["blue", 3, 36],
+    ["green", 4, 37],
+  ] as const)("serializes %s accent as base N %i and modifier N %i", (lane, base, modifier) => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 0, lane, length: 0, accent: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain(`0 = N ${base} 0`);
+    expect(output).toContain(`0 = N ${modifier} 0`);
+  });
+
+  it.each([
+    ["red", 1, 40],
+    ["yellow", 2, 41],
+    ["blue", 3, 42],
+    ["green", 4, 43],
+  ] as const)("serializes %s ghost as base N %i and modifier N %i", (lane, base, modifier) => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 0, lane, length: 0, ghost: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain(`0 = N ${base} 0`);
+    expect(output).toContain(`0 = N ${modifier} 0`);
+  });
+
+  it("does not serialize accent or ghost modifiers for kick", () => {
     const chart = makeChart({
       expertDrums: [
-        { tick: 0, lane: "red", length: 0, ghost: true },
-        { tick: 480, lane: "red", length: 0, accent: true },
+        { tick: 0, lane: "kick", length: 0, accent: true },
+        { tick: 480, lane: "kick", length: 0, ghost: true },
       ],
     });
     const output = writeChart(chart);
+    expect(output).toContain("0 = N 0 0");
+    expect(output).toContain("480 = N 0 0");
+    for (const modifier of [34, 35, 36, 37, 40, 41, 42, 43]) {
+      expect(output).not.toContain(`N ${modifier}`);
+    }
+  });
+
+  it("serializes accent instead of ghost when both are set", () => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 0, lane: "red", length: 0, accent: true, ghost: true }],
+    });
+    const output = writeChart(chart);
     expect(output).toContain("0 = N 1 0");
-    expect(output).toContain("480 = N 1 0");
+    expect(output).toContain("0 = N 34 0");
     expect(output).not.toContain("N 40");
-    expect(output).not.toContain("N 66");
-    expect(output).not.toContain("N 67");
-    expect(output).not.toContain("N 68");
+  });
+
+  it("serializes open hi-hat style notes as yellow base, yellow cymbal, and yellow accent", () => {
+    const chart = makeChart({
+      expertDrums: [{ tick: 0, lane: "yellow", length: 0, cymbal: true, accent: true }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("0 = N 2 0");
+    expect(output).toContain("0 = N 66 0");
+    expect(output).toContain("0 = N 35 0");
   });
 });

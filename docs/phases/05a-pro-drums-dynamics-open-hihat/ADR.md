@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed for implementation.
+Implemented for Phase 05A.
 
 ## Context
 

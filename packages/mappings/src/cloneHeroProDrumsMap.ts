@@ -13,7 +13,8 @@ export function mapHitToCloneHeroNote(
   const target = mapping[hit.piece];
   if (!target) return null;
 
-  const accent = hit.velocity >= dynamics.accentVelocityMin;
+  const forceOpenHihatAccent = hit.piece === "hihat_open";
+  const accent = forceOpenHihatAccent || hit.velocity >= dynamics.accentVelocityMin;
   const ghost = !accent && hit.velocity <= dynamics.ghostVelocityMax;
 
   return {
