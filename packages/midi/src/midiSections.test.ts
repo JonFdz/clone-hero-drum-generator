@@ -51,6 +51,18 @@ describe("extractSectionsFromMidiMetaEvents", () => {
     ]);
   });
 
+  it("imports Pre-Verse marker names as sections", () => {
+    const events = [
+      makeEvent({ tick: 19200, text: "Pre-Verse 1" }),
+      makeEvent({ tick: 25344, text: "Pre Verse 1" }),
+    ];
+
+    expect(extractSectionsFromMidiMetaEvents(events)).toEqual([
+      { tick: 19200, name: "Pre-Verse 1" },
+      { tick: 25344, name: "Pre Verse 1" },
+    ]);
+  });
+
   it("filters generated technical markers", () => {
     const events = [
       makeEvent({ text: "MEASURE_0" }),

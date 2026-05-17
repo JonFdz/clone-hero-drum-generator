@@ -16,7 +16,7 @@ const TECHNICAL_MARKER_PATTERNS = [
   /^START$/i,
 ] as const;
 
-const SEMANTIC_SECTION_PATTERN = /^(?:guitar\s+)?(?:intro|verse|chorus|bridge|solo|breakdown|outro|pre[-\s]?chorus|post[-\s]?chorus|interlude|instrumental)\b/i;
+const SEMANTIC_SECTION_PATTERN = /^(?:guitar\s+)?(?:intro|verse|chorus|bridge|solo|breakdown|outro|pre[-\s]?verse|pre[-\s]?chorus|post[-\s]?chorus|interlude|instrumental)\b/i;
 
 function cleanSectionName(text: string): { name: string; explicitSectionPrefix: boolean } {
   let name = text.trim().replace(/\s+/g, " ");
