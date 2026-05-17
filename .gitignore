@@ -9,6 +9,9 @@ samples/**
 !samples/README.md
 !samples/.gitkeep
 .pnpm-store/
-.pi*/
+
 # Local Pi runtime state
 .atl/
+.pi*/
+
+openspec/
