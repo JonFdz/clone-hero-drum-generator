@@ -5,6 +5,7 @@ export function printHelp(): void {
 
 Usage:
   chdg inspect-midi [options] <file.mid>
+  chdg inspect-gp <file.gp>
   chdg normalize-drums [options] <file.mid>
   chdg generate [options] <file.mid> --out <output-dir>
 

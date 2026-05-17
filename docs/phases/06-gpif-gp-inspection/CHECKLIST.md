@@ -2,54 +2,61 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/implementation/implementation-plan.md`.
-- [ ] Read this phase PRD.
-- [ ] Read this phase ADR.
-- [ ] Read the OpenSpec artifacts for `phase-06-gpif-gp-inspection`.
-- [ ] Inspect CLI command routing.
-- [ ] Inspect package/tsconfig conventions.
-- [ ] Inspect `packages/midi` inspection patterns.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/implementation/implementation-plan.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Read the OpenSpec artifacts for `phase-06-gpif-gp-inspection`.
+- [x] Inspect CLI command routing.
+- [x] Inspect package/tsconfig conventions.
+- [x] Inspect `packages/midi` inspection patterns.
 
 ## Implementation
 
-- [ ] Add `packages/guitarpro`.
-- [ ] Add package config and tsconfig.
-- [ ] Add public exports.
-- [ ] Implement GPIF extraction from `.gp` containers.
-- [ ] Prefer `Content/score.gpif` when present.
-- [ ] Fail clearly for unsupported files.
-- [ ] Parse GPIF XML safely.
-- [ ] Extract metadata when available.
-- [ ] Extract/list tracks when available.
-- [ ] Detect likely drum track candidates.
-- [ ] Inspect tempo/time-signature structures when available.
-- [ ] Inspect markers/sections when available.
-- [ ] Inspect drum/percussion/articulation structures when available.
-- [ ] Report unknown/unhandled structures without crashing.
-- [ ] Add `inspect-gp <file>` CLI command.
-- [ ] Keep `apps/cli` orchestration-only.
+- [x] Add `packages/guitarpro`.
+- [x] Add package config and tsconfig.
+- [x] Add public exports.
+- [x] Implement GPIF extraction from `.gp` containers.
+- [x] Prefer `Content/score.gpif` when present.
+- [x] Fail clearly for unsupported files.
+- [x] Parse GPIF XML safely.
+- [x] Extract metadata when available.
+- [x] Extract/list tracks when available.
+- [x] Detect likely drum track candidates.
+- [x] Inspect tempo/time-signature structures when available.
+- [x] Inspect markers/sections when available.
+- [x] Inspect drum/percussion/articulation structures when available.
+- [x] Report unknown/unhandled structures without crashing.
+- [x] Add `inspect-gp <file>` CLI command.
+- [x] Keep `apps/cli` orchestration-only.
+
+Dependency choices:
+
+- `fflate` reads modern `.gp` ZIP-like containers with a small, Node-compatible footprint.
+- `fast-xml-parser` parses GPIF XML deterministically with attributes and text nodes available for inspection.
 
 ## Tests
 
-- [ ] GPIF extraction from synthetic `.gp` ZIP fixture.
-- [ ] Unsupported file without GPIF fails clearly.
-- [ ] Metadata inspection from minimal GPIF XML.
-- [ ] Track listing from minimal GPIF XML.
-- [ ] Drum track candidate detection.
-- [ ] Marker/section candidate reporting.
-- [ ] Missing metadata does not crash.
-- [ ] Output/structured result is deterministic.
-- [ ] No copyrighted `.gp`, MIDI, or audio fixtures committed.
+- [x] GPIF extraction from synthetic `.gp` ZIP fixture.
+- [x] Unsupported file without GPIF fails clearly.
+- [x] Metadata inspection from minimal GPIF XML.
+- [x] Track listing from minimal GPIF XML.
+- [x] Drum track candidate detection.
+- [x] Marker/section candidate reporting.
+- [x] Missing metadata does not crash.
+- [x] Output/structured result is deterministic.
+- [x] No copyrighted `.gp`, MIDI, or audio fixtures committed.
 
 ## Validation
 
-- [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] Optional local `.gp` validation recorded if files exist.
-- [ ] No chart generation from `.gp` was added.
-- [ ] No GPIF drum normalization was added.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] Optional local `.gp` validation recorded if files exist.
+  - Validated `samples/demo.gp` locally: report printed GPIF entry, metadata, tracks, drum candidate, tempo automation (`Tempo: 147 2`), time signatures and drum structures.
+  - `samples/eat-my-dust.gp` was absent locally.
+- [x] No chart generation from `.gp` was added.
+- [x] No GPIF drum normalization was added.
 
 ## Deferred
 
