@@ -1,47 +1,68 @@
-# PRD Phase 04: Manual Validation
+# PRD Phase 04: Manual Validation Setup
 
-    ## Final result
+## Final result
 
-    A repeatable manual checklist exists for validating generated charts in Moonscraper and Clone Hero.
+A repeatable manual validation process exists for checking generated CHDG charts in Moonscraper and Clone Hero.
 
-    ## Why this phase exists
+This phase is considered created/setup-ready, not fully complete.
 
-    This phase creates a concrete, reviewable step toward the full MIDI-to-Clone-Hero drum chart pipeline. It must remain small enough to validate before the next phase begins.
+Full manual validation should be repeated after:
 
-    ## Scope
+- audio packaging exists;
+- generated song folders include `song.ogg`;
+- Pro Drums cymbal flags are implemented;
+- the main demo source has been changed to the new Eat My Dust demo.
 
-    - Create manual validation checklist
-- Define expected lane checks
-- Define tempo/sync checks
-- Define mismatch recording template
-- Define accepted/rejected criteria
+## Why this phase exists
 
-    ## Non-goals
+CHDG has several possible failure points:
 
-    - Automated validation implementation
-- Chart generation changes
+- source parsing;
+- drum track selection;
+- timing;
+- mapping;
+- chart encoding;
+- audio packaging;
+- editor/game compatibility.
 
-    ## Where to apply changes
+Manual validation isolates what a human must confirm in Moonscraper/Clone Hero and records mismatches as follow-up work.
 
-    - CLI orchestration: `apps/cli`
-    - Shared model/timing: `packages/core`
-    - MIDI behavior: `packages/midi`
-    - Mapping behavior/data: `packages/mappings`
-    - Chart writing: `packages/chart`
-    - Validation: `packages/validation`
-    - Documentation: `docs/`
+## Scope
 
-    Only modify the folders relevant to this phase.
+- Create a manual validation checklist.
+- Define expected lane checks.
+- Define tempo/sync checks.
+- Define mismatch recording template.
+- Define accepted/rejected criteria.
+- Record that initial Moonscraper validation passed for Phase 03 structure, but full validation is deferred.
 
-    ## Validation checklist
+## Non-goals
 
-    - Checklist can be followed by a human
-- Mismatches can be recorded and turned into mapping/code tasks
+- Automated validation implementation.
+- Chart generation changes.
+- Pro Drums flags.
+- Audio conversion.
+- Moonscraper automation.
+- Clone Hero automation.
 
-    ## Definition of done
+## Validation expectations
 
-    - Final result is achieved.
-    - Docs are updated.
-    - `pnpm build` passes.
-    - `pnpm typecheck` passes.
-    - Manual validation is completed when applicable.
+For Phase 03 output, manual validation checks:
+
+- `notes.chart` opens in Moonscraper;
+- `ExpertDrums` exists;
+- game mode/lane mode are reasonable;
+- only base lanes `N 0` to `N 4` are present;
+- no unexpected `N 5`;
+- no cymbal/ghost/accent/double-kick/star-power/drum-fill events are generated.
+
+Full validation should be repeated later when Pro Drums and audio packaging exist.
+
+## Definition of done
+
+- Manual checklist exists and can be followed by a human.
+- Mismatches can be recorded and turned into mapping/code tasks.
+- Docs are updated.
+- `pnpm build` passes if code changes are made.
+- `pnpm typecheck` passes if code changes are made.
+- Full Moonscraper/Clone Hero validation can remain pending if explicitly deferred.
