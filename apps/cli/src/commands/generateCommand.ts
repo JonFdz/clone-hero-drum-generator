@@ -41,6 +41,7 @@ export function runGenerateCommand(rawArgs: string[]): Promise<void> {
         resolution: result.resolution,
         tempos: result.tempos,
         timeSignatures: result.timeSignatures,
+        sections: result.sections,
         expertDrums: deduplicated,
       };
 

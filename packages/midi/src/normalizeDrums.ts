@@ -1,4 +1,4 @@
-import type { DrumHit, TempoEvent, TimeSignatureEvent } from "@chdg/core";
+import type { DrumHit, SongSection, TempoEvent, TimeSignatureEvent } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { mapMidiNoteToDrumPiece } from "@chdg/mappings";
 import type { MidiReadResult } from "./readMidi.js";
@@ -12,6 +12,7 @@ export type DrumNormalizationResult = {
   resolution: number;
   tempos: TempoEvent[];
   timeSignatures: TimeSignatureEvent[];
+  sections: SongSection[];
 };
 
 export type NormalizeDrumsOptions = {
@@ -73,6 +74,7 @@ export function normalizeDrums(
     resolution: midiResult.resolution,
     tempos: midiResult.tempos,
     timeSignatures: midiResult.timeSignatures,
+    sections: midiResult.sections,
   };
 }
 

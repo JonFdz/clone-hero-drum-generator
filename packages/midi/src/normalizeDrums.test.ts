@@ -25,6 +25,8 @@ function fakeMidiResult(tracks: MidiTrack[]): MidiReadResult {
     tempos: [{ tick: 0, bpm: 120 }],
     timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
     tracks,
+    metaEvents: [],
+    sections: [],
   };
 }
 
