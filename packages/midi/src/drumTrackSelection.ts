@@ -7,6 +7,7 @@ export const DISQUALIFYING_NAME_FRAGMENTS = [
   "guitar",
   "bass",
   "vocal",
+  "voice",
   "keys",
   "piano",
   "recorder",
@@ -14,17 +15,42 @@ export const DISQUALIFYING_NAME_FRAGMENTS = [
   "string",
 ];
 
+export const STRONG_DRUM_NAME_FRAGMENTS = [
+  "drum",
+  "percussion",
+  "perc",
+  "cymbal",
+  "snare",
+  "kick",
+];
+
+function hasNameFragment(nameLower: string, fragments: string[]): boolean {
+  return fragments.some((fragment) => nameLower.includes(fragment));
+}
+
+function hasDisqualifyingName(track: MidiTrack): boolean {
+  const nameLower = track.name.toLowerCase();
+  return (
+    hasNameFragment(nameLower, DISQUALIFYING_NAME_FRAGMENTS) &&
+    !hasNameFragment(nameLower, STRONG_DRUM_NAME_FRAGMENTS)
+  );
+}
+
+function hasStrongDrumName(track: MidiTrack): boolean {
+  return hasNameFragment(track.name.toLowerCase(), STRONG_DRUM_NAME_FRAGMENTS);
+}
+
+function hasStrongContextSignal(track: MidiTrack): boolean {
+  return track.channel === 9 || hasStrongDrumName(track);
+}
+
 export function scoreDrumTrack(
   track: MidiTrack,
   drumPieceMap: MidiDrumPieceMap
 ): number {
-  const nameLower = track.name.toLowerCase();
-
   // Step 1: Disqualifying name check
-  for (const fragment of DISQUALIFYING_NAME_FRAGMENTS) {
-    if (nameLower.includes(fragment)) {
-      return -1000;
-    }
+  if (hasDisqualifyingName(track)) {
+    return -1000;
   }
 
   // Step 2: Precompute track drum pieces
@@ -52,7 +78,7 @@ export function scoreDrumTrack(
 
   // Positive signals
   if (track.channel === 9) score += 50;
-  if (nameLower.includes("drum") || nameLower.includes("drums")) score += 40;
+  if (hasStrongDrumName(track)) score += 40;
   if (hasKick && hasSnare && hasHihat) score += 30;
   if (uniquePieceCount >= 5) score += 20;
   else if (uniquePieceCount >= 3) score += 10;
@@ -83,11 +109,17 @@ export function classifyDrumTracks(
   }));
 
   const strong = scores
-    .filter((t) => t.score >= 45)
+    .filter(
+      (t) =>
+        t.score >= 45 &&
+        !hasDisqualifyingName(tracks[t.index]) &&
+        hasStrongContextSignal(tracks[t.index])
+    )
     .map((t) => t.index);
 
+  const strongSet = new Set(strong);
   const weak = scores
-    .filter((t) => t.score >= 20 && t.score < 45)
+    .filter((t) => t.score >= 20 && !strongSet.has(t.index))
     .map((t) => t.index);
 
   return { strong, weak };

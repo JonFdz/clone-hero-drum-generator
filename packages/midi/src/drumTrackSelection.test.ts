@@ -33,9 +33,8 @@ function makeNotes(midi: number, count: number) {
 }
 
 describe("scoreDrumTrack", () => {
-  it("scores channel 9 + 'Drums' name >= 45", () => {
+  it("scores channel 9 + drum-like notes >= 45", () => {
     const track = fakeTrack({
-      name: "Drums",
       channel: 9,
       notes: [
         ...makeNotes(36, 4),
@@ -54,6 +53,20 @@ describe("scoreDrumTrack", () => {
   it("returns -1000 for 'Bass' name", () => {
     const track = fakeTrack({ name: "Bass", notes: makeNotes(36, 10) });
     expect(scoreDrumTrack(track, testMap)).toBe(-1000);
+  });
+
+  it("does not disqualify 'Bass Drum' because the name has explicit drum context", () => {
+    const track = fakeTrack({
+      name: "Bass Drum",
+      channel: 5,
+      notes: [
+        ...makeNotes(36, 4),
+        ...makeNotes(38, 4),
+        ...makeNotes(42, 4),
+      ],
+    });
+    const { strong } = classifyDrumTracks([track], testMap);
+    expect(strong).toEqual([0]);
   });
 
   it("returns -1000 for 'Vocals' name", () => {
@@ -91,7 +104,7 @@ describe("scoreDrumTrack", () => {
     expect(scoreDrumTrack(track, testMap)).toBeLessThan(45);
   });
 
-  it("scores kick+snare+hihat >= 45", () => {
+  it("scores kick+snare+hihat as drum-like even without strong context", () => {
     const track = fakeTrack({
       notes: [
         ...makeNotes(36, 4),
@@ -99,11 +112,126 @@ describe("scoreDrumTrack", () => {
         ...makeNotes(42, 4),
       ],
     });
-    expect(scoreDrumTrack(track, testMap)).toBeGreaterThanOrEqual(45);
+    expect(scoreDrumTrack(track, testMap)).toBeGreaterThanOrEqual(20);
   });
 });
 
 describe("classifyDrumTracks", () => {
+  it("classifies channel 9 + drum-like notes as strong", () => {
+    const tracks = [
+      fakeTrack({
+        channel: 9,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong, weak } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([0]);
+    expect(weak).toEqual([]);
+  });
+
+  it("classifies empty non-channel-9 drum-like tracks as weak, not strong", () => {
+    const tracks = [
+      fakeTrack({
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong, weak } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([]);
+    expect(weak).toEqual([0]);
+  });
+
+  it("classifies named drum tracks on non-standard channels as strong", () => {
+    const tracks = [
+      fakeTrack({
+        name: "Drums",
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong, weak } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([0]);
+    expect(weak).toEqual([]);
+  });
+
+  it("does not classify named non-drum tracks as strong", () => {
+    const tracks = [
+      fakeTrack({
+        name: "Lead Guitar",
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong, weak } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([]);
+    expect(weak).toEqual([]);
+  });
+
+  it("does not classify generic names containing kit as strong", () => {
+    const tracks = [
+      fakeTrack({
+        name: "Toolkit",
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
+    const { strong } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([]);
+  });
+
+  it("classifies the Eat My Dust-style candidates as one strong and two weak", () => {
+    const tracks = Array.from({ length: 54 }, () => fakeTrack());
+    tracks[10] = fakeTrack({
+      channel: 5,
+      notes: [
+        ...makeNotes(36, 172),
+        ...makeNotes(38, 172),
+        ...makeNotes(42, 172),
+      ],
+    });
+    tracks[28] = fakeTrack({
+      channel: 5,
+      notes: [
+        ...makeNotes(36, 301),
+        ...makeNotes(38, 301),
+        ...makeNotes(42, 300),
+      ],
+    });
+    tracks[53] = fakeTrack({
+      channel: 9,
+      notes: [
+        ...makeNotes(36, 347),
+        ...makeNotes(38, 215),
+        ...makeNotes(42, 99),
+        ...makeNotes(49, 232),
+      ],
+    });
+
+    const { strong, weak } = classifyDrumTracks(tracks, testMap);
+    expect(strong).toEqual([53]);
+    expect(weak).toEqual([10, 28]);
+  });
+
   it("classifies mixed tracks correctly", () => {
     const tracks = [
       fakeTrack({ name: "Guitar" }),
@@ -129,6 +257,21 @@ describe("classifyDrumTracks", () => {
 describe("selectDrumTrack", () => {
   it("selects explicit index", () => {
     const tracks = [fakeTrack({ name: "Drums", notes: makeNotes(36, 10) })];
+    const result = selectDrumTrack(tracks, testMap, 0);
+    expect(result).toEqual({ kind: "selected", trackIndex: 0 });
+  });
+
+  it("selects explicit weak index", () => {
+    const tracks = [
+      fakeTrack({
+        channel: 5,
+        notes: [
+          ...makeNotes(36, 4),
+          ...makeNotes(38, 4),
+          ...makeNotes(42, 4),
+        ],
+      }),
+    ];
     const result = selectDrumTrack(tracks, testMap, 0);
     expect(result).toEqual({ kind: "selected", trackIndex: 0 });
   });
