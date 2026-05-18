@@ -2,11 +2,11 @@
 
 ## Main pipeline
 
-Current implemented MIDI-first pipeline:
+Current implemented multi-source pipeline:
 
 ```txt
-MIDI file
-  -> MIDI inspection
+MIDI or GPIF input
+  -> source inspection
   -> drum track selection
   -> normalized DrumHit[]
   -> Clone Hero Pro Drums note model
@@ -14,19 +14,6 @@ MIDI file
   -> song.ogg audio packaging
   -> Pro Drums cymbals/dynamics/open hi-hat encoding
   -> sections/global events when present
-  -> Moonscraper/Clone Hero validation
-```
-
-Target multi-source pipeline:
-
-```txt
-MIDI or GPIF input
-  -> source inspection
-  -> normalized DrumHit[]
-  -> Clone Hero Pro Drums note model
-  -> notes.chart + song.ini
-  -> audio packaging
-  -> local song folder / ZIP
   -> Moonscraper/Clone Hero validation
 ```
 
@@ -56,31 +43,37 @@ The CLI remains important for automation, tests, agent tasks and debugging.
 | 04B | Demo and track-detection hardening | Effectively covered by later work | Eat My Dust demo and explicit track validation are used locally |
 | 05 | Pro Drums cymbal flags | Complete | Yellow/blue/green cymbals are encoded as `N 66`/`N 67`/`N 68` |
 | 05A | Pro Drums dynamics and open hi-hat | Complete | Accent/ghost modifiers are encoded and open hi-hat uses yellow-accent convention |
-| 05B | Sections and global events | Complete / PR reviewed | `SongSection[]`, `[Events]` section writing, and MIDI marker filtering exist |
-| 06 | GPIF / `.gp` inspection | Next recommended | `.gp` files can be inspected deterministically without generating charts |
-| 07 | GPIF drum normalization | Pending | GPIF drum tracks become `DrumHit[]` |
-| 08 | Generate from GPIF | Pending | `.gp` input can produce `notes.chart`, `song.ini`, and packaged audio |
-| 09 | Metadata and offset controls | Pending | CLI supports user metadata and manual audio/chart offset |
+| 05B | Sections and global events | Complete | `SongSection[]`, `[Events]` section writing, and MIDI marker filtering exist |
+| 06 | GPIF / `.gp` inspection | Complete | `.gp` files can be inspected deterministically without generating charts |
+| 07 | GPIF drum normalization | Complete | Selected GPIF drum tracks become `DrumHit[]` |
+| 08 | Generate from GPIF | Complete / PR reviewed | `.gp` input can produce `notes.chart`, `song.ini`, and packaged audio |
+| 09 | Metadata and offset controls | Next recommended | CLI supports user metadata and manual audio/chart offset |
 | 10 | Desktop app shell | Pending | Electron + Angular shell can call local inspection/generation |
 | 11 | Desktop full song package flow | Pending | Desktop UI can generate a full local Clone Hero song folder |
 | 12 | Future symbolic inputs | Pending | MusicXML/MXL research/import if useful |
 
-## Validated MIDI-first baseline
-
-The current validated baseline uses the Eat My Dust demo.
+## Validated demo baseline
 
 Known local paths:
 
 ```txt
 MIDI:  /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid
+GP:    /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.gp
 Audio: /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mp3
-Output: /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo
+MIDI output: /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo
+GPIF output: /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo-gp
 ```
 
-Known generation command:
+Known MIDI generation command:
 
 ```bash
 pnpm chdg generate /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid --track 53 --audio-source /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mp3 --out /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo
+```
+
+Known GPIF generation command:
+
+```bash
+pnpm chdg generate /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.gp --track 3 --audio-source /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mp3 --out /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo-gp
 ```
 
 Confirmed behavior:
@@ -100,25 +93,26 @@ Known manual adjustment:
 
 ```txt
 The demo needed manual start/offset adjustment in Moonscraper.
-Offset support is deferred to a future phase.
+Offset support is Phase 09.
 ```
 
 ## Demo source policy
-
-The original Stairway to Heaven demo exposed useful edge cases but is not a good main validation sample because drums enter very late.
 
 The main local validation demo is:
 
 ```txt
 Eat My Dust — Dead Pony
 MIDI drum track: 53
+GPIF drum track: 3
 Tempo: 147 BPM
 Time signature: 4/4
 Drum hits: 1039
-Unknown notes: none
+Unknown notes/articulations: none
 ```
 
 Do not commit copyrighted MIDI/audio/GP files unless licensing is explicitly safe. Local samples can remain ignored while documented as validation fixtures.
+
+Do not use or reference `samples/eat-my-dust.gp`; the song is Eat My Dust, but the local file name is `samples/demo.gp`.
 
 ## Definition of done
 
@@ -140,7 +134,7 @@ Manual Moonscraper/Clone Hero validation can be deferred explicitly when the pha
 - `apps/web`: optional future web surface, not the main product target.
 - `packages/core`: shared types, timing, pipeline primitives.
 - `packages/midi`: MIDI reading, inspection, normalization and MIDI section extraction.
-- `packages/guitarpro`: GPIF reading, inspection and future normalization.
+- `packages/guitarpro`: GPIF reading, inspection and normalization.
 - `packages/mappings`: mapping data and functions.
 - `packages/chart`: `notes.chart` and `song.ini` writers.
 - `packages/audio`: audio preparation via system ffmpeg.
