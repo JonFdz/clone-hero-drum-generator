@@ -11,7 +11,7 @@
 - [ ] Inspect `generateArgs.ts`.
 - [ ] Inspect `generateCommand.ts`.
 - [ ] Inspect `writeSongIni`.
-- [ ] Inspect chart writer timing behavior.
+- [ ] Inspect `writeChart`.
 
 ## Implementation
 
@@ -23,8 +23,9 @@
 - [ ] Add `--charter` if supported.
 - [ ] Add `--offset-ms`.
 - [ ] Validate offset is numeric.
-- [ ] Document offset sign convention.
-- [ ] Apply offset using the chosen Clone Hero-compatible approach.
+- [ ] Convert offset from milliseconds to seconds.
+- [ ] Write converted offset to the `.chart` `[Song]` `Offset` field.
+- [ ] Do not shift note/event ticks for offset.
 - [ ] Preserve existing default metadata behavior when options are omitted.
 - [ ] Preserve existing MIDI generation behavior.
 - [ ] Preserve existing GPIF generation behavior.
@@ -38,7 +39,10 @@
 - [ ] Argument parser rejects invalid offset values.
 - [ ] `song.ini` includes provided metadata.
 - [ ] Default metadata output is unchanged when options are omitted.
-- [ ] Offset behavior is tested according to documented semantics.
+- [ ] `--offset-ms 900` writes `Offset = 0.9` in `notes.chart`.
+- [ ] `--offset-ms 1200` writes `Offset = 1.2` in `notes.chart`.
+- [ ] `--offset-ms -250` writes `Offset = -0.25` in `notes.chart`.
+- [ ] Note/event ticks are not shifted by offset.
 - [ ] MIDI generate path still passes.
 - [ ] GPIF generate path still passes.
 - [ ] No copyrighted fixtures committed.
