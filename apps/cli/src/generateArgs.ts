@@ -13,6 +13,7 @@ export type GenerateOptions = SongMetadataOptions & {
 	audioFile?: string;
 	audioSource?: string;
 	offsetMs?: number;
+	json?: boolean;
 };
 
 const metadataOptions = new Set([
@@ -71,6 +72,9 @@ export function parseGenerateArgs(
 			const next = requireOptionValue("--audio-source", rawArgs[++i]);
 			options.audioSource = next;
 			consumed.add(i - 1);
+			consumed.add(i);
+		} else if (arg === "--json") {
+			options.json = true;
 			consumed.add(i);
 		} else if (metadataOptions.has(arg)) {
 			const next = requireOptionValue(arg, rawArgs[++i]);

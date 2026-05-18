@@ -1,50 +1,29 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { basename, extname, join } from "node:path";
-import { normalizeDrumsFromFile } from "@chdg/midi";
-import { normalizeGpDrums } from "@chdg/guitarpro";
-import { mapHitToCloneHeroNote } from "@chdg/mappings";
-import { writeChart, writeSongIni, deduplicateBaseNotes } from "@chdg/chart";
-import type {
-	CloneHeroDrumNote,
-	DrumChart,
-	DrumHit,
-	SongSection,
-	TempoEvent,
-	TimeSignatureEvent,
-} from "@chdg/core";
-import { prepareAudio } from "@chdg/audio";
-import { generalMidiDrums, cloneHeroProDrums } from "../mappings.js";
-import { parseGenerateArgs, type GenerateOptions } from "../generateArgs.js";
-
-type SourceKind = "midi" | "gpif";
-
-type SourceNormalizationResult = {
-	kind: SourceKind;
-	filePath: string;
-	track: { index: number; name?: string };
-	resolution: number;
-	tempos: TempoEvent[];
-	timeSignatures: TimeSignatureEvent[];
-	sections: SongSection[];
-	hits: DrumHit[];
-	warnings: string[];
-	unknowns: string[];
-};
+import { isAbsolute, resolve } from "node:path";
+import {
+	detectSourceKind,
+	generatePackage,
+	ProjectServiceError,
+} from "@chdg/project";
+import type { SourceKind } from "@chdg/project";
+import { parseGenerateArgs } from "../generateArgs.js";
+import { printJsonError, printJsonSuccess } from "../jsonOutput.js";
 
 export function detectGenerateSourceKind(filePath: string): SourceKind {
-	const extension = extname(filePath).toLowerCase();
-	if (extension === ".mid" || extension === ".midi") return "midi";
-	if (extension === ".gp") return "gpif";
-	throw new Error(
-		`Unsupported source type: ${extension || "(none)"}. Supported source types: .mid, .midi, .gp.`,
-	);
+	return detectSourceKind(filePath);
 }
 
-export function runGenerateCommand(rawArgs: string[]): Promise<void> {
+export async function runGenerateCommand(rawArgs: string[]): Promise<void> {
 	let parsed: ReturnType<typeof parseGenerateArgs>;
+	let jsonRequested = rawArgs.includes("--json");
+
 	try {
 		parsed = parseGenerateArgs(rawArgs);
 	} catch (err) {
+		if (jsonRequested) {
+			printJsonError("ARG_PARSE_ERROR", (err as Error).message);
+			throw new Error("COMMAND_FAILED");
+		}
+
 		console.error((err as Error).message);
 		throw new Error("ARG_PARSE_ERROR");
 	}
@@ -53,147 +32,76 @@ export function runGenerateCommand(rawArgs: string[]): Promise<void> {
 		throw new Error("HELP_REQUESTED");
 	}
 
-	return normalizeGenerateSource(parsed.file, parsed.options).then((source) =>
-		writeGeneratedSongPackage(source, parsed.options),
-	);
-}
+	jsonRequested = parsed.options.json === true;
 
-async function normalizeGenerateSource(
-	file: string,
-	options: GenerateOptions,
-): Promise<SourceNormalizationResult> {
-	const kind = detectGenerateSourceKind(file);
-
-	if (kind === "midi") {
-		const result = await normalizeDrumsFromFile(file, generalMidiDrums, {
-			trackIndex: options.trackIndex,
+	try {
+		const result = await generatePackage({
+			sourcePath: resolveInputPath(parsed.file),
+			outDir: resolveInputPath(parsed.options.outDir),
+			trackIndex: parsed.options.trackIndex,
+			audioFile: parsed.options.audioFile,
+			audioSource:
+				parsed.options.audioSource === undefined
+					? undefined
+					: resolveInputPath(parsed.options.audioSource),
+			name: parsed.options.name,
+			artist: parsed.options.artist,
+			album: parsed.options.album,
+			year: parsed.options.year,
+			genre: parsed.options.genre,
+			charter: parsed.options.charter,
+			offsetMs: parsed.options.offsetMs,
 		});
-		return {
-			kind,
-			filePath: file,
-			track: { index: result.track.index, name: result.track.name },
-			resolution: result.resolution,
-			tempos: result.tempos,
-			timeSignatures: result.timeSignatures,
-			sections: result.sections,
-			hits: result.hits,
-			warnings:
-				result.unknownNotes.length > 0
-					? [`Unknown MIDI notes skipped: ${result.unknownNotes.join(", ")}`]
-					: [],
-			unknowns: [],
-		};
-	}
 
-	if (options.trackIndex === undefined) {
-		throw new Error(
-			"Missing required --track <index> option for GPIF generation.",
+		if (jsonRequested) {
+			printJsonSuccess(result, result.issues);
+			return;
+		}
+
+		for (const warning of result.issues.filter(
+			(item) => item.severity !== "info",
+		)) {
+			console.warn(`Warning: ${warning.message}`);
+		}
+
+		console.log("CHDG Chart Generation");
+		console.log("=====================");
+		console.log(`File: ${result.sourcePath}`);
+		console.log(
+			`Source type: ${result.sourceKind === "gpif" ? "GPIF" : "MIDI"}`,
 		);
-	}
+		console.log(`Track: [${result.selectedTrack}]`);
+		console.log(`Hits: ${result.hitCount}`);
+		console.log(`Mapped notes: ${result.mappedNoteCount}`);
+		if (result.deduplicatedCount > 0) {
+			console.log(`Deduplicated notes: ${result.deduplicatedCount}`);
+		}
+		console.log(`Output: ${result.outputDir}`);
+		console.log(`  - notes.chart`);
+		console.log(`  - song.ini`);
+		if (result.files.songOgg) {
+			console.log(`  - ${result.files.songOgg.split("/").pop()}`);
+		}
+	} catch (err) {
+		if (jsonRequested) {
+			const error =
+				err instanceof ProjectServiceError
+					? err
+					: new ProjectServiceError(
+							"GENERATE_PACKAGE_FAILED",
+							(err as Error).message,
+						);
+			printJsonError(error.code, error.message, error.issues);
+			throw new Error("COMMAND_FAILED");
+		}
 
-	const result = await normalizeGpDrums(file, {
-		trackIndex: options.trackIndex,
-	});
-	const gpifTiming = result as typeof result & {
-		tempos?: TempoEvent[];
-		timeSignatures?: TimeSignatureEvent[];
-		sections?: SongSection[];
-	};
-	return {
-		kind,
-		filePath: file,
-		track: { index: result.trackIndex, name: result.trackName },
-		resolution: result.resolution,
-		tempos: gpifTiming.tempos ?? [{ tick: 0, bpm: 120 }],
-		timeSignatures: gpifTiming.timeSignatures ?? [
-			{ tick: 0, numerator: 4, denominator: 4 },
-		],
-		sections: gpifTiming.sections ?? [],
-		hits: result.hits,
-		warnings: [...result.warnings, ...result.unhandled],
-		unknowns: result.unknownArticulations.map(
-			(item) => `${item.rawArticulation} (${item.count})`,
-		),
-	};
+		throw err;
+	}
 }
 
-async function writeGeneratedSongPackage(
-	source: SourceNormalizationResult,
-	options: GenerateOptions,
-): Promise<void> {
-	for (const warning of source.warnings) {
-		console.warn(`Warning: ${warning}`);
+function resolveInputPath(filePath: string): string {
+	if (isAbsolute(filePath)) {
+		return filePath;
 	}
-
-	const expertDrums: CloneHeroDrumNote[] = source.hits
-		.map((hit) => mapHitToCloneHeroNote(hit, cloneHeroProDrums))
-		.filter((n): n is CloneHeroDrumNote => n !== null);
-
-	const deduplicated = deduplicateBaseNotes(expertDrums);
-
-	const chart: DrumChart = {
-		resolution: source.resolution,
-		offsetSeconds:
-			options.offsetMs === undefined ? undefined : options.offsetMs / 1000,
-		tempos: source.tempos,
-		timeSignatures: source.timeSignatures,
-		sections: source.sections,
-		expertDrums: deduplicated,
-	};
-
-	const songName = options.name ?? basename(source.filePath, extname(source.filePath));
-	const artist = options.artist ?? "Unknown Artist";
-	const audioFile = options.audioFile ?? "song.ogg";
-	const chartText = writeChart(chart, {
-		name: songName,
-		artist,
-		charter: options.charter,
-	});
-	const songIniText = writeSongIni({
-		name: songName,
-		artist,
-		album: options.album,
-		year: options.year,
-		genre: options.genre,
-		charter: options.charter,
-		songFile: audioFile,
-	});
-
-	await mkdir(options.outDir, { recursive: true });
-	await writeFile(join(options.outDir, "notes.chart"), chartText);
-	await writeFile(join(options.outDir, "song.ini"), songIniText);
-
-	const audioResult = options.audioSource
-		? await prepareAudio({
-				sourcePath: options.audioSource,
-				outputDir: options.outDir,
-				outputFileName: audioFile,
-			})
-		: null;
-
-	console.log("CHDG Chart Generation");
-	console.log("=====================");
-	console.log(`File: ${source.filePath}`);
-	console.log(`Source type: ${source.kind === "gpif" ? "GPIF" : "MIDI"}`);
-	console.log(
-		`Track: [${source.track.index}] "${source.track.name ?? "(unnamed)"}"`,
-	);
-	console.log(`Hits: ${source.hits.length}`);
-	console.log(`Mapped notes: ${expertDrums.length}`);
-	if (deduplicated.length < expertDrums.length) {
-		console.log(
-			`Deduplicated notes: ${expertDrums.length - deduplicated.length}`,
-		);
-	}
-	if (source.kind === "gpif") {
-		console.log(
-			`GPIF Unknown Articulations: ${source.unknowns.length > 0 ? source.unknowns.join(", ") : "none"}`,
-		);
-	}
-	console.log(`Output: ${options.outDir}`);
-	console.log(`  - notes.chart`);
-	console.log(`  - song.ini`);
-	if (audioResult) {
-		console.log(`  - ${audioResult.outputFileName} (${audioResult.action})`);
-	}
+	return resolve(process.env.INIT_CWD ?? process.cwd(), filePath);
 }
