@@ -1,71 +1,44 @@
 # PRD Phase 10: Desktop App Shell
 
-## Final result
+## Goal
 
-A first desktop shell exists for CHDG using Electron + Angular.
+Create the first Electron + Angular desktop shell for CHDG.
 
-The desktop app should run locally on the user's PC and call the same CHDG packages used by the CLI.
-
-## Why this phase exists
-
-CHDG handles user-provided symbolic files and audio. Local desktop execution avoids upload, privacy, copyright and backend CPU concerns.
-
-## Target stack
+## Visual references
 
 ```txt
-Electron
-Angular
-TypeScript
-pnpm monorepo
-CHDG packages
-local ffmpeg
+docs/desktop/mockups/01-home-dashboard.png
+docs/desktop/mockups/10-settings.png
+```
+
+Also read:
+
+```txt
+docs/desktop/decisions.md
+docs/desktop/mockup-corrections.md
 ```
 
 ## Scope
 
-- Create Electron + Angular app scaffold.
-- Add local file selection for source file and audio file.
-- Call existing generation pipeline from Electron main process.
-- Show selected source/audio/output paths.
-- Show generation logs and warnings.
-- Open output folder after generation.
+- Add `apps/desktop`.
+- Use Electron + Angular.
+- Implement secure Electron preload bridge.
+- Implement dark-mode desktop shell.
+- Add sidebar routes for Home, Projects, New Project, Inspect Source, Track Selection, Generate, Validation, Preview, Mapping, Settings.
+- Add backend health check/status.
+- Keep feature pages as placeholders unless trivial.
+- Prepare styling so light mode can be added later.
 
 ## Non-goals
 
-- No full chart preview.
-- No internal Moonscraper replacement.
-- No GPIF implementation unless already available.
-- No cloud backend.
-- No audio transcription.
+- No full generation workflow.
+- No project persistence.
+- No multi-track UI.
+- No preview player.
+- No packaging installer.
 
-## Architecture direction
+## Notes
 
-```txt
-apps/desktop
-  src/main      # Electron main process, local backend
-  src/preload   # safe IPC bridge
-  src/renderer  # Angular app
-```
+This phase should preserve existing CLI/backend behavior unless explicitly extending it.
 
-Renderer should not directly perform domain logic. It should call the local backend through IPC.
-
-Generation logic stays in packages:
-
-```txt
-packages/core
-packages/midi
-packages/chart
-packages/audio
-packages/validation
-packages/guitarpro later
-```
-
-## Validation checklist
-
-- Desktop app starts.
-- User can select MIDI input.
-- User can select audio input.
-- User can select output folder.
-- App can call generation pipeline.
-- App shows success/failure.
-- Generated output matches CLI behavior.
+Final PR review is external and PRs must not be merged without explicit approval.
