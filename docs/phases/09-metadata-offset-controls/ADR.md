@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed.
+Implemented.
 
 ## Context
 
@@ -49,6 +49,14 @@ Examples:
 ```
 
 The implementation must not shift chart notes/events for offset in this phase.
+
+Implementation notes:
+
+- `--offset-ms` uses milliseconds at the CLI boundary.
+- `notes.chart` `Offset` uses seconds.
+- Offset is written to the chart `[Song]` `Offset` field.
+- Note/event ticks are not shifted.
+- No automatic offset detection or desktop UI is included in this phase.
 
 ## Rationale
 

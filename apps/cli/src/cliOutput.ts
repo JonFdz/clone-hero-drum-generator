@@ -8,14 +8,21 @@ Usage:
   chdg inspect-gp <file.gp>
   chdg normalize-drums [options] <file.mid>
   chdg normalize-gp-drums <file.gp> --track <index>
-  chdg generate [options] <file.mid> --out <output-dir>
+  chdg generate [options] <file.mid|file.gp> --out <output-dir>
 
 Options:
-  --track <index>   Select a specific track (for generate, inspect-midi, normalize-drums, normalize-gp-drums)
-  --drums-only      Show only strong drum tracks
+  --track <index>          Select a specific track (for generate, inspect-midi, normalize-drums, normalize-gp-drums)
+  --drums-only             Show only strong drum tracks
   --out <dir>              Output directory for generate command
   --audio <file>           Final audio filename for song.ini (default: song.ogg)
   --audio-source <path>    Source audio file to copy/convert into the output directory
+  --name <name>            Song name for generated metadata
+  --artist <artist>        Artist for generated metadata
+  --album <album>          Album for generated metadata
+  --year <year>            Year for generated metadata
+  --genre <genre>          Genre for generated metadata
+  --charter <charter>      Charter for generated metadata
+  --offset-ms <number>     Chart offset in milliseconds; writes seconds to notes.chart Offset
   --help                   Show this help
 `);
 }

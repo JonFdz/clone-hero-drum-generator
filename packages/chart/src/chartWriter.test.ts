@@ -123,6 +123,33 @@ describe("writeChart", () => {
     expect(output).toContain("0 = B 195000");
   });
 
+  it("writes default offset as zero", () => {
+    const chart = makeChart();
+    const output = writeChart(chart);
+    expect(output).toContain("Offset = 0");
+  });
+
+  it.each([
+    [0.9, "Offset = 0.9"],
+    [1.2, "Offset = 1.2"],
+  ] as const)("writes configured offset seconds: %s", (offsetSeconds, expected) => {
+    const chart = makeChart({ offsetSeconds });
+    const output = writeChart(chart);
+    expect(output).toContain(expected);
+  });
+
+  it("does not shift notes or events when offset is configured", () => {
+    const chart = makeChart({
+      offsetSeconds: -0.25,
+      sections: [{ tick: 480, name: "Verse" }],
+      expertDrums: [{ tick: 960, lane: "red", length: 0 }],
+    });
+    const output = writeChart(chart);
+    expect(output).toContain("Offset = -0.25");
+    expect(output).toContain(`480 = E "section Verse"`);
+    expect(output).toContain("960 = N 1 0");
+  });
+
   it("serializes yellow cymbal as base N 2 and modifier N 66", () => {
     const chart = makeChart({
       expertDrums: [{ tick: 0, lane: "yellow", length: 0, cymbal: true }],

@@ -1,9 +1,38 @@
-export type GenerateOptions = {
+export type SongMetadataOptions = {
+	name?: string;
+	artist?: string;
+	album?: string;
+	year?: string;
+	genre?: string;
+	charter?: string;
+};
+
+export type GenerateOptions = SongMetadataOptions & {
 	trackIndex?: number;
 	outDir: string;
 	audioFile?: string;
 	audioSource?: string;
+	offsetMs?: number;
 };
+
+const metadataOptions = new Set([
+	"--name",
+	"--artist",
+	"--album",
+	"--year",
+	"--genre",
+	"--charter",
+]);
+
+function requireOptionValue(
+	optionName: string,
+	value: string | undefined,
+): string {
+	if (value === undefined || value.startsWith("--")) {
+		throw new Error(`${optionName} requires a value.`);
+	}
+	return value;
+}
 
 export function parseGenerateArgs(
 	rawArgs: string[],
@@ -20,10 +49,7 @@ export function parseGenerateArgs(
 	for (let i = 0; i < rawArgs.length; i++) {
 		const arg = rawArgs[i];
 		if (arg === "--track") {
-			const next = rawArgs[++i];
-			if (next === undefined) {
-				throw new Error("--track requires a track index.");
-			}
+			const next = requireOptionValue("--track", rawArgs[++i]);
 			const idx = Number(next);
 			if (!Number.isInteger(idx)) {
 				throw new Error(`Invalid track index: ${next}`);
@@ -32,27 +58,33 @@ export function parseGenerateArgs(
 			consumed.add(i - 1);
 			consumed.add(i);
 		} else if (arg === "--out") {
-			const next = rawArgs[++i];
-			if (next === undefined) {
-				throw new Error("--out requires an output directory.");
-			}
+			const next = requireOptionValue("--out", rawArgs[++i]);
 			options.outDir = next;
 			consumed.add(i - 1);
 			consumed.add(i);
 		} else if (arg === "--audio") {
-			const next = rawArgs[++i];
-			if (next === undefined) {
-				throw new Error("--audio requires a filename.");
-			}
+			const next = requireOptionValue("--audio", rawArgs[++i]);
 			options.audioFile = next;
 			consumed.add(i - 1);
 			consumed.add(i);
 		} else if (arg === "--audio-source") {
-			const next = rawArgs[++i];
-			if (next === undefined) {
-				throw new Error("--audio-source requires a path.");
-			}
+			const next = requireOptionValue("--audio-source", rawArgs[++i]);
 			options.audioSource = next;
+			consumed.add(i - 1);
+			consumed.add(i);
+		} else if (metadataOptions.has(arg)) {
+			const next = requireOptionValue(arg, rawArgs[++i]);
+			const fieldName = arg.slice(2) as keyof SongMetadataOptions;
+			options[fieldName] = next;
+			consumed.add(i - 1);
+			consumed.add(i);
+		} else if (arg === "--offset-ms") {
+			const next = requireOptionValue("--offset-ms", rawArgs[++i]);
+			const offsetMs = Number(next);
+			if (!Number.isFinite(offsetMs)) {
+				throw new Error(`Invalid --offset-ms value: ${next}`);
+			}
+			options.offsetMs = offsetMs;
 			consumed.add(i - 1);
 			consumed.add(i);
 		}
