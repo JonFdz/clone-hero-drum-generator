@@ -1,4 +1,9 @@
-import { bpmToChartValue, type CloneHeroDrumNote, type DrumChart, type SongSection } from "@chdg/core";
+import {
+	bpmToChartValue,
+	type CloneHeroDrumNote,
+	type DrumChart,
+	type SongSection,
+} from "@chdg/core";
 
 const CYMBAL_MODIFIER_NOTES = {
 	yellow: 66,
@@ -102,10 +107,11 @@ export function writeChart(
 	const name = options?.name ?? "Untitled";
 	const artist = options?.artist ?? "Unknown Artist";
 	const charter = options?.charter ?? "CHDG";
+	const offsetSeconds = chart.offsetSeconds ?? 0;
 	const expertLines = chart.expertDrums.flatMap(expertDrumLines);
 	const eventLines = sectionEventLines(chart.sections);
 	return [
-		`[Song]\n{\n  Name = "${name}"\n  Artist = "${artist}"\n  Charter = "${charter}"\n  Offset = 0\n  Resolution = ${chart.resolution}\n}\n`,
+		`[Song]\n{\n  Name = "${name}"\n  Artist = "${artist}"\n  Charter = "${charter}"\n  Offset = ${offsetSeconds}\n  Resolution = ${chart.resolution}\n}\n`,
 		`[SyncTrack]\n{`,
 		...chart.timeSignatures.map(
 			(ts) => `  ${ts.tick} = TS ${ts.numerator} ${Math.log2(ts.denominator)}`,

@@ -2,58 +2,67 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/implementation/implementation-plan.md`.
-- [ ] Read Phase 08 docs and implementation.
-- [ ] Read this phase PRD.
-- [ ] Read this phase ADR.
-- [ ] Read OpenSpec artifacts for `phase-09-metadata-offset-controls`.
-- [ ] Inspect `generateArgs.ts`.
-- [ ] Inspect `generateCommand.ts`.
-- [ ] Inspect `writeSongIni`.
-- [ ] Inspect `writeChart`.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/implementation/implementation-plan.md`.
+- [x] Read Phase 08 docs and implementation.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Read OpenSpec artifacts for `phase-09-metadata-offset-controls`.
+- [x] Inspect `generateArgs.ts`.
+- [x] Inspect `generateCommand.ts`.
+- [x] Inspect `writeSongIni`.
+- [x] Inspect `writeChart`.
 
 ## Implementation
 
-- [ ] Add `--name`.
-- [ ] Add `--artist`.
-- [ ] Add `--album` if supported.
-- [ ] Add `--year` if supported.
-- [ ] Add `--genre` if supported.
-- [ ] Add `--charter` if supported.
-- [ ] Add `--offset-ms`.
-- [ ] Validate offset is numeric.
-- [ ] Convert offset from milliseconds to seconds.
-- [ ] Write converted offset to the `.chart` `[Song]` `Offset` field.
-- [ ] Do not shift note/event ticks for offset.
-- [ ] Preserve existing default metadata behavior when options are omitted.
-- [ ] Preserve existing MIDI generation behavior.
-- [ ] Preserve existing GPIF generation behavior.
-- [ ] Do not implement automatic offset detection.
+- [x] Add `--name`.
+- [x] Add `--artist`.
+- [x] Add `--album` if supported.
+- [x] Add `--year` if supported.
+- [x] Add `--genre` if supported.
+- [x] Add `--charter` if supported.
+- [x] Add `--offset-ms`.
+- [x] Validate offset is numeric.
+- [x] Convert offset from milliseconds to seconds.
+- [x] Write converted offset to the `.chart` `[Song]` `Offset` field.
+- [x] Do not shift note/event ticks for offset.
+- [x] Preserve existing default metadata behavior when options are omitted.
+- [x] Preserve existing MIDI generation behavior.
+- [x] Preserve existing GPIF generation behavior.
+- [x] Do not implement automatic offset detection.
+
+Implementation notes:
+
+- `--offset-ms` uses milliseconds.
+- `notes.chart` `Offset` uses seconds.
+- Offset is written to chart `[Song]` `Offset`.
+- Note/event ticks are not shifted.
 
 ## Tests
 
-- [ ] Argument parser accepts metadata options.
-- [ ] Argument parser rejects missing metadata values.
-- [ ] Argument parser accepts valid positive/negative/zero offset values.
-- [ ] Argument parser rejects invalid offset values.
-- [ ] `song.ini` includes provided metadata.
-- [ ] Default metadata output is unchanged when options are omitted.
-- [ ] `--offset-ms 900` writes `Offset = 0.9` in `notes.chart`.
-- [ ] `--offset-ms 1200` writes `Offset = 1.2` in `notes.chart`.
-- [ ] `--offset-ms -250` writes `Offset = -0.25` in `notes.chart`.
-- [ ] Note/event ticks are not shifted by offset.
-- [ ] MIDI generate path still passes.
-- [ ] GPIF generate path still passes.
-- [ ] No copyrighted fixtures committed.
+- [x] Argument parser accepts metadata options.
+- [x] Argument parser rejects missing metadata values.
+- [x] Argument parser accepts valid positive/negative/zero offset values.
+- [x] Argument parser rejects invalid offset values.
+- [x] `song.ini` includes provided metadata.
+- [x] Default metadata output is unchanged when options are omitted.
+- [x] `--offset-ms 900` writes `Offset = 0.9` in `notes.chart`.
+- [x] `--offset-ms 1200` writes `Offset = 1.2` in `notes.chart`.
+- [x] `--offset-ms -250` writes `Offset = -0.25` in `notes.chart`.
+- [x] Note/event ticks are not shifted by offset.
+- [x] MIDI generate path still passes.
+- [x] GPIF generate path still passes.
+- [x] No copyrighted fixtures committed.
 
 ## Validation
 
-- [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] Optional local MIDI validation recorded if performed.
-- [ ] Optional local GPIF validation recorded if performed.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] Optional local MIDI validation recorded if performed.
+    - Generated `output/demo-midi-meta/notes.chart`, `song.ini`, and `song.ogg` from `/Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid` with `--offset-ms 900`; `song.ini` contains provided metadata and `notes.chart` contains `Offset = 0.9`.
+- [x] Optional local GPIF validation recorded if performed.
+    - Generated `output/demo-gp-meta/notes.chart`, `song.ini`, and `song.ogg` from `/Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.gp` with `--offset-ms 900`; `song.ini` contains provided metadata and `notes.chart` contains `Offset = 0.9`.
 - [ ] Optional Moonscraper offset validation recorded if performed.
 
 ## Deferred

@@ -164,6 +164,94 @@ describe("parseGenerateArgs", () => {
 		expect(result.options.audioSource).toBeUndefined();
 	});
 
+	it("parses metadata options", () => {
+		const result = parseGenerateArgs([
+			"samples/demo.gp",
+			"--track",
+			"3",
+			"--out",
+			"output/demo",
+			"--name",
+			"Eat My Dust",
+			"--artist",
+			"Dead Pony",
+			"--album",
+			"Ignore This",
+			"--year",
+			"2024",
+			"--genre",
+			"Punk Rock",
+			"--charter",
+			"CHDG",
+		]);
+		expect("help" in result).toBe(false);
+		if ("help" in result) return;
+		expect(result.options.name).toBe("Eat My Dust");
+		expect(result.options.artist).toBe("Dead Pony");
+		expect(result.options.album).toBe("Ignore This");
+		expect(result.options.year).toBe("2024");
+		expect(result.options.genre).toBe("Punk Rock");
+		expect(result.options.charter).toBe("CHDG");
+	});
+
+	it.each(["--name", "--artist", "--album", "--year", "--genre", "--charter"])(
+		"throws when %s value is missing",
+		(option) => {
+			expect(() =>
+				parseGenerateArgs([
+					"samples/demo.mid",
+					"--out",
+					"output/demo",
+					option,
+				]),
+			).toThrow(`${option} requires a value`);
+		},
+	);
+
+	it.each([
+		["900", 900],
+		["1200", 1200],
+		["-250", -250],
+		["0", 0],
+	] as const)("parses valid --offset-ms %s", (rawOffset, expected) => {
+		const result = parseGenerateArgs([
+			"samples/demo.mid",
+			"--out",
+			"output/demo",
+			"--offset-ms",
+			rawOffset,
+		]);
+		expect("help" in result).toBe(false);
+		if ("help" in result) return;
+		expect(result.options.offsetMs).toBe(expected);
+	});
+
+	it.each(["abc", "Infinity", "NaN"])(
+		"throws when --offset-ms value is invalid: %s",
+		(rawOffset) => {
+			expect(() =>
+				parseGenerateArgs([
+					"samples/demo.mid",
+					"--out",
+					"output/demo",
+					"--offset-ms",
+					rawOffset,
+				]),
+			).toThrow(/invalid --offset-ms value/i);
+		},
+	);
+
+	it("throws when --offset-ms value is missing", () => {
+		expect(() =>
+			parseGenerateArgs([
+				"samples/demo.mid",
+				"--out",
+				"output/demo",
+				"--offset-ms",
+			]),
+		).toThrow(/--offset-ms requires/i);
+	});
+
 	it("throws when --audio-source value is missing", () => {
 		expect(() =>
 			parseGenerateArgs([

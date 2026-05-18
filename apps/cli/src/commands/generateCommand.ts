@@ -133,18 +133,29 @@ async function writeGeneratedSongPackage(
 
 	const chart: DrumChart = {
 		resolution: source.resolution,
+		offsetSeconds:
+			options.offsetMs === undefined ? undefined : options.offsetMs / 1000,
 		tempos: source.tempos,
 		timeSignatures: source.timeSignatures,
 		sections: source.sections,
 		expertDrums: deduplicated,
 	};
 
-	const songName = basename(source.filePath, extname(source.filePath));
+	const songName = options.name ?? basename(source.filePath, extname(source.filePath));
+	const artist = options.artist ?? "Unknown Artist";
 	const audioFile = options.audioFile ?? "song.ogg";
-	const chartText = writeChart(chart, { name: songName });
+	const chartText = writeChart(chart, {
+		name: songName,
+		artist,
+		charter: options.charter,
+	});
 	const songIniText = writeSongIni({
 		name: songName,
-		artist: "Unknown Artist",
+		artist,
+		album: options.album,
+		year: options.year,
+		genre: options.genre,
+		charter: options.charter,
 		songFile: audioFile,
 	});
 

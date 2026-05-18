@@ -115,17 +115,37 @@ describe("runGenerateCommand", () => {
 			"song.mp3",
 			"--out",
 			outDir,
+			"--name",
+			"Eat My Dust",
+			"--artist",
+			"Dead Pony",
+			"--album",
+			"Ignore This",
+			"--year",
+			"2024",
+			"--genre",
+			"Punk Rock",
+			"--charter",
+			"CHDG",
+			"--offset-ms",
+			"900",
 		]);
 
 		expect(mocks.normalizeGpDrums).toHaveBeenCalledWith("song.gp", {
 			trackIndex: 3,
 		});
 		expect(mocks.normalizeDrumsFromFile).not.toHaveBeenCalled();
-		expect(await readFile(join(outDir, "song.ini"), "utf8")).toContain(
-			"song = song.ogg",
-		);
+		const songIni = await readFile(join(outDir, "song.ini"), "utf8");
+		expect(songIni).toContain("name = Eat My Dust");
+		expect(songIni).toContain("artist = Dead Pony");
+		expect(songIni).toContain("album = Ignore This");
+		expect(songIni).toContain("year = 2024");
+		expect(songIni).toContain("genre = Punk Rock");
+		expect(songIni).toContain("charter = CHDG");
+		expect(songIni).toContain("song = song.ogg");
 		const chart = await readFile(join(outDir, "notes.chart"), "utf8");
 		expect(chart).toContain("[ExpertDrums]");
+		expect(chart).toContain("Offset = 0.9");
 		expect(chart).toContain("  960 = N 66 0");
 		expect(chart).toContain("  960 = N 35 0");
 		expect(chart).toContain("  1920 = N 68 0");
@@ -161,12 +181,28 @@ describe("runGenerateCommand", () => {
 			unknownNotes: [31],
 		});
 
-		await runGenerateCommand(["song.mid", "--track", "53", "--out", outDir]);
+		await runGenerateCommand([
+			"song.mid",
+			"--track",
+			"53",
+			"--out",
+			outDir,
+			"--name",
+			"MIDI Song",
+			"--artist",
+			"MIDI Artist",
+			"--offset-ms",
+			"-250",
+		]);
 
 		expect(mocks.normalizeDrumsFromFile).toHaveBeenCalledOnce();
 		expect(mocks.normalizeGpDrums).not.toHaveBeenCalled();
-		expect(await readFile(join(outDir, "notes.chart"), "utf8")).toContain(
-			"section Intro",
+		const chart = await readFile(join(outDir, "notes.chart"), "utf8");
+		expect(chart).toContain("Offset = -0.25");
+		expect(chart).toContain("section Intro");
+		expect(chart).toContain("  0 = N 1 0");
+		expect(await readFile(join(outDir, "song.ini"), "utf8")).toContain(
+			"name = MIDI Song",
 		);
 		expect(warnSpy).toHaveBeenCalledWith(
 			"Warning: Unknown MIDI notes skipped: 31",
