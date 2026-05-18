@@ -164,6 +164,18 @@ describe("parseGenerateArgs", () => {
 		expect(result.options.audioSource).toBeUndefined();
 	});
 
+	it("parses --json output flag", () => {
+		const result = parseGenerateArgs([
+			"samples/demo.mid",
+			"--out",
+			"output/demo",
+			"--json",
+		]);
+		expect("help" in result).toBe(false);
+		if ("help" in result) return;
+		expect(result.options.json).toBe(true);
+	});
+
 	it("parses metadata options", () => {
 		const result = parseGenerateArgs([
 			"samples/demo.gp",
@@ -194,19 +206,18 @@ describe("parseGenerateArgs", () => {
 		expect(result.options.charter).toBe("CHDG");
 	});
 
-	it.each(["--name", "--artist", "--album", "--year", "--genre", "--charter"])(
-		"throws when %s value is missing",
-		(option) => {
-			expect(() =>
-				parseGenerateArgs([
-					"samples/demo.mid",
-					"--out",
-					"output/demo",
-					option,
-				]),
-			).toThrow(`${option} requires a value`);
-		},
-	);
+	it.each([
+		"--name",
+		"--artist",
+		"--album",
+		"--year",
+		"--genre",
+		"--charter",
+	])("throws when %s value is missing", (option) => {
+		expect(() =>
+			parseGenerateArgs(["samples/demo.mid", "--out", "output/demo", option]),
+		).toThrow(`${option} requires a value`);
+	});
 
 	it.each([
 		["900", 900],
@@ -226,20 +237,21 @@ describe("parseGenerateArgs", () => {
 		expect(result.options.offsetMs).toBe(expected);
 	});
 
-	it.each(["abc", "Infinity", "NaN"])(
-		"throws when --offset-ms value is invalid: %s",
-		(rawOffset) => {
-			expect(() =>
-				parseGenerateArgs([
-					"samples/demo.mid",
-					"--out",
-					"output/demo",
-					"--offset-ms",
-					rawOffset,
-				]),
-			).toThrow(/invalid --offset-ms value/i);
-		},
-	);
+	it.each([
+		"abc",
+		"Infinity",
+		"NaN",
+	])("throws when --offset-ms value is invalid: %s", (rawOffset) => {
+		expect(() =>
+			parseGenerateArgs([
+				"samples/demo.mid",
+				"--out",
+				"output/demo",
+				"--offset-ms",
+				rawOffset,
+			]),
+		).toThrow(/invalid --offset-ms value/i);
+	});
 
 	it("throws when --offset-ms value is missing", () => {
 		expect(() =>

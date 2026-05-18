@@ -41,6 +41,9 @@ importers:
       '@chdg/midi':
         specifier: workspace:*
         version: link:../../packages/midi
+      '@chdg/project':
+        specifier: workspace:*
+        version: link:../../packages/project
       '@chdg/validation':
         specifier: workspace:*
         version: link:../../packages/validation
@@ -136,6 +139,27 @@ importers:
       midi-file:
         specifier: ^1.2.4
         version: 1.2.4
+
+  packages/project:
+    dependencies:
+      '@chdg/audio':
+        specifier: workspace:*
+        version: link:../audio
+      '@chdg/chart':
+        specifier: workspace:*
+        version: link:../chart
+      '@chdg/core':
+        specifier: workspace:*
+        version: link:../core
+      '@chdg/guitarpro':
+        specifier: workspace:*
+        version: link:../guitarpro
+      '@chdg/mappings':
+        specifier: workspace:*
+        version: link:../mappings
+      '@chdg/midi':
+        specifier: workspace:*
+        version: link:../midi
 
   packages/validation:
     dependencies:

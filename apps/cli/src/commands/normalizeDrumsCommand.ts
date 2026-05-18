@@ -1,108 +1,155 @@
-import { normalizeDrumsFromFile } from "@chdg/midi";
-import type { NormalizeDrumsOptions } from "@chdg/midi";
-import { generalMidiDrums } from "../mappings.js";
+import { isAbsolute, resolve } from "node:path";
+import { normalizeSelection, ProjectServiceError } from "@chdg/project";
+import {
+	consumeJsonFlag,
+	printJsonError,
+	printJsonSuccess,
+} from "../jsonOutput.js";
 
 function parseNormalizeDrumsArgs(
-  rawArgs: string[]
-): { file: string; options: NormalizeDrumsOptions } | { help: true } {
-  const helpFlags = new Set(["--help", "-h"]);
-  if (rawArgs.some((a) => helpFlags.has(a))) {
-    return { help: true };
-  }
+	rawArgs: string[],
+):
+	| { file: string; trackIndex?: number; json: boolean }
+	| { help: true; json: boolean } {
+	const { args, json } = consumeJsonFlag(rawArgs);
+	const helpFlags = new Set(["--help", "-h"]);
+	if (args.some((a) => helpFlags.has(a))) {
+		return { help: true, json };
+	}
 
-  const consumed = new Set<number>();
-  const options: NormalizeDrumsOptions = {};
+	const consumed = new Set<number>();
+	let trackIndex: number | undefined;
 
-  for (let i = 0; i < rawArgs.length; i++) {
-    const arg = rawArgs[i];
-    if (arg === "--track") {
-      const next = rawArgs[++i];
-      if (next === undefined) {
-        throw new Error("--track requires a track index.");
-      }
-      const idx = Number(next);
-      if (!Number.isInteger(idx)) {
-        throw new Error(`Invalid track index: ${next}`);
-      }
-      options.trackIndex = idx;
-      consumed.add(i - 1);
-      consumed.add(i);
-    }
-  }
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		if (arg === "--track") {
+			const next = args[++i];
+			if (next === undefined) {
+				throw new Error("--track requires a track index.");
+			}
+			const idx = Number(next);
+			if (!Number.isInteger(idx)) {
+				throw new Error(`Invalid track index: ${next}`);
+			}
+			trackIndex = idx;
+			consumed.add(i - 1);
+			consumed.add(i);
+		}
+	}
 
-  let fileIndex = -1;
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (!consumed.has(i) && !rawArgs[i].startsWith("-")) {
-      fileIndex = i;
-      break;
-    }
-  }
+	let fileIndex = -1;
+	for (let i = 0; i < args.length; i++) {
+		if (!consumed.has(i) && !args[i].startsWith("-")) {
+			fileIndex = i;
+			break;
+		}
+	}
 
-  if (fileIndex === -1) {
-    throw new Error("Missing MIDI file path.");
-  }
+	if (fileIndex === -1) {
+		throw new Error("Missing MIDI file path.");
+	}
 
-  const file = rawArgs[fileIndex];
+	const file = resolveInputPath(args[fileIndex]);
 
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (!consumed.has(i) && i !== fileIndex) {
-      const arg = rawArgs[i];
-      if (arg.startsWith("-")) {
-        throw new Error(`Unknown option: ${arg}`);
-      }
-    }
-  }
+	for (let i = 0; i < args.length; i++) {
+		if (!consumed.has(i) && i !== fileIndex) {
+			const arg = args[i];
+			if (arg.startsWith("-")) {
+				throw new Error(`Unknown option: ${arg}`);
+			}
+			throw new Error(`Unexpected argument: ${arg}`);
+		}
+	}
 
-  return { file, options };
+	return { file, trackIndex, json };
 }
 
-export function runNormalizeDrumsCommand(rawArgs: string[]): Promise<void> {
-  let parsed: ReturnType<typeof parseNormalizeDrumsArgs>;
-  try {
-    parsed = parseNormalizeDrumsArgs(rawArgs);
-  } catch (err) {
-    console.error((err as Error).message);
-    throw new Error("ARG_PARSE_ERROR");
-  }
+export async function runNormalizeDrumsCommand(
+	rawArgs: string[],
+): Promise<void> {
+	let parsed: ReturnType<typeof parseNormalizeDrumsArgs>;
+	try {
+		parsed = parseNormalizeDrumsArgs(rawArgs);
+	} catch (err) {
+		const { json } = consumeJsonFlag(rawArgs);
+		if (json) {
+			printJsonError("ARG_PARSE_ERROR", (err as Error).message);
+			throw new Error("COMMAND_FAILED");
+		}
 
-  if ("help" in parsed) {
-    throw new Error("HELP_REQUESTED");
-  }
+		console.error((err as Error).message);
+		throw new Error("ARG_PARSE_ERROR");
+	}
 
-  const { file, options } = parsed;
+	if ("help" in parsed) {
+		throw new Error("HELP_REQUESTED");
+	}
 
-  return normalizeDrumsFromFile(file, generalMidiDrums, options).then((result) => {
-    console.log("CHDG Drum Normalization");
-    console.log("=======================");
-    console.log(`File: ${file}`);
-    const chInfo = result.track.channel !== undefined ? ` (ch ${result.track.channel})` : "";
-    console.log(`Track: [${result.track.index}] "${result.track.name}"${chInfo}`);
-    console.log(`Hits: ${result.hits.length}`);
-    console.log(
-      `Unknown Notes: ${result.unknownNotes.length > 0 ? result.unknownNotes.join(", ") : "none"}`
-    );
-    console.log();
+	try {
+		const result = await normalizeSelection({
+			sourcePath: parsed.file,
+			trackIndex: parsed.trackIndex,
+		});
 
-    const pieceCounts = new Map<string, number>();
-    for (const hit of result.hits) {
-      pieceCounts.set(hit.piece, (pieceCounts.get(hit.piece) ?? 0) + 1);
-    }
-    console.log("Piece Summary:");
-    for (const [piece, count] of pieceCounts) {
-      console.log(`  ${piece}: ${count}`);
-    }
-    console.log();
+		if (parsed.json) {
+			printJsonSuccess(result, result.issues);
+			return;
+		}
 
-    console.log("First Hits:");
-    const firstHits = result.hits.slice(0, 10);
-    for (const hit of firstHits) {
-      const midiNote = "midiNote" in hit.source ? hit.source.midiNote : "unknown";
-      console.log(
-        `  tick ${hit.tick}: ${hit.piece} vel ${hit.velocity} midi ${midiNote}`
-      );
-    }
-    if (result.hits.length > 10) {
-      console.log(`  ... and ${result.hits.length - 10} more`);
-    }
-  });
+		console.log("CHDG Drum Normalization");
+		console.log("=======================");
+		console.log(`File: ${result.sourcePath}`);
+		console.log(`Track: [${result.selectedTrack}]`);
+		console.log(`Hits: ${result.hitCount}`);
+		console.log();
+
+		console.log("Piece Summary:");
+		for (const [piece, count] of Object.entries(result.pieceSummary)) {
+			console.log(`  ${piece}: ${count}`);
+		}
+		console.log();
+
+		console.log("First Hits:");
+		for (const hit of result.firstHits) {
+			const midiNote =
+				"midiNote" in hit.source ? hit.source.midiNote : "unknown";
+			console.log(
+				`  tick ${hit.tick}: ${hit.piece} vel ${hit.velocity} midi ${midiNote}`,
+			);
+		}
+		if (result.hitCount > result.firstHits.length) {
+			console.log(
+				`  ... and ${result.hitCount - result.firstHits.length} more`,
+			);
+		}
+
+		if (result.issues.length > 0) {
+			console.log();
+			console.log("Warnings/Issues:");
+			for (const issue of result.issues) {
+				console.log(`  - [${issue.severity}] ${issue.code}: ${issue.message}`);
+			}
+		}
+	} catch (err) {
+		if (parsed.json) {
+			const error =
+				err instanceof ProjectServiceError
+					? err
+					: new ProjectServiceError(
+							"NORMALIZE_SELECTION_FAILED",
+							(err as Error).message,
+						);
+			printJsonError(error.code, error.message, error.issues);
+			throw new Error("COMMAND_FAILED");
+		}
+
+		throw err;
+	}
+}
+
+function resolveInputPath(filePath: string): string {
+	if (isAbsolute(filePath)) {
+		return filePath;
+	}
+	return resolve(process.env.INIT_CWD ?? process.cwd(), filePath);
 }
