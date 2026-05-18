@@ -1,0 +1,40 @@
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Primary navigation">
+    <div class="brand">
+      <div class="brand-mark">CHDG</div>
+      <div class="brand-subtitle">Clone Hero Drum Generator</div>
+    </div>
+
+    <nav class="nav-list">
+      @for (item of navItems; track item.path) {
+        <a class="nav-item" [routerLink]="item.path" routerLinkActive="active">
+          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="info-icon" aria-hidden="true">ⓘ</span>
+      <span>v{{ appVersion() }}</span>
+      <span class="badge">Beta</span>
+    </div>
+  </aside>
+
+  <main class="content-shell">
+    <header class="topbar">
+      <div></div>
+      <div class="status-group">
+        <div class="status-pill" [class.unavailable]="!health().ok">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>{{ health().ok ? "Backend Connected" : "Backend Unavailable" }}</span>
+        </div>
+        <div class="version-pill">v{{ appVersion() }}</div>
+      </div>
+    </header>
+
+    <section class="content-panel">
+      <router-outlet />
+    </section>
+  </main>
+</div>
