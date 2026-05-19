@@ -21,6 +21,7 @@
 - [x] Implement in-memory New Project, Inspect Source, Track Selection, and Generate workflow screens.
 - [x] Preserve Electron security: `contextIsolation: true`, `nodeIntegration: false`, explicit preload bridge.
 - [x] Restrict source/audio/output paths to files/folders selected through desktop pickers in the current session.
+- [x] Build Electron preload as CommonJS `dist/electron/preload.cjs` and load that file from `BrowserWindow`.
 
 ## Bridge / IPC names
 
@@ -48,6 +49,12 @@ chdg:generate-package
 shell:open-output-folder
 ```
 
+## Electron preload runtime behavior
+
+- [x] Source preload file uses `.cts` so TypeScript emits `dist/electron/preload.cjs`.
+- [x] `BrowserWindow` points to `preload.cjs`, avoiding top-level ESM `import` syntax in the sandboxed preload runtime.
+- [x] Build-output smoke confirmed `dist/electron/preload.cjs` exists and contains no top-level ESM `import` statement.
+
 ## Path allowlist behavior
 
 - [x] `inspectSource` requires `sourcePath` selected through `pickSourceFile()`.
@@ -74,7 +81,7 @@ shell:open-output-folder
 
 ## Manual validation note
 
-Manual GUI smoke validation was not completed in this agent environment. Build/typecheck/test evidence is recorded for PR review.
+Manual GUI interaction with DevTools/pickers was not completed in this agent environment. A bounded `pnpm --filter @chdg/desktop dev` launch smoke completed without the previous preload error appearing in captured logs.
 
 ## Deferred
 

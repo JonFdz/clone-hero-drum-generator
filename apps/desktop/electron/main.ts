@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const rendererIndex = path.join(__dirname, "../renderer/browser/index.html");
-const preloadScript = path.join(__dirname, "preload.js");
+const preloadScript = path.join(__dirname, "preload.cjs");
 const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
