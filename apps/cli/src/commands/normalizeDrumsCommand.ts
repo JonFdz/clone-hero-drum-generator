@@ -5,11 +5,12 @@ import {
 	printJsonError,
 	printJsonSuccess,
 } from "../jsonOutput.js";
+import { parseTrackIndexes } from "../generateArgs.js";
 
 function parseNormalizeDrumsArgs(
 	rawArgs: string[],
 ):
-	| { file: string; trackIndex?: number; json: boolean }
+	| { file: string; trackIndex?: number; trackIndexes?: number[]; json: boolean }
 	| { help: true; json: boolean } {
 	const { args, json } = consumeJsonFlag(rawArgs);
 	const helpFlags = new Set(["--help", "-h"]);
@@ -19,6 +20,7 @@ function parseNormalizeDrumsArgs(
 
 	const consumed = new Set<number>();
 	let trackIndex: number | undefined;
+	let trackIndexes: number[] | undefined;
 
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
@@ -34,7 +36,19 @@ function parseNormalizeDrumsArgs(
 			trackIndex = idx;
 			consumed.add(i - 1);
 			consumed.add(i);
+		} else if (arg === "--tracks") {
+			const next = args[++i];
+			if (next === undefined) {
+				throw new Error("--tracks requires comma-separated track indexes.");
+			}
+			trackIndexes = parseTrackIndexes(next);
+			consumed.add(i - 1);
+			consumed.add(i);
 		}
+	}
+
+	if (trackIndex !== undefined && trackIndexes !== undefined) {
+		throw new Error("Use either --track <index> or --tracks <csv>, not both.");
 	}
 
 	let fileIndex = -1;
@@ -61,7 +75,7 @@ function parseNormalizeDrumsArgs(
 		}
 	}
 
-	return { file, trackIndex, json };
+	return { file, trackIndex, trackIndexes, json };
 }
 
 export async function runNormalizeDrumsCommand(
@@ -89,6 +103,7 @@ export async function runNormalizeDrumsCommand(
 		const result = await normalizeSelection({
 			sourcePath: parsed.file,
 			trackIndex: parsed.trackIndex,
+			trackIndexes: parsed.trackIndexes,
 		});
 
 		if (parsed.json) {
@@ -99,8 +114,20 @@ export async function runNormalizeDrumsCommand(
 		console.log("CHDG Drum Normalization");
 		console.log("=======================");
 		console.log(`File: ${result.sourcePath}`);
-		console.log(`Track: [${result.selectedTrack}]`);
+		console.log(
+			result.selectedTracks.length > 1
+				? `Selected tracks: ${result.selectedTracks.join(", ")}`
+				: `Track: [${result.selectedTrack}]`,
+		);
 		console.log(`Hits: ${result.hitCount}`);
+		if (result.mergeSummary) {
+			console.log(`Input hits: ${result.mergeSummary.inputHitCount}`);
+			console.log(`Merged hits: ${result.mergeSummary.mergedHitCount}`);
+			console.log(`Duplicates removed: ${result.mergeSummary.duplicateHitCount}`);
+			console.log(
+				`Impossible hand chord warnings: ${result.mergeSummary.impossibleChordCount}`,
+			);
+		}
 		console.log();
 
 		console.log("Piece Summary:");

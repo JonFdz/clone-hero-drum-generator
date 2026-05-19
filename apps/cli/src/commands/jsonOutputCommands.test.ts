@@ -85,6 +85,7 @@ describe("CLI command JSON mode", () => {
 			sourceKind: "midi",
 			sourcePath: "demo.mid",
 			selectedTrack: 53,
+			selectedTracks: [53],
 			hitCount: 10,
 			pieceSummary: { kick: 4 },
 			firstHits: [],
@@ -102,6 +103,7 @@ describe("CLI command JSON mode", () => {
 			sourceKind: "gpif",
 			sourcePath: "/abs/demo.gp",
 			selectedTrack: 3,
+			selectedTracks: [3],
 			hitCount: 5,
 			pieceSummary: { snare: 2 },
 			firstHits: [],
@@ -117,6 +119,40 @@ describe("CLI command JSON mode", () => {
 		const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
 		expect(payload.ok).toBe(true);
 		expect(payload.data.sourceKind).toBe("gpif");
+	});
+
+	it("normalize-gp-drums --tracks --json outputs parseable multi-track JSON", async () => {
+		mocks.normalizeSelection.mockResolvedValue({
+			sourceKind: "gpif",
+			sourcePath: "/abs/demo.gp",
+			selectedTrack: 3,
+			selectedTracks: [3, 10],
+			mergeSummary: {
+				selectedTracks: [3, 10],
+				sourceTrackCount: 2,
+				inputHitCount: 3,
+				mergedHitCount: 2,
+				deduplicatedHitCount: 1,
+				duplicateHitCount: 1,
+				impossibleChordCount: 0,
+				issues: [],
+			},
+			hitCount: 2,
+			pieceSummary: { kick: 1, snare: 1 },
+			firstHits: [],
+			issues: [],
+		});
+
+		await runNormalizeGpDrumsCommand([
+			"/abs/demo.gp",
+			"--tracks",
+			"3,10",
+			"--json",
+		]);
+		const payload = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+		expect(payload.ok).toBe(true);
+		expect(payload.data.selectedTracks).toEqual([3, 10]);
+		expect(payload.data.mergeSummary.duplicateHitCount).toBe(1);
 	});
 
 	it("inspect-midi --json rejects extra positional args as parseable JSON", async () => {

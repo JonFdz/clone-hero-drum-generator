@@ -8,11 +8,12 @@ Usage:
   chdg inspect-midi [options] <file.mid>
   chdg inspect-gp [options] <file.gp>
   chdg normalize-drums [options] <file.mid>
-  chdg normalize-gp-drums [options] <file.gp> --track <index>
+  chdg normalize-gp-drums [options] <file.gp> --track <index>|--tracks <csv>
   chdg generate [options] <file.mid|file.gp> --out <output-dir>
 
 Options:
   --track <index>          Select a specific track (for generate, inspect-midi, normalize-drums, normalize-gp-drums)
+  --tracks <csv>           Select multiple tracks for generate, normalize-drums, normalize-gp-drums (example: 3,10)
   --drums-only             Show only strong drum tracks
   --out <dir>              Output directory for generate command
   --audio <file>           Final audio filename for song.ini (default: song.ogg)

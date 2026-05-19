@@ -5,15 +5,17 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import type { DrumHit } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
-import { issue, toProjectServiceError } from "./issues.js";
+import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
+import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
-import type { NormalizationPreview } from "./types.js";
+import type { NormalizationPreview, ProjectIssue } from "./types.js";
 
 const generalMidiDrums = generalMidiDrumsUntyped as MidiDrumPieceMap;
 
 export type NormalizeSelectionInput = {
 	sourcePath: string;
 	trackIndex?: number;
+	trackIndexes?: number[];
 };
 
 export async function normalizeSelection(
@@ -22,79 +24,137 @@ export async function normalizeSelection(
 	const sourceKind = detectSourceKind(input.sourcePath);
 
 	try {
-		if (sourceKind === "midi") {
-			const result = await normalizeDrumsFromFile(
-				input.sourcePath,
-				generalMidiDrums,
-				{
-					trackIndex: input.trackIndex,
-				},
-			);
+		const requestedTracks = resolveRequestedTracks(input);
 
-			return {
+		if (sourceKind === "midi") {
+			const results = await Promise.all(
+				(requestedTracks ?? [undefined]).map((trackIndex) =>
+					normalizeDrumsFromFile(input.sourcePath, generalMidiDrums, {
+						trackIndex,
+					}),
+				),
+			);
+			const selectedTracks = results.map((result) => result.track.index);
+			const sourceIssues = results.flatMap((result) =>
+				result.unknownNotes.length > 0
+					? [
+							issue(
+								"warning",
+								"UNKNOWN_MIDI_NOTES",
+								"Unknown MIDI notes were found during normalization.",
+								{
+									trackIndex: result.track.index,
+									notes: result.unknownNotes,
+								},
+							),
+						]
+					: [],
+			);
+			return toPreview({
 				sourceKind,
 				sourcePath: input.sourcePath,
-				selectedTrack: result.track.index,
-				hitCount: result.hits.length,
-				pieceSummary: summarizePieces(result.hits),
-				firstHits: result.hits.slice(0, 10).map(toHitPreview),
-				issues:
-					result.unknownNotes.length > 0
-						? [
-								issue(
-									"warning",
-									"UNKNOWN_MIDI_NOTES",
-									"Unknown MIDI notes were found during normalization.",
-									{ notes: result.unknownNotes },
-								),
-							]
-						: [],
-			};
+				selectedTracks,
+				hits: results.flatMap((result) => result.hits),
+				sourceIssues,
+				includeMergeSummary: selectedTracks.length > 1,
+			});
 		}
 
-		if (input.trackIndex === undefined) {
+		if (requestedTracks === undefined) {
 			throw new Error(
-				"Missing required --track <index> option for GPIF normalization.",
+				"Missing required --track <index> or --tracks <csv> option for GPIF normalization.",
 			);
 		}
 
-		const result = await normalizeGpDrums(input.sourcePath, {
-			trackIndex: input.trackIndex,
-		});
+		const results = await Promise.all(
+			requestedTracks.map((trackIndex) =>
+				normalizeGpDrums(input.sourcePath, { trackIndex }),
+			),
+		);
+		const selectedTracks = results.map((result) => result.trackIndex);
+		const sourceIssues = results.flatMap((result) => [
+			...result.warnings.map((warning) =>
+				issue("warning", "GPIF_WARNING", warning, {
+					trackIndex: result.trackIndex,
+				}),
+			),
+			...result.unhandled.map((item) =>
+				issue("info", "GPIF_UNHANDLED", item, {
+					trackIndex: result.trackIndex,
+				}),
+			),
+			...result.unknownArticulations.map((item) =>
+				issue(
+					"warning",
+					"UNKNOWN_GPIF_ARTICULATION",
+					`Unknown articulation: ${item.rawArticulation}`,
+					{
+						trackIndex: result.trackIndex,
+						rawArticulation: item.rawArticulation,
+						count: item.count,
+						measureIndex: item.measureIndex,
+						beatIndex: item.beatIndex,
+						noteIndex: item.noteIndex,
+					},
+				),
+			),
+		]);
 
-		return {
+		return toPreview({
 			sourceKind,
 			sourcePath: input.sourcePath,
-			selectedTrack: result.trackIndex,
-			hitCount: result.hits.length,
-			pieceSummary: summarizePieces(result.hits),
-			firstHits: result.hits.slice(0, 10).map(toHitPreview),
-			issues: [
-				...result.warnings.map((warning) =>
-					issue("warning", "GPIF_WARNING", warning),
-				),
-				...result.unhandled.map((item) =>
-					issue("info", "GPIF_UNHANDLED", item),
-				),
-				...result.unknownArticulations.map((item) =>
-					issue(
-						"warning",
-						"UNKNOWN_GPIF_ARTICULATION",
-						`Unknown articulation: ${item.rawArticulation}`,
-						{
-							rawArticulation: item.rawArticulation,
-							count: item.count,
-							measureIndex: item.measureIndex,
-							beatIndex: item.beatIndex,
-							noteIndex: item.noteIndex,
-						},
-					),
-				),
-			],
-		};
+			selectedTracks,
+			hits: results.flatMap((result) => result.hits),
+			sourceIssues,
+			includeMergeSummary: selectedTracks.length > 1,
+		});
 	} catch (error) {
 		throw toProjectServiceError(error, "NORMALIZE_SELECTION_FAILED");
 	}
+}
+
+function resolveRequestedTracks(input: NormalizeSelectionInput): number[] | undefined {
+	if (input.trackIndex !== undefined && input.trackIndexes !== undefined) {
+		throw new ProjectServiceError(
+			"TRACK_SELECTION_CONFLICT",
+			"Use either --track <index> or --tracks <csv>, not both.",
+		);
+	}
+	if (input.trackIndexes !== undefined) {
+		if (input.trackIndexes.length === 0) {
+			throw new ProjectServiceError(
+				"MISSING_TRACK_INDEX",
+				"--tracks requires at least one track index.",
+			);
+		}
+		return input.trackIndexes;
+	}
+	return input.trackIndex === undefined ? undefined : [input.trackIndex];
+}
+
+function toPreview(input: {
+	sourceKind: NormalizationPreview["sourceKind"];
+	sourcePath: string;
+	selectedTracks: number[];
+	hits: DrumHit[];
+	sourceIssues: ProjectIssue[];
+	includeMergeSummary: boolean;
+}): NormalizationPreview {
+	const merged = mergeDrumHits(input.hits, input.selectedTracks);
+	const issues = [...input.sourceIssues, ...merged.summary.issues];
+	return {
+		sourceKind: input.sourceKind,
+		sourcePath: input.sourcePath,
+		selectedTrack: input.selectedTracks[0],
+		selectedTracks: input.selectedTracks,
+		hitCount: merged.hits.length,
+		pieceSummary: summarizePieces(merged.hits),
+		firstHits: merged.hits.slice(0, 10).map(toHitPreview),
+		mergeSummary: input.includeMergeSummary
+			? { ...merged.summary, issues: merged.summary.issues }
+			: undefined,
+		issues,
+	};
 }
 
 function summarizePieces(hits: DrumHit[]): Record<string, number> {

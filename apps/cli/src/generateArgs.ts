@@ -9,6 +9,7 @@ export type SongMetadataOptions = {
 
 export type GenerateOptions = SongMetadataOptions & {
 	trackIndex?: number;
+	trackIndexes?: number[];
 	outDir: string;
 	audioFile?: string;
 	audioSource?: string;
@@ -56,6 +57,11 @@ export function parseGenerateArgs(
 				throw new Error(`Invalid track index: ${next}`);
 			}
 			options.trackIndex = idx;
+			consumed.add(i - 1);
+			consumed.add(i);
+		} else if (arg === "--tracks") {
+			const next = requireOptionValue("--tracks", rawArgs[++i]);
+			options.trackIndexes = parseTrackIndexes(next);
 			consumed.add(i - 1);
 			consumed.add(i);
 		} else if (arg === "--out") {
@@ -120,9 +126,39 @@ export function parseGenerateArgs(
 		}
 	}
 
+	if (options.trackIndex !== undefined && options.trackIndexes !== undefined) {
+		throw new Error("Use either --track <index> or --tracks <csv>, not both.");
+	}
+
 	if (!options.outDir) {
 		throw new Error("--out <output-dir> is required.");
 	}
 
 	return { file, options };
+}
+
+export function parseTrackIndexes(rawValue: string): number[] {
+	const parts = rawValue.split(",");
+	if (parts.length === 0 || parts.some((part) => part.trim() === "")) {
+		throw new Error("--tracks must contain comma-separated track indexes without empty values.");
+	}
+
+	const indexes = parts.map((part) => {
+		const trimmed = part.trim();
+		const index = Number(trimmed);
+		if (!Number.isInteger(index)) {
+			throw new Error(`Invalid --tracks value: ${trimmed}`);
+		}
+		return index;
+	});
+
+	const seen = new Set<number>();
+	for (const index of indexes) {
+		if (seen.has(index)) {
+			throw new Error(`Duplicate --tracks value: ${index}`);
+		}
+		seen.add(index);
+	}
+
+	return indexes;
 }

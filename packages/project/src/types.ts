@@ -48,13 +48,26 @@ export type NormalizationHitPreview = {
 	source: DrumHit["source"];
 };
 
+export type MultiTrackMergeSummary = {
+	selectedTracks: number[];
+	sourceTrackCount: number;
+	inputHitCount: number;
+	mergedHitCount: number;
+	deduplicatedHitCount: number;
+	duplicateHitCount: number;
+	impossibleChordCount: number;
+	issues: ProjectIssue[];
+};
+
 export type NormalizationPreview = {
 	sourceKind: SourceKind;
 	sourcePath: string;
 	selectedTrack: number;
+	selectedTracks: number[];
 	hitCount: number;
 	pieceSummary: Record<string, number>;
 	firstHits: NormalizationHitPreview[];
+	mergeSummary?: MultiTrackMergeSummary;
 	issues: ProjectIssue[];
 };
 
@@ -71,6 +84,7 @@ export type GeneratePackageInput = SongMetadataInput & {
 	sourcePath: string;
 	outDir: string;
 	trackIndex?: number;
+	trackIndexes?: number[];
 	audioFile?: string;
 	audioSource?: string;
 	offsetMs?: number;
@@ -80,6 +94,8 @@ export type GeneratePackageResult = {
 	sourceKind: SourceKind;
 	sourcePath: string;
 	selectedTrack: number;
+	selectedTracks: number[];
+	mergeSummary?: MultiTrackMergeSummary;
 	outputDir: string;
 	hitCount: number;
 	mappedNoteCount: number;
