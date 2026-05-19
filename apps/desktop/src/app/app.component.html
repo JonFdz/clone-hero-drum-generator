@@ -23,7 +23,25 @@
 
   <main class="content-shell">
     <header class="topbar">
-      <div></div>
+      <div class="project-actions">
+        @if (project().projectFilePath) {
+          <span class="project-name">{{ project().projectName }}{{ project().dirty ? ' · Modified' : '' }}</span>
+        }
+        <button class="button secondary small" type="button" (click)="openProject()">Open</button>
+        @if (project().projectFilePath) {
+          <button class="button secondary small" type="button" (click)="saveProject()">Save</button>
+        }
+        <button class="button secondary small" type="button" (click)="saveProjectAs()">Save As</button>
+        @if (project().outputStatus === 'needs-regenerate') {
+          <span class="pill warning">Needs Regenerate</span>
+        }
+        @if (project().outputStatus === 'generated') {
+          <span class="pill success">Generated</span>
+        }
+        @if (project().outputStatus === 'failed') {
+          <span class="pill danger">Failed</span>
+        }
+      </div>
       <div class="status-group">
         <div class="status-pill" [class.unavailable]="!health().ok">
           <span class="status-dot" aria-hidden="true"></span>

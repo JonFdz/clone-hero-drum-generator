@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { DesktopGenerateState } from "./desktop-generate-state.service";
 import {
@@ -83,5 +85,26 @@ describe("desktop generate state helpers", () => {
 				{ index: 10, noteCount: 8, strength: "strong", role: "drums" },
 			]),
 		).toEqual([3]);
+	});
+});
+
+describe("desktop generate state source regressions", () => {
+	const source = readFileSync(
+		join(
+			process.cwd(),
+			"apps/desktop/src/app/services/desktop-generate-state.service.ts",
+		),
+		"utf8",
+	);
+
+	it("metadata changes use markNeedsRegenerate instead of markDirty", () => {
+		expect(source).toContain("setMetadata(metadata: DesktopMetadata): void {");
+		expect(source).toContain("this.projectState.markNeedsRegenerate();");
+		expect(source).not.toContain("setMetadata(metadata: DesktopMetadata): void {\n\t\tthis.patch({ metadata: { ...this.state().metadata, ...metadata } });\n\t\tthis.projectState.markDirty();");
+	});
+
+	it("preserves outputFiles and lastGeneratedAt in project payload rebuild", () => {
+		expect(source).toContain("lastGeneratedAt: state.lastGeneratedAt");
+		expect(source).toContain(": state.outputFiles");
 	});
 });

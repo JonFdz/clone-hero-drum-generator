@@ -1,4 +1,4 @@
-import { Injectable, computed, signal } from "@angular/core";
+import { Injectable, computed, inject, signal } from "@angular/core";
 import type {
 	GeneratePackageInput,
 	GeneratePackageResult,
@@ -14,6 +14,7 @@ import {
 	detectDesktopSourceKind,
 	validateGenerateState,
 } from "./desktop-generate-model";
+import { DesktopProjectStateService } from "./desktop-project-state.service";
 
 export type DesktopMetadata = {
 	name?: string;
@@ -46,6 +47,12 @@ export type DesktopGenerateState = {
 	selectedTracks: number[];
 	normalizationPreview?: NormalizationPreview;
 	generationResult?: GeneratePackageResult;
+	lastGeneratedAt?: string;
+	outputFiles?: {
+		chart?: string;
+		songIni?: string;
+		songOgg?: string;
+	};
 	issues: ProjectIssue[];
 	logs: string[];
 	status: DesktopGenerateStatus;
@@ -68,6 +75,11 @@ const initialState: DesktopGenerateState = {
 @Injectable({ providedIn: "root" })
 export class DesktopGenerateStateService {
 	readonly state = signal<DesktopGenerateState>(initialState);
+	private readonly projectState: DesktopProjectStateService;
+
+	constructor(projectState: DesktopProjectStateService = inject(DesktopProjectStateService)) {
+		this.projectState = projectState;
+	}
 
 	readonly validation = computed(() => validateGenerateState(this.state()));
 	readonly trackCandidates = computed(
@@ -87,6 +99,7 @@ export class DesktopGenerateStateService {
 			errorMessage: undefined,
 			status: sourceKind ? "ready-to-inspect" : "error",
 		});
+		this.projectState.markNeedsRegenerate();
 		if (!sourceKind) {
 			this.addIssue(
 				"error",
@@ -98,20 +111,24 @@ export class DesktopGenerateStateService {
 
 	setAudioPath(audioPath: string): void {
 		this.patch({ audioPath });
+		this.projectState.markNeedsRegenerate();
 	}
 
 	setOutputDir(outputDir: string): void {
 		this.patch({ outputDir });
+		this.projectState.markNeedsRegenerate();
 	}
 
 	setMetadata(metadata: DesktopMetadata): void {
 		this.patch({ metadata: { ...this.state().metadata, ...metadata } });
+		this.projectState.markNeedsRegenerate();
 	}
 
 	setOffsetMsInput(value: string): void {
 		const trimmed = value.trim();
 		if (trimmed.length === 0) {
 			this.patch({ offsetMs: undefined });
+			this.projectState.markNeedsRegenerate();
 			return;
 		}
 
@@ -125,6 +142,7 @@ export class DesktopGenerateStateService {
 		}
 
 		this.patch({ offsetMs: parsed, errorMessage: undefined });
+		this.projectState.markNeedsRegenerate();
 	}
 
 	startInspecting(): void {
@@ -166,10 +184,12 @@ export class DesktopGenerateStateService {
 			normalizationPreview: undefined,
 			generationResult: undefined,
 		});
+		this.projectState.markNeedsRegenerate();
 	}
 
 	setSelectedTracks(selectedTracks: number[]): void {
 		this.patch({ selectedTracks: [...selectedTracks].sort((a, b) => a - b) });
+		this.projectState.markNeedsRegenerate();
 	}
 
 	startNormalizing(): void {
@@ -209,16 +229,24 @@ export class DesktopGenerateStateService {
 	applyGeneration(envelope: JsonEnvelope<GeneratePackageResult>): void {
 		if (!envelope.ok) {
 			this.applyError(envelope.error.message, envelope.issues);
+			this.projectState.markFailed();
 			return;
 		}
 
 		this.patch({
 			generationResult: envelope.data,
+			lastGeneratedAt: new Date().toISOString(),
+			outputFiles: {
+				chart: envelope.data.files.chart,
+				songIni: envelope.data.files.songIni,
+				songOgg: envelope.data.files.songOgg,
+			},
 			issues: envelope.issues,
 			status: "generated",
 			logs: appendLog(this.state().logs, "Generation completed successfully."),
 			errorMessage: undefined,
 		});
+		this.projectState.markGenerated();
 	}
 
 	applyError(message: string, issues: ProjectIssue[] = []): void {
@@ -228,6 +256,9 @@ export class DesktopGenerateStateService {
 			status: "error",
 			logs: appendLog(this.state().logs, `Error: ${message}`),
 		});
+		if (this.state().status === "generating") {
+			this.projectState.markFailed();
+		}
 	}
 
 	buildNormalizeInput(): {
@@ -272,6 +303,68 @@ export class DesktopGenerateStateService {
 
 	reset(): void {
 		this.state.set(initialState);
+	}
+
+	loadProjectState(payload: {
+		sourcePath?: string;
+		audioPath?: string;
+		outputDir?: string;
+		sourceKind?: SourceKind;
+		selectedTracks: number[];
+		metadata: DesktopMetadata;
+		offsetMs?: number;
+		generationResult?: GeneratePackageResult;
+		lastGeneratedAt?: string;
+		outputFiles?: {
+			chart?: string;
+			songIni?: string;
+			songOgg?: string;
+		};
+	}): void {
+		const sourceKind = payload.sourceKind ?? (payload.sourcePath ? detectDesktopSourceKind(payload.sourcePath) : undefined);
+		this.state.set({
+			...initialState,
+			sourcePath: payload.sourcePath,
+			audioPath: payload.audioPath,
+			outputDir: payload.outputDir,
+			sourceKind,
+			selectedTracks: payload.selectedTracks,
+			metadata: payload.metadata,
+			offsetMs: payload.offsetMs,
+			generationResult: payload.generationResult,
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			status:
+				payload.generationResult || payload.outputFiles
+					? "generated"
+					: sourceKind
+						? "ready-to-inspect"
+						: "idle",
+		});
+	}
+
+	buildProjectStatePayload(projectName: string, projectFilePath?: string): import("./desktop-bridge.service").ProjectStatePayload {
+		const state = this.state();
+		return {
+			projectName,
+			projectFilePath,
+			sourcePath: state.sourcePath,
+			audioPath: state.audioPath,
+			outputDir: state.outputDir,
+			sourceKind: state.sourceKind,
+			selectedTracks: state.selectedTracks,
+			metadata: state.metadata,
+			offsetMs: state.offsetMs,
+			generationStatus: this.projectState.outputStatus(),
+			lastGeneratedAt: state.lastGeneratedAt,
+			outputFiles: state.generationResult
+				? {
+						chart: state.generationResult.files.chart,
+						songIni: state.generationResult.files.songIni,
+						songOgg: state.generationResult.files.songOgg,
+				  }
+				: state.outputFiles,
+		};
 	}
 
 	private patch(patch: Partial<DesktopGenerateState>): void {

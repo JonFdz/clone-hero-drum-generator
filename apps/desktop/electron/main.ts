@@ -13,8 +13,35 @@ import {
 	type SourceInspectionResult,
 	type NormalizationPreview,
 	type GeneratePackageResult,
+	type ChdgProjectFile,
+	type ChdgOutputStatus,
+	type RecentProject,
 } from "@chdg/project";
 import { addAllowedPath, assertAllowedPath } from "./pathAllowlist.js";
+import {
+	readProjectFile,
+	writeProjectFile,
+	buildProjectFileFromState,
+	getDefaultProjectFilePath,
+	getDefaultOutputDir,
+} from "./projectFileService.js";
+import {
+	readSettings,
+	writeSettings,
+	readRecentProjects,
+	addRecentProject,
+	removeRecentProject,
+} from "./settingsService.js";
+import { testFfmpeg } from "./ffmpegDiagnostic.js";
+import {
+	addAllowedProjectFile,
+	assertAllowedProjectFile,
+	resolveAllowedOpenProjectFile,
+} from "./projectFileAccess.js";
+import {
+	assertCreateProjectName,
+	optionalSelectedTracks,
+} from "./projectPayloadValidation.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +52,7 @@ const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
 const allowedOutputFolders = new Set<string>();
+const allowedProjectFiles = new Set<string>();
 
 type DesktopHealthStatus = {
 	ok: boolean;
@@ -44,6 +72,37 @@ type PickedPath = {
 type DesktopGeneratePackageInput = GeneratePackageInput & {
 	audioSource: string;
 	overwriteKnownFiles?: boolean;
+};
+
+type ProjectStatePayload = {
+	projectName: string;
+	projectFilePath?: string;
+	sourcePath?: string;
+	audioPath?: string;
+	outputDir?: string;
+	sourceKind?: "midi" | "gpif";
+	selectedTracks: number[];
+	metadata: {
+		name?: string;
+		artist?: string;
+		album?: string;
+		year?: string;
+		genre?: string;
+		charter?: string;
+	};
+	offsetMs?: number;
+	generationStatus: ChdgOutputStatus;
+	lastGeneratedAt?: string;
+	outputFiles?: {
+		chart?: string;
+		songIni?: string;
+		songOgg?: string;
+	};
+};
+
+type SaveProjectResult = {
+	filePath: string;
+	project: ChdgProjectFile;
 };
 
 function createWindow(): void {
@@ -223,6 +282,214 @@ app.whenReady().then(() => {
 					throw new DesktopIpcError("OPEN_OUTPUT_FOLDER_FAILED", errorMessage);
 				}
 				return { opened: true as const };
+			});
+		},
+	);
+
+	// Project persistence handlers
+	ipcMain.handle(
+		"dialog:save-project-file",
+		async (_event, projectName: unknown, currentPath?: unknown): Promise<PickedPath | null> => {
+			const name = typeof projectName === "string" && projectName.trim().length > 0 ? projectName.trim() : "Untitled";
+			const defaultPath = typeof currentPath === "string" && currentPath.trim().length > 0
+				? currentPath
+				: getDefaultProjectFilePath(name);
+			const result = await dialog.showSaveDialog({
+				title: "Save Project",
+				defaultPath,
+				filters: [{ name: "CHDG Project", extensions: ["chdg"] }],
+			});
+			if (result.canceled || !result.filePath) return null;
+			const picked = toPickedPath(result.filePath);
+			addAllowedProjectFile(allowedProjectFiles, picked.path);
+			return picked;
+		},
+	);
+
+	ipcMain.handle(
+		"dialog:open-project-file",
+		async (): Promise<PickedPath | null> => {
+			const result = await dialog.showOpenDialog({
+				title: "Open Project",
+				properties: ["openFile"],
+				filters: [{ name: "CHDG Project", extensions: ["chdg"] }],
+			});
+			if (result.canceled || result.filePaths.length === 0) return null;
+			const picked = toPickedPath(result.filePaths[0]);
+			addAllowedProjectFile(allowedProjectFiles, picked.path);
+			return picked;
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:create-project",
+		async (_event, input: unknown): Promise<JsonEnvelope<ProjectStatePayload>> => {
+			return toEnvelope(async () => {
+				const name = assertCreateProjectName(input);
+				const settings = await readSettings();
+				const projectFolder = path.join(settings.projectLocation, name);
+				const filePath = path.join(projectFolder, `${name}.chdg`);
+				const outputDir = getDefaultOutputDir(filePath);
+				addAllowedProjectFile(allowedProjectFiles, filePath);
+				const project = buildProjectFileFromState(name, app.getVersion(), {
+					outputDir,
+					selectedTracks: [],
+					metadata: {},
+					generationStatus: "not-generated",
+				});
+				const writeResult = await writeProjectFile(filePath, project);
+				if (!writeResult.ok) {
+					throw new DesktopIpcError(writeResult.code, writeResult.message);
+				}
+				await addRecentProject({ path: filePath, name, lastOpenedAt: new Date().toISOString() });
+				addAllowedPath(allowedOutputFolders, outputDir);
+				return {
+					projectName: name,
+					projectFilePath: filePath,
+					outputDir,
+					selectedTracks: [],
+					metadata: {},
+					generationStatus: "not-generated" as ChdgOutputStatus,
+				};
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:save-project",
+		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
+			return toEnvelope(async () => {
+				const payload = assertProjectStatePayload(input);
+				const defaultPath = getDefaultProjectFilePath(payload.projectName);
+				const candidatePath = payload.projectFilePath ?? defaultPath;
+				if (!payload.projectFilePath) {
+					addAllowedProjectFile(allowedProjectFiles, candidatePath);
+				}
+				const filePath = assertAllowedProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					"PROJECT_SAVE_PATH_NOT_SELECTED",
+					"Project save path was not selected or created by a trusted desktop flow.",
+				);
+				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
+				const writeResult = await writeProjectFile(filePath, project);
+				if (!writeResult.ok) {
+					throw new DesktopIpcError(writeResult.code, writeResult.message);
+				}
+				await addRecentProject({ path: filePath, name: payload.projectName, lastOpenedAt: new Date().toISOString() });
+				return { filePath, project };
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:save-project-as",
+		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
+			return toEnvelope(async () => {
+				const payload = assertProjectStatePayload(input);
+				const value = assertRecord(input, "Save As payload is required.");
+				const candidatePath = assertNonEmptyString(
+					value["filePath"],
+					"filePath is required for Save As.",
+				);
+				const filePath = assertAllowedProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					"PROJECT_SAVE_PATH_NOT_SELECTED",
+					"Select the project file path with the desktop save dialog before writing it.",
+				);
+				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
+				const writeResult = await writeProjectFile(filePath, project);
+				if (!writeResult.ok) {
+					throw new DesktopIpcError(writeResult.code, writeResult.message);
+				}
+				await addRecentProject({ path: filePath, name: payload.projectName, lastOpenedAt: new Date().toISOString() });
+				return { filePath, project };
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:open-project",
+		async (_event, filePath: unknown): Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>> => {
+			return toEnvelope(async () => {
+				const candidatePath = assertNonEmptyString(filePath, "Project file path is required.");
+				const targetPath = await resolveAllowedOpenProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					readRecentProjects,
+					"PROJECT_FILE_NOT_ALLOWED",
+					"Project file was not selected in this desktop session or found in Electron-owned recents.",
+				);
+				const readResult = await readProjectFile(targetPath);
+				if (!readResult.ok) {
+					throw new DesktopIpcError(readResult.code, readResult.message);
+				}
+				const { project, missingPaths } = readResult;
+				if (project.paths.sourcePath) {
+					addAllowedPath(allowedSourceFiles, project.paths.sourcePath);
+				}
+				if (project.paths.audioPath) {
+					addAllowedPath(allowedAudioFiles, project.paths.audioPath);
+				}
+				if (project.paths.outputDir) {
+					addAllowedPath(allowedOutputFolders, project.paths.outputDir);
+				}
+				await addRecentProject({ path: targetPath, name: project.project.name, lastOpenedAt: new Date().toISOString() });
+				return {
+					projectName: project.project.name,
+					projectFilePath: targetPath,
+					sourcePath: project.paths.sourcePath,
+					audioPath: project.paths.audioPath,
+					outputDir: project.paths.outputDir,
+					sourceKind: project.source?.sourceKind,
+					selectedTracks: project.selection.selectedTracks,
+					metadata: project.metadata,
+					offsetMs: project.generation.offsetMs,
+					generationStatus: project.generation.status,
+					lastGeneratedAt: project.generation.lastGeneratedAt,
+					outputFiles: project.generation.outputFiles,
+					missingPaths,
+				};
+			});
+		},
+	);
+
+	ipcMain.handle("chdg:read-recent-projects", async (): Promise<JsonEnvelope<RecentProject[]>> => {
+		return toEnvelope(() => readRecentProjects());
+	});
+
+	ipcMain.handle(
+		"chdg:remove-recent-project",
+		async (_event, projectPath: unknown): Promise<JsonEnvelope<void>> => {
+			return toEnvelope(async () => {
+				const target = assertNonEmptyString(projectPath, "Project path is required.");
+				await removeRecentProject(target);
+			});
+		},
+	);
+
+	ipcMain.handle("chdg:read-settings", async (): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
+		return toEnvelope(() => readSettings());
+	});
+
+	ipcMain.handle(
+		"chdg:write-settings",
+		async (_event, settings: unknown): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
+			return toEnvelope(async () => {
+				const validated = assertSettingsPayload(settings);
+				await writeSettings(validated);
+				return validated;
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:test-ffmpeg",
+		async (_event, input: unknown): Promise<JsonEnvelope<import("./ffmpegDiagnostic.js").FfmpegDiagnostic>> => {
+			return toEnvelope(async () => {
+				const pathValue = typeof input === "string" ? input : undefined;
+				return testFfmpeg(pathValue);
 			});
 		},
 	);
@@ -442,6 +709,73 @@ function optionalNumberArray(
 		throw new DesktopIpcError("INVALID_INPUT", message);
 	}
 	return input;
+}
+
+function assertProjectStatePayload(input: unknown): ProjectStatePayload {
+	const value = assertRecord(input, "Project state payload is required.");
+	return {
+		projectName: assertNonEmptyString(value["projectName"], "projectName is required."),
+		projectFilePath: optionalString(value["projectFilePath"], "projectFilePath must be a string."),
+		sourcePath: optionalString(value["sourcePath"], "sourcePath must be a string."),
+		audioPath: optionalString(value["audioPath"], "audioPath must be a string."),
+		outputDir: optionalString(value["outputDir"], "outputDir must be a string."),
+		sourceKind: optionalSourceKind(value["sourceKind"]),
+		selectedTracks: optionalSelectedTracks(value["selectedTracks"]),
+		metadata: assertMetadata(value["metadata"]),
+		offsetMs: optionalNumber(value["offsetMs"], "offsetMs must be numeric."),
+		generationStatus: assertGenerationStatus(value["generationStatus"]),
+		lastGeneratedAt: optionalString(value["lastGeneratedAt"], "lastGeneratedAt must be a string."),
+		outputFiles: optionalOutputFiles(value["outputFiles"]),
+	};
+}
+
+function assertSettingsPayload(input: unknown): import("@chdg/project").DesktopSettings {
+	const value = assertRecord(input, "Settings payload is required.");
+	return {
+		schemaVersion: 1,
+		theme: "dark",
+		accentColor: optionalString(value["accentColor"], "accentColor must be a string."),
+		projectLocation: assertNonEmptyString(value["projectLocation"], "projectLocation is required."),
+		defaultOutputFolder: optionalString(value["defaultOutputFolder"], "defaultOutputFolder must be a string."),
+		defaultCharter: optionalString(value["defaultCharter"], "defaultCharter must be a string."),
+		defaultOffsetMs: optionalNumber(value["defaultOffsetMs"], "defaultOffsetMs must be numeric."),
+		ffmpegPath: optionalString(value["ffmpegPath"], "ffmpegPath must be a string."),
+	};
+}
+
+function optionalSourceKind(input: unknown): "midi" | "gpif" | undefined {
+	if (input === undefined || input === null) return undefined;
+	if (input === "midi" || input === "gpif") return input;
+	return undefined;
+}
+
+function assertMetadata(input: unknown): ProjectStatePayload["metadata"] {
+	if (typeof input !== "object" || input === null) return {};
+	const value = input as Record<string, unknown>;
+	return {
+		name: optionalString(value["name"], "name must be a string."),
+		artist: optionalString(value["artist"], "artist must be a string."),
+		album: optionalString(value["album"], "album must be a string."),
+		year: optionalString(value["year"], "year must be a string."),
+		genre: optionalString(value["genre"], "genre must be a string."),
+		charter: optionalString(value["charter"], "charter must be a string."),
+	};
+}
+
+function assertGenerationStatus(input: unknown): ChdgOutputStatus {
+	const valid: ChdgOutputStatus[] = ["not-generated", "generated", "needs-regenerate", "failed"];
+	if (valid.includes(input as ChdgOutputStatus)) return input as ChdgOutputStatus;
+	return "not-generated";
+}
+
+function optionalOutputFiles(input: unknown): { chart?: string; songIni?: string; songOgg?: string } | undefined {
+	if (typeof input !== "object" || input === null) return undefined;
+	const value = input as Record<string, unknown>;
+	return {
+		chart: optionalString(value["chart"], "chart must be a string."),
+		songIni: optionalString(value["songIni"], "songIni must be a string."),
+		songOgg: optionalString(value["songOgg"], "songOgg must be a string."),
+	};
 }
 
 async function findExistingKnownOutputs(outDir: string): Promise<string[]> {

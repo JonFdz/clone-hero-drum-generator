@@ -6,3 +6,5 @@ export * from "./normalizeSelection.js";
 export * from "./generatePackage.js";
 export * from "./mergeDrumHits.js";
 export * from "./validatePackage.js";
+export * from "./projectFile.js";
+export * from "./settings.js";

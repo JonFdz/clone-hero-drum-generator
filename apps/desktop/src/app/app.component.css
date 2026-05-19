@@ -140,3 +140,36 @@
   flex: 1;
   padding: var(--space-4) var(--space-8) var(--space-8);
 }
+
+.project-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.project-name {
+  color: var(--color-text);
+  font-weight: 700;
+  margin-right: var(--space-2);
+}
+
+.button.small {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.pill.warning {
+  background: rgba(246, 180, 80, 0.22);
+  color: #f6b450;
+}
+
+.pill.success {
+  background: rgba(101, 222, 119, 0.22);
+  color: #65de77;
+}
+
+.pill.danger {
+  background: rgba(255, 107, 107, 0.22);
+  color: #ff6b6b;
+}
