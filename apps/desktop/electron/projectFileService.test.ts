@@ -1,0 +1,126 @@
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+
+vi.mock("electron", () => ({
+	app: {
+		getPath: (name: string) => {
+			if (name === "documents") return tmpdir() + "/chdg-documents";
+			return tmpdir() + "/chdg-" + name;
+		},
+	},
+}));
+import {
+	readProjectFile,
+	writeProjectFile,
+	buildProjectFileFromState,
+	getDefaultProjectFilePath,
+	getDefaultOutputDir,
+} from "./projectFileService.js";
+
+describe("projectFileService", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = mkdtempSync(join(tmpdir(), "chdg-test-"));
+	});
+
+	afterEach(() => {
+		rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	describe("writeProjectFile", () => {
+		it("writes a valid project file", async () => {
+			const filePath = join(tempDir, "test.chdg");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [1],
+				metadata: { name: "Song" },
+				generationStatus: "not-generated",
+			});
+			const result = await writeProjectFile(filePath, project);
+			expect(result.ok).toBe(true);
+			const text = readFileSync(filePath, "utf8");
+			const parsed = JSON.parse(text);
+			expect(parsed.project.name).toBe("Demo");
+			expect(parsed.project.updatedAt).toBeTypeOf("string");
+		});
+	});
+
+	describe("readProjectFile", () => {
+		it("reads a valid project file", async () => {
+			const filePath = join(tempDir, "test.chdg");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [1],
+				metadata: {},
+				generationStatus: "generated",
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.project.name).toBe("Demo");
+				expect(result.missingPaths).toEqual([]);
+			}
+		});
+
+		it("returns error for missing file", async () => {
+			const result = await readProjectFile(join(tempDir, "missing.chdg"));
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.code).toBe("PROJECT_FILE_NOT_FOUND");
+			}
+		});
+
+		it("returns error for invalid JSON", async () => {
+			const filePath = join(tempDir, "bad.chdg");
+			writeFileSync(filePath, "not json", "utf8");
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.code).toBe("INVALID_PROJECT_JSON");
+			}
+		});
+
+		it("returns error for unsupported schema version", async () => {
+			const filePath = join(tempDir, "old.chdg");
+			writeFileSync(filePath, JSON.stringify({ schemaVersion: 99 }), "utf8");
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.code).toBe("UNSUPPORTED_PROJECT_VERSION");
+			}
+		});
+
+		it("detects missing paths", async () => {
+			const filePath = join(tempDir, "test.chdg");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				outputDir: join(tempDir, "missing-output"),
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.missingPaths).toContain("outputDir");
+			}
+		});
+	});
+
+	describe("getDefaultProjectFilePath", () => {
+		it("includes project name and extension", () => {
+			const path = getDefaultProjectFilePath("My Song");
+			expect(path).toContain("My Song");
+			expect(path).toContain("My Song.chdg");
+		});
+	});
+
+	describe("getDefaultOutputDir", () => {
+		it("returns output folder inside project directory", () => {
+			const out = getDefaultOutputDir("/projects/My Song/My Song.chdg");
+			expect(out).toContain("output");
+		});
+	});
+});

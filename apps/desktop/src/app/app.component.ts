@@ -1,6 +1,8 @@
 import { Component, type OnInit, computed, inject } from "@angular/core";
-import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { DesktopBridgeService } from "./services/desktop-bridge.service";
+import { DesktopProjectStateService } from "./services/desktop-project-state.service";
+import { DesktopGenerateStateService } from "./services/desktop-generate-state.service";
 
 type NavItem = {
   label: string;
@@ -17,6 +19,9 @@ type NavItem = {
 })
 export class AppComponent implements OnInit {
   private readonly desktopBridge = inject(DesktopBridgeService);
+  private readonly projectState = inject(DesktopProjectStateService);
+  private readonly generateState = inject(DesktopGenerateStateService);
+  private readonly router = inject(Router);
 
   readonly navItems: NavItem[] = [
     { label: "Home", path: "/home", icon: "⌂" },
@@ -33,8 +38,51 @@ export class AppComponent implements OnInit {
 
   readonly appVersion = computed(() => this.desktopBridge.appInfo()?.version ?? this.desktopBridge.health().appVersion);
   readonly health = this.desktopBridge.health;
+  readonly project = this.projectState.state;
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     void this.desktopBridge.loadStatus();
+    await this.projectState.loadSettings();
+    await this.projectState.loadRecentProjects();
+  }
+
+  async saveProject(): Promise<void> {
+    const name = this.project().projectName;
+    const filePath = this.project().projectFilePath;
+    const payload = this.generateState.buildProjectStatePayload(name, filePath);
+    const saved = await this.projectState.saveProject(payload);
+    if (saved) {
+      this.generateState.applyError = this.generateState.applyError; // no-op to satisfy linter if unused
+    }
+  }
+
+  async saveProjectAs(): Promise<void> {
+    const name = this.project().projectName;
+    const currentPath = this.project().projectFilePath;
+    const picked = await this.desktopBridge.saveProjectFile(name, currentPath);
+    if (!picked) return;
+    const payload = this.generateState.buildProjectStatePayload(name, picked.path);
+    const saved = await this.projectState.saveProjectAs({ ...payload, filePath: picked.path });
+    if (saved) {
+      // Saved
+    }
+  }
+
+  async openProject(): Promise<void> {
+    const picked = await this.desktopBridge.openProjectFile();
+    if (!picked) return;
+    const payload = await this.projectState.openProject(picked.path);
+    if (payload) {
+      this.generateState.loadProjectState({
+        sourcePath: payload.sourcePath,
+        audioPath: payload.audioPath,
+        outputDir: payload.outputDir,
+        sourceKind: payload.sourceKind,
+        selectedTracks: payload.selectedTracks,
+        metadata: payload.metadata,
+        offsetMs: payload.offsetMs,
+      });
+      await this.router.navigateByUrl("/new-project");
+    }
   }
 }

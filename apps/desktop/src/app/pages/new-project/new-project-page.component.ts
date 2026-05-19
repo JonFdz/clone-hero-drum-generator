@@ -4,6 +4,7 @@ import { FormsModule } from "@angular/forms";
 import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 
 @Component({
 	selector: "chdg-new-project-page",
@@ -12,13 +13,40 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
 	template: `
     <header class="page-header">
       <p class="eyebrow">New Project</p>
-      <h1>Generate a Clone Hero song folder</h1>
-      <p>Select local source/audio files, an output folder, metadata, and chart offset. State is in memory only for Phase 11.</p>
+      <h1>{{ projectState.state().projectName }}</h1>
+      <p>Select local source/audio files, an output folder, metadata, and chart offset.</p>
     </header>
+
+    @if (projectState.missingPathWarnings().length > 0) {
+      <section class="card message warning">
+        <h2>Missing files</h2>
+        <ul>
+          @for (warning of projectState.missingPathWarnings(); track warning.kind) {
+            <li>{{ warning.message }}</li>
+          }
+        </ul>
+        <p>Re-select missing files before generating.</p>
+      </section>
+    }
+
+    @if (projectState.outputStatus() === 'needs-regenerate') {
+      <section class="card message warning">
+        <h2>Output outdated</h2>
+        <p>Generation inputs changed since the last successful generation. Regenerate to update output.</p>
+      </section>
+    }
 
     <div class="grid two">
       <section class="card form-card">
         <h2>Project inputs</h2>
+
+        <div class="field-group">
+          <label>Project Name <span class="required">required</span></label>
+          <div class="picker-row">
+            <input class="input-like" [(ngModel)]="projectNameInput" (change)="updateProjectName()" placeholder="Enter project name" />
+            <button class="button secondary" type="button" (click)="createProject()">Create Project</button>
+          </div>
+        </div>
 
         <div class="field-group">
           <label>Source File <span class="required">required</span></label>
@@ -71,13 +99,19 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
       <aside class="card summary-card">
         <h2>Project Summary</h2>
         <dl class="summary-list">
+          <dt>Project</dt><dd>{{ projectState.state().projectName }}</dd>
+          <dt>Status</dt><dd>{{ projectState.state().dirty ? 'Modified' : 'Saved' }}</dd>
+          <dt>Output</dt><dd>{{ projectState.state().outputStatus }}</dd>
           <dt>Source</dt><dd>{{ state().sourcePath || "Not selected" }}</dd>
           <dt>Source type</dt><dd>{{ state().sourceKind || "Unknown" }}</dd>
           <dt>Audio</dt><dd>{{ state().audioPath || "Required" }}</dd>
-          <dt>Output</dt><dd>{{ state().outputDir || "Not selected" }}</dd>
+          <dt>Output folder</dt><dd>{{ state().outputDir || "Not selected" }}</dd>
           <dt>Offset</dt><dd>{{ state().offsetMs ?? 0 }} ms</dd>
         </dl>
-        <p>Local-only workflow. No URLs, uploads, .chdg persistence, or external editor integration in this phase.</p>
+        <div class="action-row">
+          <button class="button secondary small" type="button" (click)="saveProject()">Save</button>
+          <button class="button secondary small" type="button" (click)="saveProjectAs()">Save As</button>
+        </div>
       </aside>
     </div>
   `,
@@ -86,12 +120,61 @@ export class NewProjectPageComponent {
 	readonly state = this.generateState.state;
 	readonly validation = this.generateState.validation;
 	readonly metadata = { ...this.generateState.state().metadata };
+	projectNameInput = this.projectState.state().projectName;
 
 	constructor(
 		private readonly bridge: DesktopBridgeService,
-		private readonly generateState: DesktopGenerateStateService,
+		readonly generateState: DesktopGenerateStateService,
+		readonly projectState: DesktopProjectStateService,
 		private readonly router: Router,
-	) {}
+	) {
+		// Apply default charter/offset from settings if empty
+		const settings = this.projectState.state().settings;
+		if (settings.defaultCharter && !this.metadata.charter) {
+			this.metadata.charter = settings.defaultCharter;
+			this.generateState.setMetadata(this.metadata);
+		}
+		if (settings.defaultOffsetMs !== undefined && this.state().offsetMs === undefined) {
+			this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
+		}
+	}
+
+	updateProjectName(): void {
+		this.projectState.setProjectName(this.projectNameInput);
+	}
+
+	async createProject(): Promise<void> {
+		if (!this.projectNameInput.trim()) return;
+		const ok = await this.projectState.createProject(this.projectNameInput.trim());
+		if (ok) {
+			this.generateState.reset();
+			// Apply defaults from settings
+			const settings = this.projectState.state().settings;
+			if (settings.defaultCharter) {
+				this.metadata.charter = settings.defaultCharter;
+				this.generateState.setMetadata(this.metadata);
+			}
+			if (settings.defaultOffsetMs !== undefined) {
+				this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
+			}
+		}
+	}
+
+	async saveProject(): Promise<void> {
+		const name = this.projectState.state().projectName;
+		const filePath = this.projectState.state().projectFilePath;
+		const payload = this.generateState.buildProjectStatePayload(name, filePath);
+		await this.projectState.saveProject(payload);
+	}
+
+	async saveProjectAs(): Promise<void> {
+		const name = this.projectState.state().projectName;
+		const currentPath = this.projectState.state().projectFilePath;
+		const picked = await this.bridge.saveProjectFile(name, currentPath);
+		if (!picked) return;
+		const payload = this.generateState.buildProjectStatePayload(name, picked.path);
+		await this.projectState.saveProjectAs({ ...payload, filePath: picked.path });
+	}
 
 	async pickSource(): Promise<void> {
 		await this.runPicker(async () => {

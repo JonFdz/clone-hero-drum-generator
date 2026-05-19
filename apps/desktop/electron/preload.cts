@@ -14,6 +14,25 @@ const api = {
 		ipcRenderer.invoke("chdg:generate-package", input),
 	openOutputFolder: (folderPath: string) =>
 		ipcRenderer.invoke("shell:open-output-folder", folderPath),
+	// Project persistence
+	saveProjectFile: (projectName: string, currentPath?: string) =>
+		ipcRenderer.invoke("dialog:save-project-file", projectName, currentPath),
+	openProjectFile: () => ipcRenderer.invoke("dialog:open-project-file"),
+	createProject: (input: unknown) =>
+		ipcRenderer.invoke("chdg:create-project", input),
+	saveProject: (input: unknown) =>
+		ipcRenderer.invoke("chdg:save-project", input),
+	saveProjectAs: (input: unknown) =>
+		ipcRenderer.invoke("chdg:save-project-as", input),
+	openProject: (filePath: string) =>
+		ipcRenderer.invoke("chdg:open-project", filePath),
+	readRecentProjects: () => ipcRenderer.invoke("chdg:read-recent-projects"),
+	removeRecentProject: (projectPath: string) =>
+		ipcRenderer.invoke("chdg:remove-recent-project", projectPath),
+	readSettings: () => ipcRenderer.invoke("chdg:read-settings"),
+	writeSettings: (settings: unknown) =>
+		ipcRenderer.invoke("chdg:write-settings", settings),
+	testFfmpeg: (input: string) => ipcRenderer.invoke("chdg:test-ffmpeg", input),
 };
 
 contextBridge.exposeInMainWorld("chdg", api);

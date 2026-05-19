@@ -6,12 +6,19 @@ import type {
 	NormalizationPreview,
 	NormalizeSelectionInput,
 	SourceInspectionResult,
+	ChdgProjectFile,
+	ChdgOutputStatus,
+	DesktopSettings,
+	RecentProject,
 } from "@chdg/project";
 import type {
 	DesktopAppInfo,
 	DesktopHealthStatus,
 	OpenOutputFolderResult,
 	PickedPath,
+	FfmpegDiagnostic,
+	ProjectStatePayload,
+	SaveProjectResult,
 } from "./services/desktop-bridge.service";
 
 declare global {
@@ -34,6 +41,33 @@ declare global {
 			openOutputFolder: (
 				folderPath: string,
 			) => Promise<JsonEnvelope<OpenOutputFolderResult>>;
+			// Project persistence
+			saveProjectFile: (
+				projectName: string,
+				currentPath?: string,
+			) => Promise<PickedPath | null>;
+			openProjectFile: () => Promise<PickedPath | null>;
+			createProject: (
+				input: { projectName: string },
+			) => Promise<JsonEnvelope<ProjectStatePayload>>;
+			saveProject: (
+				input: ProjectStatePayload,
+			) => Promise<JsonEnvelope<SaveProjectResult>>;
+			saveProjectAs: (
+				input: ProjectStatePayload & { filePath: string },
+			) => Promise<JsonEnvelope<SaveProjectResult>>;
+			openProject: (
+				filePath: string,
+			) => Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>>;
+			readRecentProjects: () => Promise<JsonEnvelope<RecentProject[]>>;
+			removeRecentProject: (
+				projectPath: string,
+			) => Promise<JsonEnvelope<void>>;
+			readSettings: () => Promise<JsonEnvelope<DesktopSettings>>;
+			writeSettings: (
+				settings: DesktopSettings,
+			) => Promise<JsonEnvelope<DesktopSettings>>;
+			testFfmpeg: (input: string) => Promise<JsonEnvelope<FfmpegDiagnostic>>;
 		};
 	}
 }
