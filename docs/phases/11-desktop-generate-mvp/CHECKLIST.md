@@ -20,6 +20,7 @@
 - [x] Add project service IPC handlers for inspect, normalize, generate, and open output folder.
 - [x] Implement in-memory New Project, Inspect Source, Track Selection, and Generate workflow screens.
 - [x] Preserve Electron security: `contextIsolation: true`, `nodeIntegration: false`, explicit preload bridge.
+- [x] Restrict source/audio/output paths to files/folders selected through desktop pickers in the current session.
 
 ## Bridge / IPC names
 
@@ -46,6 +47,14 @@ chdg:normalize-selection
 chdg:generate-package
 shell:open-output-folder
 ```
+
+## Path allowlist behavior
+
+- [x] `inspectSource` requires `sourcePath` selected through `pickSourceFile()`.
+- [x] `normalizeSelection` requires `sourcePath` selected through `pickSourceFile()`.
+- [x] `generatePackage` requires source, audio, and output paths selected through their dedicated pickers.
+- [x] Paths are normalized before being passed to `@chdg/project`.
+- [x] Open Output Folder remains limited to selected/generated output folders.
 
 ## Output overwrite behavior
 

@@ -14,6 +14,7 @@ import {
 	type NormalizationPreview,
 	type GeneratePackageResult,
 } from "@chdg/project";
+import { addAllowedPath, assertAllowedPath } from "./pathAllowlist.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,8 @@ const __dirname = path.dirname(__filename);
 const rendererIndex = path.join(__dirname, "../renderer/browser/index.html");
 const preloadScript = path.join(__dirname, "preload.js");
 const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
+const allowedSourceFiles = new Set<string>();
+const allowedAudioFiles = new Set<string>();
 const allowedOutputFolders = new Set<string>();
 
 type DesktopHealthStatus = {
@@ -39,6 +42,7 @@ type PickedPath = {
 };
 
 type DesktopGeneratePackageInput = GeneratePackageInput & {
+	audioSource: string;
 	overwriteKnownFiles?: boolean;
 };
 
@@ -94,7 +98,9 @@ app.whenReady().then(() => {
 				return null;
 			}
 
-			return toPickedPath(result.filePaths[0]);
+			const picked = toPickedPath(result.filePaths[0]);
+			addAllowedPath(allowedSourceFiles, picked.path);
+			return picked;
 		},
 	);
 
@@ -116,7 +122,9 @@ app.whenReady().then(() => {
 				return null;
 			}
 
-			return toPickedPath(result.filePaths[0]);
+			const picked = toPickedPath(result.filePaths[0]);
+			addAllowedPath(allowedAudioFiles, picked.path);
+			return picked;
 		},
 	);
 
@@ -133,7 +141,7 @@ app.whenReady().then(() => {
 			}
 
 			const picked = toPickedPath(result.filePaths[0]);
-			allowedOutputFolders.add(path.resolve(picked.path));
+			addAllowedPath(allowedOutputFolders, picked.path);
 			return picked;
 		},
 	);
@@ -144,7 +152,11 @@ app.whenReady().then(() => {
 			_event,
 			input: unknown,
 		): Promise<JsonEnvelope<SourceInspectionResult>> => {
-			return toEnvelope(() => inspectSource(assertInspectInput(input)));
+			return toEnvelope(() => {
+				const inspectInput = assertInspectInput(input);
+				const sourcePath = assertAllowedSourcePath(inspectInput.sourcePath);
+				return inspectSource({ ...inspectInput, sourcePath });
+			});
 		},
 	);
 
@@ -154,7 +166,11 @@ app.whenReady().then(() => {
 			_event,
 			input: unknown,
 		): Promise<JsonEnvelope<NormalizationPreview>> => {
-			return toEnvelope(() => normalizeSelection(assertNormalizeInput(input)));
+			return toEnvelope(() => {
+				const normalizeInput = assertNormalizeInput(input);
+				const sourcePath = assertAllowedSourcePath(normalizeInput.sourcePath);
+				return normalizeSelection({ ...normalizeInput, sourcePath });
+			});
 		},
 	);
 
@@ -166,13 +182,11 @@ app.whenReady().then(() => {
 		): Promise<JsonEnvelope<GeneratePackageResult>> => {
 			return toEnvelope(async () => {
 				const generateInput = assertGenerateInput(input);
-				const normalizedOutDir = path.resolve(generateInput.outDir);
-				if (!allowedOutputFolders.has(normalizedOutDir)) {
-					throw new DesktopIpcError(
-						"OUTPUT_FOLDER_NOT_SELECTED",
-						"Select the output folder with the desktop folder picker before generating.",
-					);
-				}
+				const sourcePath = assertAllowedSourcePath(generateInput.sourcePath);
+				const audioSource = assertAllowedAudioPath(generateInput.audioSource);
+				const normalizedOutDir = assertAllowedOutputFolder(
+					generateInput.outDir,
+				);
 				const existing = await findExistingKnownOutputs(normalizedOutDir);
 				if (existing.length > 0 && !generateInput.overwriteKnownFiles) {
 					throw new DesktopIpcError(
@@ -180,7 +194,12 @@ app.whenReady().then(() => {
 						`Output folder already contains ${existing.join(", ")}. Confirm overwrite to replace only known CHDG output files.`,
 					);
 				}
-				return generatePackage({ ...generateInput, outDir: normalizedOutDir });
+				return generatePackage({
+					...generateInput,
+					sourcePath,
+					audioSource,
+					outDir: normalizedOutDir,
+				});
 			});
 		},
 	);
@@ -198,13 +217,7 @@ app.whenReady().then(() => {
 						"Output folder path is required.",
 					);
 				}
-				const normalized = path.resolve(folderPath);
-				if (!allowedOutputFolders.has(normalized)) {
-					throw new DesktopIpcError(
-						"OPEN_OUTPUT_FOLDER_DENIED",
-						"Output folder was not selected or generated in this desktop session.",
-					);
-				}
+				const normalized = assertAllowedOpenOutputFolder(folderPath);
 				const errorMessage = await shell.openPath(normalized);
 				if (errorMessage) {
 					throw new DesktopIpcError("OPEN_OUTPUT_FOLDER_FAILED", errorMessage);
@@ -231,6 +244,42 @@ app.on("window-all-closed", () => {
 
 function toPickedPath(filePath: string): PickedPath {
 	return { path: filePath, name: path.basename(filePath) };
+}
+
+function assertAllowedSourcePath(sourcePath: string): string {
+	return assertAllowedPath(
+		allowedSourceFiles,
+		sourcePath,
+		"SOURCE_FILE_NOT_SELECTED",
+		"Select the source file with the desktop file picker before using it.",
+	);
+}
+
+function assertAllowedAudioPath(audioSource: string): string {
+	return assertAllowedPath(
+		allowedAudioFiles,
+		audioSource,
+		"AUDIO_FILE_NOT_SELECTED",
+		"Select the audio file with the desktop file picker before generating.",
+	);
+}
+
+function assertAllowedOutputFolder(outDir: string): string {
+	return assertAllowedPath(
+		allowedOutputFolders,
+		outDir,
+		"OUTPUT_FOLDER_NOT_SELECTED",
+		"Select the output folder with the desktop folder picker before generating.",
+	);
+}
+
+function assertAllowedOpenOutputFolder(folderPath: string): string {
+	return assertAllowedPath(
+		allowedOutputFolders,
+		folderPath,
+		"OPEN_OUTPUT_FOLDER_DENIED",
+		"Output folder was not selected or generated in this desktop session.",
+	);
 }
 
 async function toEnvelope<T>(
