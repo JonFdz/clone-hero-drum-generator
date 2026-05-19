@@ -90,6 +90,8 @@ export class HomePageComponent {
         selectedTracks: payload.selectedTracks,
         metadata: payload.metadata,
         offsetMs: payload.offsetMs,
+        lastGeneratedAt: payload.lastGeneratedAt,
+        outputFiles: payload.outputFiles,
       });
       await this.router.navigateByUrl("/new-project");
     }
@@ -113,6 +115,8 @@ export class HomePageComponent {
         selectedTracks: payload.selectedTracks,
         metadata: payload.metadata,
         offsetMs: payload.offsetMs,
+        lastGeneratedAt: payload.lastGeneratedAt,
+        outputFiles: payload.outputFiles,
       });
       await this.router.navigateByUrl("/new-project");
     }

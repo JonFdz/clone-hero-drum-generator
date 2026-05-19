@@ -50,10 +50,7 @@ export class AppComponent implements OnInit {
     const name = this.project().projectName;
     const filePath = this.project().projectFilePath;
     const payload = this.generateState.buildProjectStatePayload(name, filePath);
-    const saved = await this.projectState.saveProject(payload);
-    if (saved) {
-      this.generateState.applyError = this.generateState.applyError; // no-op to satisfy linter if unused
-    }
+    await this.projectState.saveProject(payload);
   }
 
   async saveProjectAs(): Promise<void> {
@@ -81,6 +78,8 @@ export class AppComponent implements OnInit {
         selectedTracks: payload.selectedTracks,
         metadata: payload.metadata,
         offsetMs: payload.offsetMs,
+        lastGeneratedAt: payload.lastGeneratedAt,
+        outputFiles: payload.outputFiles,
       });
       await this.router.navigateByUrl("/new-project");
     }

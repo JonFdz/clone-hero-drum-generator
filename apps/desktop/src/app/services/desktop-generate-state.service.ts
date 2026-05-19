@@ -47,6 +47,12 @@ export type DesktopGenerateState = {
 	selectedTracks: number[];
 	normalizationPreview?: NormalizationPreview;
 	generationResult?: GeneratePackageResult;
+	lastGeneratedAt?: string;
+	outputFiles?: {
+		chart?: string;
+		songIni?: string;
+		songOgg?: string;
+	};
 	issues: ProjectIssue[];
 	logs: string[];
 	status: DesktopGenerateStatus;
@@ -69,7 +75,11 @@ const initialState: DesktopGenerateState = {
 @Injectable({ providedIn: "root" })
 export class DesktopGenerateStateService {
 	readonly state = signal<DesktopGenerateState>(initialState);
-	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly projectState: DesktopProjectStateService;
+
+	constructor(projectState: DesktopProjectStateService = inject(DesktopProjectStateService)) {
+		this.projectState = projectState;
+	}
 
 	readonly validation = computed(() => validateGenerateState(this.state()));
 	readonly trackCandidates = computed(
@@ -111,7 +121,7 @@ export class DesktopGenerateStateService {
 
 	setMetadata(metadata: DesktopMetadata): void {
 		this.patch({ metadata: { ...this.state().metadata, ...metadata } });
-		this.projectState.markDirty();
+		this.projectState.markNeedsRegenerate();
 	}
 
 	setOffsetMsInput(value: string): void {
@@ -225,6 +235,12 @@ export class DesktopGenerateStateService {
 
 		this.patch({
 			generationResult: envelope.data,
+			lastGeneratedAt: new Date().toISOString(),
+			outputFiles: {
+				chart: envelope.data.files.chart,
+				songIni: envelope.data.files.songIni,
+				songOgg: envelope.data.files.songOgg,
+			},
 			issues: envelope.issues,
 			status: "generated",
 			logs: appendLog(this.state().logs, "Generation completed successfully."),
@@ -298,6 +314,12 @@ export class DesktopGenerateStateService {
 		metadata: DesktopMetadata;
 		offsetMs?: number;
 		generationResult?: GeneratePackageResult;
+		lastGeneratedAt?: string;
+		outputFiles?: {
+			chart?: string;
+			songIni?: string;
+			songOgg?: string;
+		};
 	}): void {
 		const sourceKind = payload.sourceKind ?? (payload.sourcePath ? detectDesktopSourceKind(payload.sourcePath) : undefined);
 		this.state.set({
@@ -310,7 +332,14 @@ export class DesktopGenerateStateService {
 			metadata: payload.metadata,
 			offsetMs: payload.offsetMs,
 			generationResult: payload.generationResult,
-			status: payload.generationResult ? "generated" : sourceKind ? "ready-to-inspect" : "idle",
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			status:
+				payload.generationResult || payload.outputFiles
+					? "generated"
+					: sourceKind
+						? "ready-to-inspect"
+						: "idle",
 		});
 	}
 
@@ -327,14 +356,14 @@ export class DesktopGenerateStateService {
 			metadata: state.metadata,
 			offsetMs: state.offsetMs,
 			generationStatus: this.projectState.outputStatus(),
-			lastGeneratedAt: state.generationResult ? new Date().toISOString() : undefined,
+			lastGeneratedAt: state.lastGeneratedAt,
 			outputFiles: state.generationResult
 				? {
 						chart: state.generationResult.files.chart,
 						songIni: state.generationResult.files.songIni,
 						songOgg: state.generationResult.files.songOgg,
 				  }
-				: undefined,
+				: state.outputFiles,
 		};
 	}
 

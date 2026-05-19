@@ -33,6 +33,15 @@ import {
 	removeRecentProject,
 } from "./settingsService.js";
 import { testFfmpeg } from "./ffmpegDiagnostic.js";
+import {
+	addAllowedProjectFile,
+	assertAllowedProjectFile,
+	resolveAllowedOpenProjectFile,
+} from "./projectFileAccess.js";
+import {
+	assertCreateProjectName,
+	optionalSelectedTracks,
+} from "./projectPayloadValidation.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,6 +52,7 @@ const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
 const allowedOutputFolders = new Set<string>();
+const allowedProjectFiles = new Set<string>();
 
 type DesktopHealthStatus = {
 	ok: boolean;
@@ -290,7 +300,9 @@ app.whenReady().then(() => {
 				filters: [{ name: "CHDG Project", extensions: ["chdg"] }],
 			});
 			if (result.canceled || !result.filePath) return null;
-			return toPickedPath(result.filePath);
+			const picked = toPickedPath(result.filePath);
+			addAllowedProjectFile(allowedProjectFiles, picked.path);
+			return picked;
 		},
 	);
 
@@ -303,7 +315,9 @@ app.whenReady().then(() => {
 				filters: [{ name: "CHDG Project", extensions: ["chdg"] }],
 			});
 			if (result.canceled || result.filePaths.length === 0) return null;
-			return toPickedPath(result.filePaths[0]);
+			const picked = toPickedPath(result.filePaths[0]);
+			addAllowedProjectFile(allowedProjectFiles, picked.path);
+			return picked;
 		},
 	);
 
@@ -311,14 +325,12 @@ app.whenReady().then(() => {
 		"chdg:create-project",
 		async (_event, input: unknown): Promise<JsonEnvelope<ProjectStatePayload>> => {
 			return toEnvelope(async () => {
-				const name = assertNonEmptyString(
-					(input as Record<string, unknown>)["projectName"],
-					"Project name is required.",
-				);
+				const name = assertCreateProjectName(input);
 				const settings = await readSettings();
 				const projectFolder = path.join(settings.projectLocation, name);
 				const filePath = path.join(projectFolder, `${name}.chdg`);
 				const outputDir = getDefaultOutputDir(filePath);
+				addAllowedProjectFile(allowedProjectFiles, filePath);
 				const project = buildProjectFileFromState(name, app.getVersion(), {
 					outputDir,
 					selectedTracks: [],
@@ -348,7 +360,17 @@ app.whenReady().then(() => {
 		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
 			return toEnvelope(async () => {
 				const payload = assertProjectStatePayload(input);
-				const filePath = payload.projectFilePath ?? getDefaultProjectFilePath(payload.projectName);
+				const defaultPath = getDefaultProjectFilePath(payload.projectName);
+				const candidatePath = payload.projectFilePath ?? defaultPath;
+				if (!payload.projectFilePath) {
+					addAllowedProjectFile(allowedProjectFiles, candidatePath);
+				}
+				const filePath = assertAllowedProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					"PROJECT_SAVE_PATH_NOT_SELECTED",
+					"Project save path was not selected or created by a trusted desktop flow.",
+				);
 				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
 				const writeResult = await writeProjectFile(filePath, project);
 				if (!writeResult.ok) {
@@ -365,9 +387,16 @@ app.whenReady().then(() => {
 		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
 			return toEnvelope(async () => {
 				const payload = assertProjectStatePayload(input);
-				const filePath = assertNonEmptyString(
-					(input as Record<string, unknown>)["filePath"],
+				const value = assertRecord(input, "Save As payload is required.");
+				const candidatePath = assertNonEmptyString(
+					value["filePath"],
 					"filePath is required for Save As.",
+				);
+				const filePath = assertAllowedProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					"PROJECT_SAVE_PATH_NOT_SELECTED",
+					"Select the project file path with the desktop save dialog before writing it.",
 				);
 				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
 				const writeResult = await writeProjectFile(filePath, project);
@@ -384,7 +413,14 @@ app.whenReady().then(() => {
 		"chdg:open-project",
 		async (_event, filePath: unknown): Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>> => {
 			return toEnvelope(async () => {
-				const targetPath = assertNonEmptyString(filePath, "Project file path is required.");
+				const candidatePath = assertNonEmptyString(filePath, "Project file path is required.");
+				const targetPath = await resolveAllowedOpenProjectFile(
+					allowedProjectFiles,
+					candidatePath,
+					readRecentProjects,
+					"PROJECT_FILE_NOT_ALLOWED",
+					"Project file was not selected in this desktop session or found in Electron-owned recents.",
+				);
 				const readResult = await readProjectFile(targetPath);
 				if (!readResult.ok) {
 					throw new DesktopIpcError(readResult.code, readResult.message);
@@ -684,7 +720,7 @@ function assertProjectStatePayload(input: unknown): ProjectStatePayload {
 		audioPath: optionalString(value["audioPath"], "audioPath must be a string."),
 		outputDir: optionalString(value["outputDir"], "outputDir must be a string."),
 		sourceKind: optionalSourceKind(value["sourceKind"]),
-		selectedTracks: (value["selectedTracks"] as number[]) ?? [],
+		selectedTracks: optionalSelectedTracks(value["selectedTracks"]),
 		metadata: assertMetadata(value["metadata"]),
 		offsetMs: optionalNumber(value["offsetMs"], "offsetMs must be numeric."),
 		generationStatus: assertGenerationStatus(value["generationStatus"]),

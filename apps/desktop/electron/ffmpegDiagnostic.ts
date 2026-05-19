@@ -8,7 +8,7 @@ export type FfmpegDiagnostic = {
 	message: string;
 };
 
-function runFfmpegVersion(ffmpegPath: string): Promise<string> {
+export function runFfmpegVersion(ffmpegPath: string): Promise<string> {
 	return new Promise((resolve, reject) => {
 		execFile(ffmpegPath, ["-version"], { timeout: 10000 }, (error, stdout) => {
 			if (error) {
@@ -21,36 +21,49 @@ function runFfmpegVersion(ffmpegPath: string): Promise<string> {
 	});
 }
 
-export async function testFfmpeg(configuredPath?: string): Promise<FfmpegDiagnostic> {
-	const candidates: string[] = [];
-	if (configuredPath) {
-		candidates.push(configuredPath);
-	}
-	if (process.platform === "win32") {
-		candidates.push("ffmpeg.exe");
-	} else {
-		candidates.push("ffmpeg");
-	}
+export async function testFfmpeg(
+	configuredPath?: string,
+	deps: {
+		access?: typeof access;
+		runFfmpegVersion?: typeof runFfmpegVersion;
+	} = {},
+): Promise<FfmpegDiagnostic> {
+	const accessFn = deps.access ?? access;
+	const runVersion = deps.runFfmpegVersion ?? runFfmpegVersion;
+	const binary = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+	const normalizedConfiguredPath = configuredPath?.trim();
 
-	for (const candidate of candidates) {
+	if (normalizedConfiguredPath) {
 		try {
-			await access(candidate);
-			const version = await runFfmpegVersion(candidate);
+			await accessFn(normalizedConfiguredPath);
+			const version = await runVersion(normalizedConfiguredPath);
 			return {
 				available: true,
 				version,
-				path: candidate,
+				path: normalizedConfiguredPath,
 				message: `FFmpeg found: ${version}`,
 			};
 		} catch {
-			// Try next candidate
+			return {
+				available: false,
+				path: normalizedConfiguredPath,
+				message: `FFmpeg not found at configured path: ${normalizedConfiguredPath}`,
+			};
 		}
 	}
 
-	return {
-		available: false,
-		message: configuredPath
-			? `FFmpeg not found at configured path: ${configuredPath}`
-			: "FFmpeg not found in PATH.",
-	};
+	try {
+		const version = await runVersion(binary);
+		return {
+			available: true,
+			version,
+			path: binary,
+			message: `FFmpeg found from PATH: ${version}`,
+		};
+	} catch {
+		return {
+			available: false,
+			message: "FFmpeg not found in PATH.",
+		};
+	}
 }
