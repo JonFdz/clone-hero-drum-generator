@@ -110,6 +110,72 @@ describe("parseGenerateArgs", () => {
 		expect(result.options.trackIndex).toBe(2);
 	});
 
+	it("parses --tracks as comma-separated track indexes", () => {
+		const result = parseGenerateArgs([
+			"samples/demo.gp",
+			"--tracks",
+			"3,10",
+			"--out",
+			"output/demo",
+		]);
+		expect("help" in result).toBe(false);
+		if ("help" in result) return;
+		expect(result.options.trackIndexes).toEqual([3, 10]);
+	});
+
+	it("throws when --track and --tracks are both present", () => {
+		expect(() =>
+			parseGenerateArgs([
+				"samples/demo.gp",
+				"--track",
+				"3",
+				"--tracks",
+				"3,10",
+				"--out",
+				"output/demo",
+			]),
+		).toThrow(/either --track .* or --tracks/i);
+	});
+
+	it.each(["", "3,", ",10", "3,,10"])(
+		"throws when --tracks contains empty values: %s",
+		(rawTracks) => {
+			expect(() =>
+				parseGenerateArgs([
+					"samples/demo.gp",
+					"--tracks",
+					rawTracks,
+					"--out",
+					"output/demo",
+				]),
+			).toThrow(/--tracks/i);
+		},
+	);
+
+	it("throws when --tracks contains non-integers", () => {
+		expect(() =>
+			parseGenerateArgs([
+				"samples/demo.gp",
+				"--tracks",
+				"3,abc",
+				"--out",
+				"output/demo",
+			]),
+		).toThrow(/invalid --tracks value/i);
+	});
+
+	it("throws when --tracks contains duplicates", () => {
+		expect(() =>
+			parseGenerateArgs([
+				"samples/demo.gp",
+				"--tracks",
+				"3,3",
+				"--out",
+				"output/demo",
+			]),
+		).toThrow(/duplicate --tracks value/i);
+	});
+
 	it("parses --audio option as the final audio filename", () => {
 		const result = parseGenerateArgs([
 			"samples/demo.mid",

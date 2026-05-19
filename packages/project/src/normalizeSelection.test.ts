@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	normalizeDrumsFromFile: vi.fn(),
@@ -13,9 +13,15 @@ vi.mock("@chdg/guitarpro", () => ({
 	normalizeGpDrums: mocks.normalizeGpDrums,
 }));
 
+import type { DrumHit } from "@chdg/core";
+import { mergeDrumHits } from "./mergeDrumHits.js";
 import { normalizeSelection } from "./normalizeSelection.js";
 
 describe("normalizeSelection", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it("returns MIDI normalization preview DTO", async () => {
 		mocks.normalizeDrumsFromFile.mockResolvedValue({
 			track: { index: 53 },
@@ -44,6 +50,7 @@ describe("normalizeSelection", () => {
 		expect(result).toMatchObject({
 			sourceKind: "midi",
 			selectedTrack: 53,
+			selectedTracks: [53],
 			hitCount: 1,
 			pieceSummary: { kick: 1 },
 		});
@@ -80,6 +87,7 @@ describe("normalizeSelection", () => {
 		expect(result).toMatchObject({
 			sourceKind: "gpif",
 			selectedTrack: 3,
+			selectedTracks: [3],
 			hitCount: 1,
 			pieceSummary: { snare: 1 },
 		});
@@ -91,4 +99,167 @@ describe("normalizeSelection", () => {
 			]),
 		);
 	});
+
+	it("returns merged MIDI preview for multiple tracks", async () => {
+		mocks.normalizeDrumsFromFile
+			.mockResolvedValueOnce({
+				track: { index: 3 },
+				hits: [midiHit({ tick: 0, piece: "kick", velocity: 80, trackIndex: 3 })],
+				unknownNotes: [],
+			})
+			.mockResolvedValueOnce({
+				track: { index: 10 },
+				hits: [midiHit({ tick: 0, piece: "kick", velocity: 110, trackIndex: 10 })],
+				unknownNotes: [],
+			});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.mid",
+			trackIndexes: [3, 10],
+		});
+
+		expect(mocks.normalizeDrumsFromFile).toHaveBeenNthCalledWith(
+			1,
+			"demo.mid",
+			expect.any(Object),
+			{ trackIndex: 3 },
+		);
+		expect(mocks.normalizeDrumsFromFile).toHaveBeenNthCalledWith(
+			2,
+			"demo.mid",
+			expect.any(Object),
+			{ trackIndex: 10 },
+		);
+		expect(result.selectedTracks).toEqual([3, 10]);
+		expect(result.hitCount).toBe(1);
+		expect(result.firstHits[0].velocity).toBe(110);
+		expect(result.mergeSummary?.duplicateHitCount).toBe(1);
+	});
+
+	it("returns merged GPIF preview for multiple tracks", async () => {
+		mocks.normalizeGpDrums
+			.mockResolvedValueOnce({
+				trackIndex: 3,
+				hits: [gpifHit({ tick: 120, piece: "snare", trackIndex: 3 })],
+				warnings: [],
+				unhandled: [],
+				unknownArticulations: [],
+			})
+			.mockResolvedValueOnce({
+				trackIndex: 10,
+				hits: [gpifHit({ tick: 120, piece: "crash", trackIndex: 10 })],
+				warnings: [],
+				unhandled: [],
+				unknownArticulations: [],
+			});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.gp",
+			trackIndexes: [3, 10],
+		});
+
+		expect(result.selectedTracks).toEqual([3, 10]);
+		expect(result.hitCount).toBe(2);
+		expect(result.mergeSummary?.inputHitCount).toBe(2);
+	});
 });
+
+describe("mergeDrumHits", () => {
+	it("deduplicates same tick and piece using highest velocity", () => {
+		const result = mergeDrumHits(
+			[
+				midiHit({ tick: 960, piece: "kick", velocity: 80, trackIndex: 3 }),
+				midiHit({ tick: 960, piece: "kick", velocity: 110, trackIndex: 10 }),
+			],
+			[3, 10],
+		);
+
+		expect(result.hits).toHaveLength(1);
+		expect(result.hits[0].tick).toBe(960);
+		expect(result.hits[0].velocity).toBe(110);
+		expect(result.summary.duplicateHitCount).toBe(1);
+	});
+
+	it("keeps different ticks without averaging timing", () => {
+		const result = mergeDrumHits(
+			[
+				midiHit({ tick: 960, piece: "kick", trackIndex: 3 }),
+				midiHit({ tick: 970, piece: "kick", trackIndex: 10 }),
+			],
+			[3, 10],
+		);
+
+		expect(result.hits.map((hit) => hit.tick)).toEqual([960, 970]);
+		expect(result.summary.duplicateHitCount).toBe(0);
+	});
+
+	it("prefers open hi-hat over closed hi-hat at the same tick", () => {
+		const result = mergeDrumHits(
+			[
+				midiHit({ tick: 1000, piece: "hihat_closed", trackIndex: 3 }),
+				midiHit({ tick: 1000, piece: "hihat_open", trackIndex: 10 }),
+			],
+			[3, 10],
+		);
+
+		expect(result.hits.map((hit) => hit.piece)).toEqual(["hihat_open"]);
+		expect(result.summary.issues).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: "HIHAT_OPEN_CLOSED_CONFLICT" }),
+			]),
+		);
+	});
+
+	it("warns on impossible hand chords without deleting notes", () => {
+		const result = mergeDrumHits(
+			[
+				midiHit({ tick: 1440, piece: "snare", trackIndex: 3 }),
+				midiHit({ tick: 1440, piece: "crash", trackIndex: 3 }),
+				midiHit({ tick: 1440, piece: "tom_mid", trackIndex: 10 }),
+			],
+			[3, 10],
+		);
+
+		expect(result.hits).toHaveLength(3);
+		expect(result.summary.impossibleChordCount).toBe(1);
+		expect(result.summary.issues).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: "IMPOSSIBLE_HAND_CHORD" }),
+			]),
+		);
+	});
+});
+
+function midiHit(input: {
+	tick: number;
+	piece: DrumHit["piece"];
+	velocity?: number;
+	trackIndex: number;
+}): DrumHit {
+	return {
+		tick: input.tick,
+		piece: input.piece,
+		velocity: input.velocity ?? 100,
+		durationTicks: 0,
+		source: {
+			midiNote: 36,
+			trackIndex: input.trackIndex,
+			trackName: `Track ${input.trackIndex}`,
+			channel: 9,
+		},
+	};
+}
+
+function gpifHit(input: {
+	tick: number;
+	piece: DrumHit["piece"];
+	trackIndex: number;
+}): DrumHit {
+	return {
+		tick: input.tick,
+		piece: input.piece,
+		velocity: 100,
+		durationTicks: 0,
+		source: { kind: "gpif", trackIndex: input.trackIndex },
+	};
+}

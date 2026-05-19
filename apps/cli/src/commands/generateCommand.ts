@@ -39,6 +39,7 @@ export async function runGenerateCommand(rawArgs: string[]): Promise<void> {
 			sourcePath: resolveInputPath(parsed.file),
 			outDir: resolveInputPath(parsed.options.outDir),
 			trackIndex: parsed.options.trackIndex,
+			trackIndexes: parsed.options.trackIndexes,
 			audioFile: parsed.options.audioFile,
 			audioSource:
 				parsed.options.audioSource === undefined
@@ -70,8 +71,20 @@ export async function runGenerateCommand(rawArgs: string[]): Promise<void> {
 		console.log(
 			`Source type: ${result.sourceKind === "gpif" ? "GPIF" : "MIDI"}`,
 		);
-		console.log(`Track: [${result.selectedTrack}]`);
+		console.log(
+			result.selectedTracks.length > 1
+				? `Selected tracks: ${result.selectedTracks.join(", ")}`
+				: `Track: [${result.selectedTrack}]`,
+		);
 		console.log(`Hits: ${result.hitCount}`);
+		if (result.mergeSummary) {
+			console.log(`Input hits: ${result.mergeSummary.inputHitCount}`);
+			console.log(`Merged hits: ${result.mergeSummary.mergedHitCount}`);
+			console.log(`Duplicates removed: ${result.mergeSummary.duplicateHitCount}`);
+			console.log(
+				`Impossible hand chord warnings: ${result.mergeSummary.impossibleChordCount}`,
+			);
+		}
 		console.log(`Mapped notes: ${result.mappedNoteCount}`);
 		if (result.deduplicatedCount > 0) {
 			console.log(`Deduplicated notes: ${result.deduplicatedCount}`);

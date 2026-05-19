@@ -52,6 +52,7 @@ describe("runGenerateCommand", () => {
 			sourceKind: "gpif",
 			sourcePath: "song.gp",
 			selectedTrack: 3,
+			selectedTracks: [3],
 			outputDir: "output/demo",
 			hitCount: 10,
 			mappedNoteCount: 10,
@@ -92,6 +93,7 @@ describe("runGenerateCommand", () => {
 			sourceKind: "midi",
 			sourcePath: "song.mid",
 			selectedTrack: 53,
+			selectedTracks: [53],
 			outputDir: "output/demo",
 			hitCount: 3,
 			mappedNoteCount: 3,
@@ -120,6 +122,52 @@ describe("runGenerateCommand", () => {
 		expect(logSpy).toHaveBeenCalledWith("CHDG Chart Generation");
 		expect(warnSpy).toHaveBeenCalledWith(
 			"Warning: Unknown MIDI notes were skipped.",
+		);
+	});
+
+	it("passes --tracks to project services and prints merge summary", async () => {
+		mocks.generatePackage.mockResolvedValue({
+			sourceKind: "gpif",
+			sourcePath: "song.gp",
+			selectedTrack: 3,
+			selectedTracks: [3, 10],
+			mergeSummary: {
+				selectedTracks: [3, 10],
+				sourceTrackCount: 2,
+				inputHitCount: 12,
+				mergedHitCount: 10,
+				deduplicatedHitCount: 2,
+				duplicateHitCount: 2,
+				impossibleChordCount: 1,
+				issues: [],
+			},
+			outputDir: "output/demo",
+			hitCount: 10,
+			mappedNoteCount: 10,
+			deduplicatedCount: 0,
+			files: {
+				chart: "output/demo/notes.chart",
+				songIni: "output/demo/song.ini",
+			},
+			issues: [],
+		});
+
+		await runGenerateCommand([
+			"song.gp",
+			"--tracks",
+			"3,10",
+			"--out",
+			"output/demo",
+		]);
+
+		expect(mocks.generatePackage).toHaveBeenCalledWith(
+			expect.objectContaining({ trackIndexes: [3, 10] }),
+		);
+		expect(logSpy).toHaveBeenCalledWith("Selected tracks: 3, 10");
+		expect(logSpy).toHaveBeenCalledWith("Input hits: 12");
+		expect(logSpy).toHaveBeenCalledWith("Duplicates removed: 2");
+		expect(logSpy).toHaveBeenCalledWith(
+			"Impossible hand chord warnings: 1",
 		);
 	});
 });

@@ -24,10 +24,12 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import { normalizeDrumsFromFile } from "@chdg/midi";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
+import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type {
 	GeneratePackageInput,
 	GeneratePackageResult,
+	MultiTrackMergeSummary,
 	ProjectIssue,
 	SourceKind,
 } from "./types.js";
@@ -39,6 +41,8 @@ type SourceNormalizationResult = {
 	kind: SourceKind;
 	filePath: string;
 	track: { index: number; name?: string };
+	selectedTracks: number[];
+	mergeSummary?: MultiTrackMergeSummary;
 	resolution: number;
 	tempos: TempoEvent[];
 	timeSignatures: TimeSignatureEvent[];
@@ -106,6 +110,8 @@ export async function generatePackage(
 			sourceKind: source.kind,
 			sourcePath: source.filePath,
 			selectedTrack: source.track.index,
+			selectedTracks: source.selectedTracks,
+			mergeSummary: source.mergeSummary,
 			outputDir: input.outDir,
 			hitCount: source.hits.length,
 			mappedNoteCount: expertDrums.length,
@@ -126,78 +132,129 @@ async function normalizeGenerateSource(
 	input: GeneratePackageInput,
 ): Promise<SourceNormalizationResult> {
 	const kind = detectSourceKind(input.sourcePath);
+	const requestedTracks = resolveRequestedTracks(input);
 
 	if (kind === "midi") {
-		const result = await normalizeDrumsFromFile(
-			input.sourcePath,
-			generalMidiDrums,
-			{
-				trackIndex: input.trackIndex,
-			},
+		const results = await Promise.all(
+			(requestedTracks ?? [undefined]).map((trackIndex) =>
+				normalizeDrumsFromFile(input.sourcePath, generalMidiDrums, {
+					trackIndex,
+				}),
+			),
+		);
+		const selectedTracks = results.map((result) => result.track.index);
+		const sourceIssues = results.flatMap((result) =>
+			result.unknownNotes.length > 0
+				? [
+						issue(
+							"warning",
+							"UNKNOWN_MIDI_NOTES",
+							"Unknown MIDI notes were skipped during generation.",
+							{
+								trackIndex: result.track.index,
+								notes: result.unknownNotes,
+							},
+						),
+					]
+				: [],
+		);
+		const merged = mergeDrumHits(
+			results.flatMap((result) => result.hits),
+			selectedTracks,
 		);
 
 		return {
 			kind,
 			filePath: input.sourcePath,
-			track: { index: result.track.index, name: result.track.name },
-			resolution: result.resolution,
-			tempos: result.tempos,
-			timeSignatures: result.timeSignatures,
-			sections: result.sections,
-			hits: result.hits,
-			issues:
-				result.unknownNotes.length > 0
-					? [
-							issue(
-								"warning",
-								"UNKNOWN_MIDI_NOTES",
-								"Unknown MIDI notes were skipped during generation.",
-								{ notes: result.unknownNotes },
-							),
-						]
-					: [],
+			track: { index: results[0].track.index, name: results[0].track.name },
+			selectedTracks,
+			mergeSummary: selectedTracks.length > 1 ? merged.summary : undefined,
+			resolution: results[0].resolution,
+			tempos: results[0].tempos,
+			timeSignatures: results[0].timeSignatures,
+			sections: results[0].sections,
+			hits: merged.hits,
+			issues: [...sourceIssues, ...merged.summary.issues],
 		};
 	}
 
-	if (input.trackIndex === undefined) {
+	if (requestedTracks === undefined) {
 		throw new ProjectServiceError(
 			"MISSING_TRACK_INDEX",
-			"Missing required --track <index> option for GPIF generation.",
+			"Missing required --track <index> or --tracks <csv> option for GPIF generation.",
 		);
 	}
 
-	const result = await normalizeGpDrums(input.sourcePath, {
-		trackIndex: input.trackIndex,
-	});
+	const results = await Promise.all(
+		requestedTracks.map((trackIndex) =>
+			normalizeGpDrums(input.sourcePath, { trackIndex }),
+		),
+	);
+	const selectedTracks = results.map((result) => result.trackIndex);
+	const sourceIssues = results.flatMap((result) => [
+		...result.warnings.map((warning) =>
+			issue("warning", "GPIF_WARNING", warning, {
+				trackIndex: result.trackIndex,
+			}),
+		),
+		...result.unhandled.map((item) =>
+			issue("info", "GPIF_UNHANDLED", item, {
+				trackIndex: result.trackIndex,
+			}),
+		),
+		...result.unknownArticulations.map((item) =>
+			issue(
+				"warning",
+				"UNKNOWN_GPIF_ARTICULATION",
+				`Unknown articulation: ${item.rawArticulation}`,
+				{
+					trackIndex: result.trackIndex,
+					rawArticulation: item.rawArticulation,
+					count: item.count,
+					measureIndex: item.measureIndex,
+					beatIndex: item.beatIndex,
+					noteIndex: item.noteIndex,
+				},
+			),
+		),
+	]);
+	const merged = mergeDrumHits(
+		results.flatMap((result) => result.hits),
+		selectedTracks,
+	);
 
 	return {
 		kind,
 		filePath: input.sourcePath,
-		track: { index: result.trackIndex, name: result.trackName },
-		resolution: result.resolution,
-		tempos: result.tempos,
-		timeSignatures: result.timeSignatures,
-		sections: result.sections,
-		hits: result.hits,
-		issues: [
-			...result.warnings.map((warning) =>
-				issue("warning", "GPIF_WARNING", warning),
-			),
-			...result.unhandled.map((item) => issue("info", "GPIF_UNHANDLED", item)),
-			...result.unknownArticulations.map((item) =>
-				issue(
-					"warning",
-					"UNKNOWN_GPIF_ARTICULATION",
-					`Unknown articulation: ${item.rawArticulation}`,
-					{
-						rawArticulation: item.rawArticulation,
-						count: item.count,
-						measureIndex: item.measureIndex,
-						beatIndex: item.beatIndex,
-						noteIndex: item.noteIndex,
-					},
-				),
-			),
-		],
+		track: { index: results[0].trackIndex, name: results[0].trackName },
+		selectedTracks,
+		mergeSummary: selectedTracks.length > 1 ? merged.summary : undefined,
+		resolution: results[0].resolution,
+		tempos: results[0].tempos,
+		timeSignatures: results[0].timeSignatures,
+		sections: results[0].sections,
+		hits: merged.hits,
+		issues: [...sourceIssues, ...merged.summary.issues],
 	};
+}
+
+function resolveRequestedTracks(
+	input: GeneratePackageInput,
+): number[] | undefined {
+	if (input.trackIndex !== undefined && input.trackIndexes !== undefined) {
+		throw new ProjectServiceError(
+			"TRACK_SELECTION_CONFLICT",
+			"Use either --track <index> or --tracks <csv>, not both.",
+		);
+	}
+	if (input.trackIndexes !== undefined) {
+		if (input.trackIndexes.length === 0) {
+			throw new ProjectServiceError(
+				"MISSING_TRACK_INDEX",
+				"--tracks requires at least one track index.",
+			);
+		}
+		return input.trackIndexes;
+	}
+	return input.trackIndex === undefined ? undefined : [input.trackIndex];
 }

@@ -66,6 +66,7 @@ describe("generatePackage", () => {
 		expect(result).toMatchObject({
 			sourceKind: "midi",
 			selectedTrack: 53,
+			selectedTracks: [53],
 			outputDir: outDir,
 			hitCount: 1,
 		});
@@ -74,6 +75,75 @@ describe("generatePackage", () => {
 		expect(await readFile(join(outDir, "song.ini"), "utf8")).toContain(
 			"name = Demo",
 		);
+	});
+
+	it("generates GPIF multi-track package from merged hits", async () => {
+		const outDir = join(tempDir, "gp-multi-output");
+		mocks.normalizeGpDrums
+			.mockResolvedValueOnce({
+				trackIndex: 3,
+				trackName: "Drums",
+				resolution: 960,
+				tempos: [{ tick: 0, bpm: 120 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [],
+				hits: [
+					{
+						tick: 0,
+						piece: "kick",
+						velocity: 80,
+						durationTicks: 0,
+						source: { kind: "gpif", trackIndex: 3 },
+					},
+				],
+				warnings: [],
+				unhandled: [],
+				unknownArticulations: [],
+			})
+			.mockResolvedValueOnce({
+				trackIndex: 10,
+				trackName: "Percussion",
+				resolution: 960,
+				tempos: [{ tick: 0, bpm: 120 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [],
+				hits: [
+					{
+						tick: 0,
+						piece: "kick",
+						velocity: 110,
+						durationTicks: 0,
+						source: { kind: "gpif", trackIndex: 10 },
+					},
+					{
+						tick: 120,
+						piece: "snare",
+						velocity: 100,
+						durationTicks: 0,
+						source: { kind: "gpif", trackIndex: 10 },
+					},
+				],
+				warnings: [],
+				unhandled: [],
+				unknownArticulations: [],
+			});
+
+		const result = await generatePackage({
+			sourcePath: "demo.gp",
+			trackIndexes: [3, 10],
+			outDir,
+		});
+
+		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(1, "demo.gp", {
+			trackIndex: 3,
+		});
+		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(2, "demo.gp", {
+			trackIndex: 10,
+		});
+		expect(result.selectedTracks).toEqual([3, 10]);
+		expect(result.hitCount).toBe(2);
+		expect(result.mergeSummary?.duplicateHitCount).toBe(1);
+		await expect(stat(join(outDir, "notes.chart"))).resolves.toMatchObject({});
 	});
 
 	it("requires --track for GPIF generation", async () => {
