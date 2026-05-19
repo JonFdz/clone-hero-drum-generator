@@ -59,10 +59,7 @@ export class AppComponent implements OnInit {
     const picked = await this.desktopBridge.saveProjectFile(name, currentPath);
     if (!picked) return;
     const payload = this.generateState.buildProjectStatePayload(name, picked.path);
-    const saved = await this.projectState.saveProjectAs({ ...payload, filePath: picked.path });
-    if (saved) {
-      // Saved
-    }
+    await this.projectState.saveProjectAs({ ...payload, filePath: picked.path });
   }
 
   async openProject(): Promise<void> {

@@ -10,4 +10,13 @@ describe("AppComponent source", () => {
 		);
 		expect(source).not.toContain("this.generateState.applyError = this.generateState.applyError");
 	});
+
+	it("does not keep the empty saved branch in saveProjectAs", () => {
+		const source = readFileSync(
+			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
+			"utf8",
+		);
+		expect(source).not.toContain("const saved = await this.projectState.saveProjectAs");
+		expect(source).not.toContain("if (saved)");
+	});
 });
