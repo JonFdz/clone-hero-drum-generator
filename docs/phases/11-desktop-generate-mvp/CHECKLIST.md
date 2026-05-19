@@ -2,27 +2,94 @@
 
 ## Before implementation
 
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read this phase PRD.
-- [ ] Read this phase ADR.
-- [ ] Review visual references.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Review visual references.
+- [x] Read OpenSpec artifacts for `phase-11-desktop-generate-mvp`.
+- [x] Transferred accepted context, decisions, non-goals, validation commands, branch and review policy into Engram.
 
 ## Implementation
 
-- [ ] Implement only this phase scope.
-- [ ] Preserve existing tests.
-- [ ] Add/update tests for new behavior.
-- [ ] Update docs if implementation differs.
+- [x] Implement only this phase scope.
+- [x] Preserve existing tests.
+- [x] Add/update tests for new behavior.
+- [x] Add native source/audio/output pickers through explicit preload bridge methods.
+- [x] Add project service IPC handlers for inspect, normalize, generate, and open output folder.
+- [x] Implement in-memory New Project, Inspect Source, Track Selection, and Generate workflow screens.
+- [x] Preserve Electron security: `contextIsolation: true`, `nodeIntegration: false`, explicit preload bridge.
+- [x] Restrict source/audio/output paths to files/folders selected through desktop pickers in the current session.
+- [x] Build Electron preload as CommonJS `dist/electron/preload.cjs` and load that file from `BrowserWindow`.
+
+## Bridge / IPC names
+
+Implemented bridge methods:
+
+```txt
+pickSourceFile()
+pickAudioFile()
+pickOutputFolder()
+inspectSource(input)
+normalizeSelection(input)
+generatePackage(input)
+openOutputFolder(path)
+```
+
+Implemented IPC channels:
+
+```txt
+dialog:pick-source-file
+dialog:pick-audio-file
+dialog:pick-output-folder
+chdg:inspect-source
+chdg:normalize-selection
+chdg:generate-package
+shell:open-output-folder
+```
+
+## Electron preload runtime behavior
+
+- [x] Source preload file uses `.cts` so TypeScript emits `dist/electron/preload.cjs`.
+- [x] `BrowserWindow` points to `preload.cjs`, avoiding top-level ESM `import` syntax in the sandboxed preload runtime.
+- [x] Build-output smoke confirmed `dist/electron/preload.cjs` exists and contains no top-level ESM `import` statement.
+
+## Path allowlist behavior
+
+- [x] `inspectSource` requires `sourcePath` selected through `pickSourceFile()`.
+- [x] `normalizeSelection` requires `sourcePath` selected through `pickSourceFile()`.
+- [x] `generatePackage` requires source, audio, and output paths selected through their dedicated pickers.
+- [x] Paths are normalized before being passed to `@chdg/project`.
+- [x] Open Output Folder remains limited to selected/generated output folders.
+
+## Output overwrite behavior
+
+- [x] The desktop flow does not recursively clear output directories.
+- [x] Before generation, Electron main checks only known CHDG output files: `notes.chart`, `song.ini`, `song.ogg`.
+- [x] If known output files already exist, generation returns `OVERWRITE_CONFIRMATION_REQUIRED`; the renderer asks for confirmation and retries with `overwriteKnownFiles: true`.
+- [x] Only known CHDG output files are overwritten by `@chdg/project.generatePackage`; arbitrary files are not deleted.
 
 ## Validation
 
-- [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] Manual validation recorded if relevant.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] `pnpm --filter @chdg/desktop build` passes.
+- [x] `pnpm --filter @chdg/desktop typecheck` passes.
+- [ ] Manual desktop launch validation recorded.
+
+## Manual validation note
+
+Manual GUI interaction with DevTools/pickers was not completed in this agent environment. A bounded `pnpm --filter @chdg/desktop dev` launch smoke completed without the previous preload error appearing in captured logs.
 
 ## Deferred
 
-- [ ] Do not implement future phases unless explicitly approved.
+- [x] Do not implement future phases unless explicitly approved.
+- [x] No `.chdg` persistence.
+- [x] No recent projects/drafts.
+- [x] No validation checklist implementation.
+- [x] No preview player, waveform, or highway.
+- [x] No mapping overrides.
+- [x] No packaging/distribution.
+- [x] No external editor/Moonscraper integration.
