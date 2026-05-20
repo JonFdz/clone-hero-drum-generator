@@ -1,7 +1,14 @@
 import { Injectable, computed, signal } from "@angular/core";
-import type { ChdgOutputStatus, DesktopSettings, RecentProject } from "@chdg/project";
+import type {
+	ChdgOutputStatus,
+	DesktopSettings,
+	RecentProject,
+} from "@chdg/project";
 import { DesktopBridgeService } from "./desktop-bridge.service";
-import type { ProjectStatePayload } from "./desktop-bridge.service";
+import type {
+	FfmpegDiagnostic,
+	ProjectStatePayload,
+} from "./desktop-bridge.service";
 
 export type MissingPathWarning = {
 	kind: "sourcePath" | "audioPath" | "outputDir";
@@ -17,6 +24,7 @@ export type DesktopProjectState = {
 	missingPaths: MissingPathWarning[];
 	recentProjects: RecentProject[];
 	settings: DesktopSettings;
+	ffmpegDiagnostic?: FfmpegDiagnostic;
 };
 
 const initialState: DesktopProjectState = {
@@ -36,7 +44,10 @@ const initialState: DesktopProjectState = {
 export class DesktopProjectStateService {
 	readonly state = signal<DesktopProjectState>(initialState);
 
-	readonly hasProject = computed(() => this.state().projectName !== "Untitled" || !!this.state().projectFilePath);
+	readonly hasProject = computed(
+		() =>
+			this.state().projectName !== "Untitled" || !!this.state().projectFilePath,
+	);
 	readonly isDirty = computed(() => this.state().dirty);
 	readonly outputStatus = computed(() => this.state().outputStatus);
 	readonly missingPathWarnings = computed(() => this.state().missingPaths);
@@ -99,7 +110,9 @@ export class DesktopProjectStateService {
 		}
 	}
 
-	async saveProjectAs(payload: ProjectStatePayload & { filePath: string }): Promise<string | null> {
+	async saveProjectAs(
+		payload: ProjectStatePayload & { filePath: string },
+	): Promise<string | null> {
 		try {
 			const envelope = await this.bridge.saveProjectAs(payload);
 			if (!envelope.ok) {
@@ -164,13 +177,27 @@ export class DesktopProjectStateService {
 		}
 	}
 
-	async testFfmpeg(input: string): Promise<import("./desktop-bridge.service").FfmpegDiagnostic | null> {
+	async testFfmpeg(input: string): Promise<FfmpegDiagnostic | null> {
 		try {
 			const envelope = await this.bridge.testFfmpeg(input);
-			if (envelope.ok) return envelope.data;
-			return null;
-		} catch {
-			return null;
+			if (envelope.ok) {
+				this.patch({ ffmpegDiagnostic: envelope.data });
+				return envelope.data;
+			}
+			const diagnostic: FfmpegDiagnostic = {
+				available: false,
+				message: envelope.error.message,
+			};
+			this.patch({ ffmpegDiagnostic: diagnostic });
+			return diagnostic;
+		} catch (error) {
+			const diagnostic: FfmpegDiagnostic = {
+				available: false,
+				message:
+					error instanceof Error ? error.message : "FFmpeg check failed.",
+			};
+			this.patch({ ffmpegDiagnostic: diagnostic });
+			return diagnostic;
 		}
 	}
 
