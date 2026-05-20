@@ -33,6 +33,10 @@ const api = {
 	writeSettings: (settings: unknown) =>
 		ipcRenderer.invoke("chdg:write-settings", settings),
 	testFfmpeg: (input: string) => ipcRenderer.invoke("chdg:test-ffmpeg", input),
+	getAudioPreviewSource: (input: unknown) =>
+		ipcRenderer.invoke("chdg:get-audio-preview-source", input),
+	getChartPreviewData: (input: unknown) =>
+		ipcRenderer.invoke("chdg:get-chart-preview-data", input),
 };
 
 contextBridge.exposeInMainWorld("chdg", api);

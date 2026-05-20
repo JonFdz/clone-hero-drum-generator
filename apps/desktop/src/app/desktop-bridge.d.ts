@@ -19,6 +19,8 @@ import type {
 	FfmpegDiagnostic,
 	ProjectStatePayload,
 	SaveProjectResult,
+	AudioPreviewSource,
+	ChartPreviewData,
 } from "./services/desktop-bridge.service";
 
 declare global {
@@ -68,6 +70,15 @@ declare global {
 				settings: DesktopSettings,
 			) => Promise<JsonEnvelope<DesktopSettings>>;
 			testFfmpeg: (input: string) => Promise<JsonEnvelope<FfmpegDiagnostic>>;
+			getAudioPreviewSource: (input: {
+				outputDir?: string;
+				generatedSongOggPath?: string;
+				selectedAudioPath?: string;
+			}) => Promise<JsonEnvelope<AudioPreviewSource>>;
+			getChartPreviewData: (input: {
+				outputDir?: string;
+				chartPath?: string;
+			}) => Promise<JsonEnvelope<ChartPreviewData>>;
 		};
 	}
 }

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { access } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	generatePackage,
 	inspectSource,
@@ -42,6 +42,11 @@ import {
 	assertCreateProjectName,
 	optionalSelectedTracks,
 } from "./projectPayloadValidation.js";
+import {
+	pickAudioPreviewCandidate,
+	parseChartPreviewData,
+	resolveChartPreviewPath,
+} from "./previewData.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -490,6 +495,68 @@ app.whenReady().then(() => {
 			return toEnvelope(async () => {
 				const pathValue = typeof input === "string" ? input : undefined;
 				return testFfmpeg(pathValue);
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:get-audio-preview-source",
+		async (_event, input: unknown): Promise<JsonEnvelope<{ src: string; sourceKind: "generated" | "selected-audio" }>> => {
+			return toEnvelope(async () => {
+				const value = assertRecord(input, "Audio preview input is required.");
+				const candidate = pickAudioPreviewCandidate({
+					outputDir: optionalString(value["outputDir"], "outputDir must be text."),
+					generatedSongOggPath: optionalString(value["generatedSongOggPath"], "generatedSongOggPath must be text."),
+					selectedAudioPath: optionalString(value["selectedAudioPath"], "selectedAudioPath must be text."),
+				});
+
+				if (candidate.generatedPath) {
+					const generatedPath = path.resolve(candidate.generatedPath);
+					if (path.basename(generatedPath).toLowerCase() === "song.ogg") {
+						const outputDir = path.dirname(generatedPath);
+						assertAllowedOutputFolder(outputDir);
+						try {
+							await access(generatedPath);
+							return { src: pathToFileURL(generatedPath).toString(), sourceKind: "generated" as const };
+						} catch {
+							// try fallback below
+						}
+					}
+				}
+
+				if (candidate.selectedAudioPath) {
+					const selected = assertAllowedAudioPath(candidate.selectedAudioPath);
+					await access(selected);
+					return { src: pathToFileURL(selected).toString(), sourceKind: "selected-audio" as const };
+				}
+
+				throw new DesktopIpcError(
+					"PREVIEW_AUDIO_NOT_AVAILABLE",
+					"No safe preview audio source is available for this project.",
+				);
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:get-chart-preview-data",
+		async (_event, input: unknown): Promise<JsonEnvelope<import("./previewData.js").ChartPreviewData>> => {
+			return toEnvelope(async () => {
+				const value = assertRecord(input, "Chart preview input is required.");
+				const outputDir = optionalString(value["outputDir"], "outputDir must be text.");
+				const chartPathInput = optionalString(value["chartPath"], "chartPath must be text.");
+				let resolved: ReturnType<typeof resolveChartPreviewPath>;
+				try {
+					resolved = resolveChartPreviewPath({ outputDir, chartPath: chartPathInput });
+				} catch (error) {
+					if (error instanceof Error && error.message === "PREVIEW_CHART_NOT_AVAILABLE") {
+						throw new DesktopIpcError("PREVIEW_CHART_NOT_AVAILABLE", "Chart path is unavailable.");
+					}
+					throw new DesktopIpcError("PREVIEW_CHART_NOT_ALLOWED", "Only notes.chart can be used for chart preview.");
+				}
+				assertAllowedOutputFolder(resolved.chartDir);
+				await access(resolved.chartPath);
+				return parseChartPreviewData(resolved.chartPath);
 			});
 		},
 	);
