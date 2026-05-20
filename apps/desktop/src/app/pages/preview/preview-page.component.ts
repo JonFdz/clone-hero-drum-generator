@@ -1,6 +1,12 @@
 import { CommonModule } from "@angular/common";
-import { type AfterViewInit, Component, type ElementRef, ViewChild } from "@angular/core";
+import {
+	type AfterViewInit,
+	Component,
+	type ElementRef,
+	ViewChild,
+} from "@angular/core";
 import { DesktopPreviewService } from "../../services/desktop-preview.service";
+import type { HighwayLane } from "../../services/desktop-preview-model";
 
 @Component({
 	selector: "chdg-preview-page",
@@ -9,8 +15,8 @@ import { DesktopPreviewService } from "../../services/desktop-preview.service";
 	template: `
     <header class="page-header">
       <p class="eyebrow">Preview</p>
-      <h1>Audio + timeline preview</h1>
-      <p>Read-only local preview. No note editing or persisted offset adjustments in Phase 14A.</p>
+      <h1>Audio + timeline + highway preview</h1>
+      <p>Read-only local preview. No note editing or persisted offset adjustments in Phase 14B.</p>
     </header>
 
     <section class="card" *ngIf="preview.error(); else loaded">
@@ -56,6 +62,29 @@ import { DesktopPreviewService } from "../../services/desktop-preview.service";
         </div>
         <ng-template #noNotes><p>No chart/hit timeline data available yet.</p></ng-template>
       </section>
+
+      <section class="card highway">
+        <h2>Clone Hero Highway (Preview)</h2>
+        <p class="field-hint" *ngFor="let limitation of preview.highwayLimitations()">{{ limitation }}</p>
+        <div class="highway-grid" *ngIf="preview.highwayNotes().length > 0; else noHighwayNotes">
+          <div class="lane-markers">
+            <span>Kick</span><span>Red</span><span>Yellow</span><span>Blue</span><span>Green</span>
+          </div>
+          <span class="highway-hit-line"></span>
+          <span
+            *ngFor="let note of preview.highwayNotes()"
+            class="highway-note"
+            [class.cymbal]="note.cymbal"
+            [class.open]="note.open"
+            [class.accent]="note.accent"
+            [class.ghost]="note.ghost"
+            [style.left.%]="laneLeftPercent(note.lane)"
+            [style.bottom.%]="note.yPercent"
+            [attr.title]="note.lane"
+          ></span>
+        </div>
+        <ng-template #noHighwayNotes><p>No highway notes available for the current preview data.</p></ng-template>
+      </section>
     </ng-template>
 
     <ng-template #missingAudio>
@@ -75,6 +104,14 @@ import { DesktopPreviewService } from "../../services/desktop-preview.service";
       .note { position: absolute; top: 38px; width: 6px; height: 32px; background: #6ea8ff; border-radius: 4px; opacity: 0.8; }
       .note.active { background: #f6b450; height: 40px; top: 34px; }
       .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #c084ff; }
+      .highway-grid { position: relative; height: 280px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); }
+      .lane-markers { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 8px 12px; color: #b9bfd0; font-size: 12px; }
+      .highway-hit-line { position: absolute; left: 0; right: 0; bottom: 18%; height: 2px; background: #c084ff; opacity: 0.9; }
+      .highway-note { position: absolute; width: 14px; height: 14px; transform: translateX(-50%); border-radius: 50%; background: #6ea8ff; border: 2px solid rgba(0,0,0,0.3); }
+      .highway-note.cymbal { border-style: dashed; }
+      .highway-note.open { box-shadow: 0 0 0 2px #d9f99d inset; }
+      .highway-note.accent { box-shadow: 0 0 0 2px #facc15 inset; }
+      .highway-note.ghost { opacity: 0.45; }
     `,
 	],
 })
@@ -117,5 +154,20 @@ export class PreviewPageComponent implements AfterViewInit {
 
 	onAudioError(): void {
 		this.preview.error.set("Audio failed to load.");
+	}
+
+	laneLeftPercent(lane: HighwayLane): number {
+		switch (lane) {
+			case "kick":
+				return 10;
+			case "red":
+				return 30;
+			case "yellow":
+				return 50;
+			case "blue":
+				return 70;
+			case "green":
+				return 90;
+		}
 	}
 }
