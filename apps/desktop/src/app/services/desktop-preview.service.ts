@@ -5,6 +5,7 @@ import {
 } from "./desktop-bridge.service";
 import { DesktopGenerateStateService } from "./desktop-generate-state.service";
 import {
+	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,
 	deriveHighwayLimitations,
 	deriveHighwayNotes,
@@ -22,6 +23,7 @@ export class DesktopPreviewService {
 	readonly duration = signal(0);
 
 	readonly waveformBars = computed(() => buildWaveformBars(this.duration()));
+	readonly highwayHitLinePercent = HIGHWAY_HIT_LINE_PERCENT;
 	readonly timelineNotes = computed(() =>
 		deriveTimelineNotes(
 			this.chartData(),
@@ -35,6 +37,7 @@ export class DesktopPreviewService {
 			this.chartData(),
 			this.generateState.state().normalizationPreview,
 			this.currentTime(),
+			this.duration(),
 		),
 	);
 	readonly highwayLimitations = computed(() =>

@@ -70,7 +70,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
           <div class="lane-markers">
             <span>Kick</span><span>Red</span><span>Yellow</span><span>Blue</span><span>Green</span>
           </div>
-          <span class="highway-hit-line"></span>
+          <span class="highway-hit-line" [style.bottom.%]="preview.highwayHitLinePercent"></span>
           <span
             *ngFor="let note of preview.highwayNotes()"
             class="highway-note"
@@ -106,7 +106,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
       .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #c084ff; }
       .highway-grid { position: relative; height: 280px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: linear-gradient(to bottom, rgba(255,255,255,0.04), rgba(255,255,255,0.01)); }
       .lane-markers { position: absolute; inset: 0 0 auto 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 8px 12px; color: #b9bfd0; font-size: 12px; }
-      .highway-hit-line { position: absolute; left: 0; right: 0; bottom: 18%; height: 2px; background: #c084ff; opacity: 0.9; }
+      .highway-hit-line { position: absolute; left: 0; right: 0; height: 2px; background: #c084ff; opacity: 0.9; }
       .highway-note { position: absolute; width: 14px; height: 14px; transform: translateX(-50%); border-radius: 50%; background: #6ea8ff; border: 2px solid rgba(0,0,0,0.3); }
       .highway-note.cymbal { border-style: dashed; }
       .highway-note.open { box-shadow: 0 0 0 2px #d9f99d inset; }

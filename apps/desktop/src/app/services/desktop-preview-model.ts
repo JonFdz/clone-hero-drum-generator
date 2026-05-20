@@ -21,6 +21,8 @@ export type HighwayNote = {
 	ghost?: boolean;
 };
 
+export const HIGHWAY_HIT_LINE_PERCENT = 18;
+
 const laneMap: Record<number, HighwayLane> = {
 	0: "kick",
 	1: "red",
@@ -112,12 +114,10 @@ export function deriveHighwayNotes(
 	chartData: ChartPreviewData | null,
 	normalization: NormalizationPreview | undefined,
 	currentTimeSeconds: number,
+	durationSeconds: number,
 	lookbehindSeconds = 0.25,
 	lookaheadSeconds = 3,
 ): HighwayNote[] {
-	const windowStart = currentTimeSeconds - lookbehindSeconds;
-	const windowSize = lookbehindSeconds + lookaheadSeconds;
-
 	if (chartData && chartData.noteEvents.length > 0) {
 		const eventsByTick = new Map<
 			number,
@@ -135,11 +135,13 @@ export function deriveHighwayNotes(
 			for (const event of events) {
 				const lane = laneMap[event.lane];
 				if (!lane) continue;
-				const visible =
-					event.seconds >= windowStart &&
-					event.seconds <= currentTimeSeconds + lookaheadSeconds;
-				const yPercent =
-					((event.seconds - windowStart) / Math.max(windowSize, 0.01)) * 100;
+				const yPercent = highwayYPercent(
+					event.seconds,
+					currentTimeSeconds,
+					lookbehindSeconds,
+					lookaheadSeconds,
+				);
+				const visible = yPercent >= 0 && yPercent <= 100;
 				notes.push({
 					id: `${tick}-${lane}`,
 					lane,
@@ -164,22 +166,29 @@ export function deriveHighwayNotes(
 			.slice(0, 5000);
 	}
 
-	if (!normalization || normalization.firstHits.length === 0) {
+	if (
+		!normalization ||
+		normalization.firstHits.length === 0 ||
+		!Number.isFinite(durationSeconds) ||
+		durationSeconds <= 0
+	) {
 		return [];
 	}
 
 	const maxTick = Math.max(...normalization.firstHits.map((h) => h.tick), 1);
 	const fallbackNotes: HighwayNote[] = [];
 	for (const hit of normalization.firstHits) {
-		const atSeconds = hit.tick / maxTick;
+		const atSeconds = (hit.tick / maxTick) * durationSeconds;
 		const lane = pieceToHighwayLane(hit.piece);
 		if (!lane) continue;
-		const visible =
-			atSeconds >= windowStart &&
-			atSeconds <= currentTimeSeconds + lookaheadSeconds;
+		const yPercent = highwayYPercent(
+			atSeconds,
+			currentTimeSeconds,
+			lookbehindSeconds,
+			lookaheadSeconds,
+		);
+		const visible = yPercent >= 0 && yPercent <= 100;
 		if (!visible) continue;
-		const yPercent =
-			((atSeconds - windowStart) / Math.max(windowSize, 0.01)) * 100;
 		fallbackNotes.push({
 			id: `${hit.tick}-${lane}`,
 			lane,
@@ -209,10 +218,32 @@ export function deriveHighwayLimitations(
 	}
 	if (normalization?.firstHits?.length) {
 		return [
-			"Using normalization fallback data; accent/ghost modifiers may be unavailable.",
+			"Using normalization fallback data; timing is approximate and modifier data may be incomplete.",
 		];
 	}
 	return ["No generated chart or preview hit data available for highway."];
+}
+
+export function highwayYPercent(
+	atSeconds: number,
+	currentTimeSeconds: number,
+	lookbehindSeconds: number,
+	lookaheadSeconds: number,
+): number {
+	if (atSeconds <= currentTimeSeconds) {
+		const elapsedBehind = currentTimeSeconds - atSeconds;
+		return (
+			HIGHWAY_HIT_LINE_PERCENT *
+			(1 - elapsedBehind / Math.max(lookbehindSeconds, 0.01))
+		);
+	}
+
+	const elapsedAhead = atSeconds - currentTimeSeconds;
+	return (
+		HIGHWAY_HIT_LINE_PERCENT +
+		(100 - HIGHWAY_HIT_LINE_PERCENT) *
+			(elapsedAhead / Math.max(lookaheadSeconds, 0.01))
+	);
 }
 
 function pieceToHighwayLane(piece: string): HighwayLane | null {
