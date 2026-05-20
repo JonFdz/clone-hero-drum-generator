@@ -45,6 +45,7 @@ import {
 import {
 	pickAudioPreviewCandidate,
 	parseChartPreviewData,
+	resolveChartPreviewPath,
 } from "./previewData.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -544,14 +545,18 @@ app.whenReady().then(() => {
 				const value = assertRecord(input, "Chart preview input is required.");
 				const outputDir = optionalString(value["outputDir"], "outputDir must be text.");
 				const chartPathInput = optionalString(value["chartPath"], "chartPath must be text.");
-				const chartPath = path.resolve(chartPathInput ?? (outputDir ? path.join(outputDir, "notes.chart") : ""));
-				if (!chartPath) {
-					throw new DesktopIpcError("PREVIEW_CHART_NOT_AVAILABLE", "Chart path is unavailable.");
+				let resolved: ReturnType<typeof resolveChartPreviewPath>;
+				try {
+					resolved = resolveChartPreviewPath({ outputDir, chartPath: chartPathInput });
+				} catch (error) {
+					if (error instanceof Error && error.message === "PREVIEW_CHART_NOT_AVAILABLE") {
+						throw new DesktopIpcError("PREVIEW_CHART_NOT_AVAILABLE", "Chart path is unavailable.");
+					}
+					throw new DesktopIpcError("PREVIEW_CHART_NOT_ALLOWED", "Only notes.chart can be used for chart preview.");
 				}
-				const chartDir = path.dirname(chartPath);
-				assertAllowedOutputFolder(chartDir);
-				await access(chartPath);
-				return parseChartPreviewData(chartPath);
+				assertAllowedOutputFolder(resolved.chartDir);
+				await access(resolved.chartPath);
+				return parseChartPreviewData(resolved.chartPath);
 			});
 		},
 	);

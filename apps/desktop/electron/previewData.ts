@@ -27,6 +27,35 @@ export type ChartPreviewRequest = {
 	chartPath?: string;
 };
 
+export function resolveChartPreviewPath(input: ChartPreviewRequest): {
+	resolvedOutputDir?: string;
+	chartPath: string;
+	chartDir: string;
+} {
+	const resolvedOutputDir =
+		typeof input.outputDir === "string" && input.outputDir.trim().length > 0
+			? path.resolve(input.outputDir)
+			: undefined;
+	const chartPathCandidate =
+		typeof input.chartPath === "string" && input.chartPath.trim().length > 0
+			? input.chartPath
+			: resolvedOutputDir
+				? path.join(resolvedOutputDir, "notes.chart")
+				: "";
+	const chartPath = path.resolve(chartPathCandidate);
+	if (!chartPathCandidate || !chartPath) {
+		throw new Error("PREVIEW_CHART_NOT_AVAILABLE");
+	}
+	if (path.basename(chartPath).toLowerCase() !== "notes.chart") {
+		throw new Error("PREVIEW_CHART_NOT_ALLOWED");
+	}
+	const chartDir = path.dirname(chartPath);
+	if (resolvedOutputDir && chartDir !== resolvedOutputDir) {
+		throw new Error("PREVIEW_CHART_NOT_ALLOWED");
+	}
+	return { resolvedOutputDir, chartPath, chartDir };
+}
+
 export function pickAudioPreviewCandidate(input: AudioPreviewRequest): {
 	generatedPath?: string;
 	selectedAudioPath?: string;
@@ -88,9 +117,10 @@ function parseTempos(text: string): Array<{ tick: number; bpm: number }> {
 		const m = line.match(/^(\s*\d+)\s*=\s*B\s+(\d+)/);
 		if (!m) continue;
 		const tick = Number(m[1].trim());
-		const microsPerQuarter = Number(m[2]);
-		if (Number.isFinite(tick) && Number.isFinite(microsPerQuarter) && microsPerQuarter > 0) {
-			events.push({ tick, bpm: 60_000_000 / microsPerQuarter });
+		const chartBpmValue = Number(m[2]);
+		const bpm = chartBpmValue / 1000;
+		if (Number.isFinite(tick) && Number.isFinite(bpm) && bpm > 0) {
+			events.push({ tick, bpm });
 		}
 	}
 	return events.sort((a, b) => a.tick - b.tick);

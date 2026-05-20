@@ -33,6 +33,8 @@ import { DesktopPreviewService } from "../../services/desktop-preview.service";
           <span>{{ preview.currentTimeText() }} / {{ preview.durationText() }}</span>
         </div>
 
+        <h3>Waveform-like overview</h3>
+        <p class="field-hint">Lightweight preview overview (not decoded audio waveform yet).</p>
         <div class="waveform" *ngIf="preview.waveformBars().length > 0; else noWaveform">
           <span *ngFor="let bar of preview.waveformBars()" class="bar" [style.height.%]="bar * 100"></span>
         </div>
