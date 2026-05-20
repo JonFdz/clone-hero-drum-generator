@@ -46,6 +46,19 @@ export type FfmpegDiagnostic = {
 	message: string;
 };
 
+export type AudioPreviewSource = {
+	src: string;
+	sourceKind: "generated" | "selected-audio";
+};
+
+export type ChartPreviewData = {
+	resolution: number;
+	offsetSeconds: number;
+	hasAccurateTiming: boolean;
+	limitations: string[];
+	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
+};
+
 export type ProjectStatePayload = {
 	projectName: string;
 	projectFilePath?: string;
@@ -203,6 +216,21 @@ export class DesktopBridgeService {
 
 	async testFfmpeg(input: string): Promise<JsonEnvelope<FfmpegDiagnostic>> {
 		return this.requireBridge().testFfmpeg(input);
+	}
+
+	async getAudioPreviewSource(input: {
+		outputDir?: string;
+		generatedSongOggPath?: string;
+		selectedAudioPath?: string;
+	}): Promise<JsonEnvelope<AudioPreviewSource>> {
+		return this.requireBridge().getAudioPreviewSource(input);
+	}
+
+	async getChartPreviewData(input: {
+		outputDir?: string;
+		chartPath?: string;
+	}): Promise<JsonEnvelope<ChartPreviewData>> {
+		return this.requireBridge().getChartPreviewData(input);
 	}
 
 	private requireBridge(): NonNullable<Window["chdg"]> {
