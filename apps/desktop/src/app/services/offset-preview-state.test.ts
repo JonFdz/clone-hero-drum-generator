@@ -6,6 +6,7 @@ import {
 	nudgeOffsetMs,
 	offsetApplyStatusMessage,
 	resetOffsetToSaved,
+	resolveOffsetApplyFlow,
 } from "./offset-preview-state";
 
 describe("offset-preview-state", () => {
@@ -25,16 +26,47 @@ describe("offset-preview-state", () => {
 
 	it("validates input and apply-state", () => {
 		expect(isOffsetInputValid("abc")).toBe(false);
+		expect(isOffsetInputValid("")).toBe(false);
+		expect(isOffsetInputValid("   ")).toBe(false);
+		expect(isOffsetInputValid("0")).toBe(true);
 		expect(isOffsetInputValid("50")).toBe(true);
 		expect(
-			canApplyOffset({ inputValid: false, previewOffsetMs: 50, savedOffsetMs: 0 }),
+			canApplyOffset({
+				inputValid: false,
+				previewOffsetMs: 50,
+				savedOffsetMs: 0,
+			}),
 		).toBe(false);
 		expect(
-			canApplyOffset({ inputValid: true, previewOffsetMs: 50, savedOffsetMs: 0 }),
+			canApplyOffset({
+				inputValid: true,
+				previewOffsetMs: 50,
+				savedOffsetMs: 0,
+			}),
 		).toBe(true);
 		expect(
-			canApplyOffset({ inputValid: true, previewOffsetMs: 0, savedOffsetMs: 0 }),
+			canApplyOffset({
+				inputValid: true,
+				previewOffsetMs: 0,
+				savedOffsetMs: 0,
+			}),
 		).toBe(false);
+	});
+
+	it("keeps saved/project offset unchanged when chart write fails", () => {
+		expect(
+			resolveOffsetApplyFlow({
+				hasOutputDir: true,
+				hasChart: true,
+				chartUpdateOk: false,
+			}),
+		).toEqual({
+			canPersistOffset: false,
+			chartUpdated: false,
+			chartMissing: false,
+			outputMissing: false,
+			failed: true,
+		});
 	});
 
 	it("returns truthful apply status messages", () => {

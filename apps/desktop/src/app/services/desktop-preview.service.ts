@@ -20,6 +20,7 @@ import {
 	nudgeOffsetMs,
 	offsetApplyStatusMessage,
 	resetOffsetToSaved,
+	resolveOffsetApplyFlow,
 } from "./offset-preview-state";
 
 @Injectable({ providedIn: "root" })
@@ -35,7 +36,9 @@ export class DesktopPreviewService {
 	readonly offsetStatus = signal<string | null>(null);
 	readonly offsetInputValid = signal(true);
 
-	readonly savedOffsetMs = computed(() => this.generateState.state().offsetMs ?? 0);
+	readonly savedOffsetMs = computed(
+		() => this.generateState.state().offsetMs ?? 0,
+	);
 	readonly offsetDirty = computed(() =>
 		isOffsetDirty(this.previewOffsetMs(), this.savedOffsetMs()),
 	);
@@ -167,28 +170,42 @@ export class DesktopPreviewService {
 		let chartMissing = false;
 		let outputMissing = false;
 
-		this.generateState.setOffsetMsInput(String(offsetMs));
-		const state = this.generateState.state();
-		if (state.outputDir) {
-			if (state.outputFiles?.chart) {
-				const chartUpdate = await this.bridge.applyChartOffset({
-					outputDir: state.outputDir,
-					chartPath: state.outputFiles.chart,
-					offsetMs,
-				});
-				if (!chartUpdate.ok) {
-					this.offsetStatus.set(`Failed to update notes.chart Offset: ${chartUpdate.error.message}`);
-					this.projectState.markFailed();
-					return;
-				}
-				chartUpdated = true;
-				this.projectState.markGenerated();
-			} else {
-				chartMissing = true;
-				this.projectState.markNeedsRegenerate();
+		const stateBeforeApply = this.generateState.state();
+		if (stateBeforeApply.outputDir && stateBeforeApply.outputFiles?.chart) {
+			const chartUpdate = await this.bridge.applyChartOffset({
+				outputDir: stateBeforeApply.outputDir,
+				chartPath: stateBeforeApply.outputFiles.chart,
+				offsetMs,
+			});
+			const chartUpdateError = chartUpdate.ok
+				? undefined
+				: chartUpdate.error.message;
+			const flow = resolveOffsetApplyFlow({
+				hasOutputDir: true,
+				hasChart: true,
+				chartUpdateOk: chartUpdate.ok,
+			});
+			if (!flow.canPersistOffset) {
+				this.offsetStatus.set(
+					`Failed to update notes.chart Offset: ${chartUpdateError ?? "unknown error"}`,
+				);
+				this.projectState.markFailed();
+				return;
 			}
+			chartUpdated = flow.chartUpdated;
 		} else {
-			outputMissing = true;
+			const flow = resolveOffsetApplyFlow({
+				hasOutputDir: !!stateBeforeApply.outputDir,
+				hasChart: !!stateBeforeApply.outputFiles?.chart,
+			});
+			chartMissing = flow.chartMissing;
+			outputMissing = flow.outputMissing;
+		}
+
+		this.generateState.setOffsetMsInput(String(offsetMs));
+		if (chartUpdated) {
+			this.projectState.markGenerated();
+		} else if (chartMissing || outputMissing) {
 			this.projectState.markNeedsRegenerate();
 		}
 
