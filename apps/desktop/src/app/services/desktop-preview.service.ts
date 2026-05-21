@@ -1,8 +1,14 @@
 import { Injectable, computed, signal } from "@angular/core";
-import { DesktopBridgeService, type ChartPreviewData } from "./desktop-bridge.service";
+import {
+	DesktopBridgeService,
+	type ChartPreviewData,
+} from "./desktop-bridge.service";
 import { DesktopGenerateStateService } from "./desktop-generate-state.service";
 import {
+	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,
+	deriveHighwayLimitations,
+	deriveHighwayNotes,
 	deriveTimelineNotes,
 	formatTime,
 } from "./desktop-preview-model";
@@ -17,12 +23,27 @@ export class DesktopPreviewService {
 	readonly duration = signal(0);
 
 	readonly waveformBars = computed(() => buildWaveformBars(this.duration()));
+	readonly highwayHitLinePercent = HIGHWAY_HIT_LINE_PERCENT;
 	readonly timelineNotes = computed(() =>
 		deriveTimelineNotes(
 			this.chartData(),
 			this.generateState.state().normalizationPreview,
 			this.duration(),
 			this.currentTime(),
+		),
+	);
+	readonly highwayNotes = computed(() =>
+		deriveHighwayNotes(
+			this.chartData(),
+			this.generateState.state().normalizationPreview,
+			this.currentTime(),
+			this.duration(),
+		),
+	);
+	readonly highwayLimitations = computed(() =>
+		deriveHighwayLimitations(
+			this.chartData(),
+			this.generateState.state().normalizationPreview,
 		),
 	);
 	readonly currentTimeText = computed(() => formatTime(this.currentTime()));
