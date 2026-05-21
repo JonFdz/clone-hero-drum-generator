@@ -6,7 +6,9 @@ import {
 	deriveHighwayLimitations,
 	deriveHighwayNotes,
 	deriveTimelineNotes,
+	effectiveNoteTime,
 	formatTime,
+	offsetMsToSeconds,
 } from "./desktop-preview-model";
 
 describe("desktop-preview-model", () => {
@@ -16,6 +18,13 @@ describe("desktop-preview-model", () => {
 
 	it("builds waveform-like bars", () => {
 		expect(buildWaveformBars(10, 12)).toHaveLength(12);
+	});
+
+	it("converts milliseconds and applies preview note timing", () => {
+		expect(offsetMsToSeconds(900)).toBe(0.9);
+		expect(offsetMsToSeconds(-120)).toBe(-0.12);
+		expect(effectiveNoteTime(1, 50)).toBe(1.05);
+		expect(effectiveNoteTime(1, -50)).toBe(0.95);
 	});
 
 	it("derives notes from chart data", () => {
@@ -33,6 +42,7 @@ describe("desktop-preview-model", () => {
 			undefined,
 			10,
 			1.05,
+			0,
 		);
 		expect(notes[0]?.highlighted).toBe(true);
 		expect(notes[1]?.highlighted).toBe(false);
@@ -55,6 +65,7 @@ describe("desktop-preview-model", () => {
 			undefined,
 			0,
 			10,
+			0,
 		);
 		expect(notes).toHaveLength(1);
 		expect(notes[0]).toMatchObject({ lane: "yellow", cymbal: true, accent: true, ghost: true });
@@ -72,6 +83,7 @@ describe("desktop-preview-model", () => {
 			undefined,
 			0,
 			10,
+			0,
 		);
 		expect(notes).toHaveLength(0);
 	});
@@ -92,6 +104,7 @@ describe("desktop-preview-model", () => {
 			undefined,
 			1.0,
 			10,
+			0,
 		);
 		expect(notes.find((n) => n.lane === "yellow")?.yPercent).toBe(HIGHWAY_HIT_LINE_PERCENT);
 		expect(notes.find((n) => n.lane === "red")?.yPercent).toBeLessThan(HIGHWAY_HIT_LINE_PERCENT);
@@ -114,6 +127,7 @@ describe("desktop-preview-model", () => {
 			undefined,
 			1.0,
 			10,
+			0,
 		);
 		expect(notes.map((n) => n.lane)).toEqual(["red", "yellow"]);
 	});
@@ -127,6 +141,7 @@ describe("desktop-preview-model", () => {
 			]),
 			8,
 			10,
+			0,
 		);
 		expect(notes.find((n) => n.atSeconds === 10)?.yPercent).toBeGreaterThan(HIGHWAY_HIT_LINE_PERCENT);
 	});

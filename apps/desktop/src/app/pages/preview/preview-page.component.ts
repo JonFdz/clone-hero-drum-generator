@@ -16,7 +16,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
     <header class="page-header">
       <p class="eyebrow">Preview</p>
       <h1>Audio + timeline + highway preview</h1>
-      <p>Read-only local preview. No note editing or persisted offset adjustments in Phase 14B.</p>
+      <p>Chart Offset adjusts notes.chart [Song] Offset. Notes are not moved; audio is not modified.</p>
     </header>
 
     <section class="card" *ngIf="preview.error(); else loaded">
@@ -84,6 +84,33 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
           ></span>
         </div>
         <ng-template #noHighwayNotes><p>No highway notes available for the current preview data.</p></ng-template>
+      </section>
+
+      <section class="card">
+        <h2>Chart Offset</h2>
+        <p class="field-hint">Adjusts notes.chart [Song] Offset. Notes are not moved; audio is not modified.</p>
+        <p>Saved: <strong>{{ preview.savedOffsetMs() }} ms</strong></p>
+        <p>Preview: <strong>{{ preview.previewOffsetMs() }} ms</strong></p>
+        <p>Delta: <strong>{{ preview.offsetDeltaMs() }} ms</strong></p>
+
+        <div class="controls">
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(-100)">-100 ms</button>
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(-50)">-50 ms</button>
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(-10)">-10 ms</button>
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(10)">+10 ms</button>
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(50)">+50 ms</button>
+          <button class="button ghost" type="button" (click)="preview.nudgeOffset(100)">+100 ms</button>
+        </div>
+
+        <label>Offset (ms)
+          <input type="number" [value]="preview.offsetInputMs()" (input)="onOffsetInput($event)" />
+        </label>
+
+        <div class="controls">
+          <button class="button secondary" type="button" (click)="preview.resetPreviewOffset()">Reset to saved</button>
+          <button class="button" type="button" [disabled]="!preview.canApplyOffset()" (click)="applyOffset()">Apply & Save</button>
+        </div>
+        <p *ngIf="preview.offsetStatus()" class="field-hint">{{ preview.offsetStatus() }}</p>
       </section>
     </ng-template>
 
@@ -154,6 +181,16 @@ export class PreviewPageComponent implements AfterViewInit {
 
 	onAudioError(): void {
 		this.preview.error.set("Audio failed to load.");
+	}
+
+	onOffsetInput(event: Event): void {
+		const input = event.target as HTMLInputElement;
+		this.preview.setPreviewOffsetInput(input.value);
+	}
+
+	async applyOffset(): Promise<void> {
+		await this.preview.applyOffset();
+		await this.preview.load();
 	}
 
 	laneLeftPercent(lane: HighwayLane): number {

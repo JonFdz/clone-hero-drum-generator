@@ -79,6 +79,11 @@ declare global {
 				outputDir?: string;
 				chartPath?: string;
 			}) => Promise<JsonEnvelope<ChartPreviewData>>;
+			applyChartOffset: (input: {
+				outputDir: string;
+				chartPath?: string;
+				offsetMs: number;
+			}) => Promise<JsonEnvelope<{ chartPath: string; offsetSeconds: number }>>;
 		};
 	}
 }

@@ -47,6 +47,7 @@ import {
 	parseChartPreviewData,
 	resolveChartPreviewPath,
 } from "./previewData.js";
+import { applyChartOffsetFile } from "./chartOffset.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -557,6 +558,33 @@ app.whenReady().then(() => {
 				assertAllowedOutputFolder(resolved.chartDir);
 				await access(resolved.chartPath);
 				return parseChartPreviewData(resolved.chartPath);
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:apply-chart-offset",
+		async (_event, input: unknown): Promise<JsonEnvelope<{ chartPath: string; offsetSeconds: number }>> => {
+			return toEnvelope(async () => {
+				const value = assertRecord(input, "Chart offset input is required.");
+				const outputDir = assertNonEmptyString(value["outputDir"], "outputDir is required.");
+				const chartPathInput = optionalString(value["chartPath"], "chartPath must be text.");
+				const offsetMs = optionalNumber(value["offsetMs"], "offsetMs must be numeric.");
+				if (offsetMs === undefined) {
+					throw new DesktopIpcError("INVALID_INPUT", "offsetMs is required.");
+				}
+
+				let resolved: ReturnType<typeof resolveChartPreviewPath>;
+				try {
+					resolved = resolveChartPreviewPath({ outputDir, chartPath: chartPathInput });
+				} catch {
+					throw new DesktopIpcError("PREVIEW_CHART_NOT_ALLOWED", "Only notes.chart can be updated for chart offset.");
+				}
+
+				assertAllowedOutputFolder(outputDir);
+				assertAllowedOutputFolder(resolved.chartDir);
+				await access(resolved.chartPath);
+				return applyChartOffsetFile({ chartPath: resolved.chartPath, offsetMs });
 			});
 		},
 	);

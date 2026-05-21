@@ -37,6 +37,8 @@ const api = {
 		ipcRenderer.invoke("chdg:get-audio-preview-source", input),
 	getChartPreviewData: (input: unknown) =>
 		ipcRenderer.invoke("chdg:get-chart-preview-data", input),
+	applyChartOffset: (input: unknown) =>
+		ipcRenderer.invoke("chdg:apply-chart-offset", input),
 };
 
 contextBridge.exposeInMainWorld("chdg", api);

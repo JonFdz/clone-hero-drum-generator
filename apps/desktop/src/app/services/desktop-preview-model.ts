@@ -76,19 +76,37 @@ export function buildWaveformBars(
 	});
 }
 
+export function offsetMsToSeconds(offsetMs: number): number {
+	if (!Number.isFinite(offsetMs)) {
+		throw new Error("OFFSET_NOT_FINITE");
+	}
+	return offsetMs / 1000;
+}
+
+export function effectiveNoteTime(
+	noteTimeSeconds: number,
+	previewOffsetMs: number,
+): number {
+	return noteTimeSeconds + offsetMsToSeconds(previewOffsetMs);
+}
+
 export function deriveTimelineNotes(
 	chartData: ChartPreviewData | null,
 	normalization: NormalizationPreview | undefined,
 	durationSeconds: number,
 	currentTimeSeconds: number,
+	previewOffsetMs = 0,
 ): TimelineNote[] {
 	const tolerance = 0.12;
 	if (chartData && chartData.noteEvents.length > 0) {
-		return chartData.noteEvents.slice(0, 5000).map((n) => ({
-			atSeconds: n.seconds,
-			lane: laneMap[n.lane] ?? `lane-${n.lane}`,
-			highlighted: Math.abs(n.seconds - currentTimeSeconds) <= tolerance,
-		}));
+		return chartData.noteEvents.slice(0, 5000).map((n) => {
+			const atSeconds = effectiveNoteTime(n.seconds, previewOffsetMs);
+			return {
+				atSeconds,
+				lane: laneMap[n.lane] ?? `lane-${n.lane}`,
+				highlighted: Math.abs(atSeconds - currentTimeSeconds) <= tolerance,
+			};
+		});
 	}
 
 	if (
@@ -101,7 +119,10 @@ export function deriveTimelineNotes(
 
 	const maxTick = Math.max(...normalization.firstHits.map((h) => h.tick), 1);
 	return normalization.firstHits.map((h) => {
-		const atSeconds = (h.tick / maxTick) * durationSeconds;
+		const atSeconds = effectiveNoteTime(
+			(h.tick / maxTick) * durationSeconds,
+			previewOffsetMs,
+		);
 		return {
 			atSeconds,
 			lane: h.piece,
@@ -115,6 +136,7 @@ export function deriveHighwayNotes(
 	normalization: NormalizationPreview | undefined,
 	currentTimeSeconds: number,
 	durationSeconds: number,
+	previewOffsetMs = 0,
 	lookbehindSeconds = 0.25,
 	lookaheadSeconds = 3,
 ): HighwayNote[] {
@@ -135,8 +157,9 @@ export function deriveHighwayNotes(
 			for (const event of events) {
 				const lane = laneMap[event.lane];
 				if (!lane) continue;
+				const atSeconds = effectiveNoteTime(event.seconds, previewOffsetMs);
 				const yPercent = highwayYPercent(
-					event.seconds,
+					atSeconds,
 					currentTimeSeconds,
 					lookbehindSeconds,
 					lookaheadSeconds,
@@ -145,7 +168,7 @@ export function deriveHighwayNotes(
 				notes.push({
 					id: `${tick}-${lane}`,
 					lane,
-					atSeconds: event.seconds,
+					atSeconds,
 					yPercent,
 					visible,
 					cymbal: cymbalModifierByLane[lane]
@@ -178,7 +201,10 @@ export function deriveHighwayNotes(
 	const maxTick = Math.max(...normalization.firstHits.map((h) => h.tick), 1);
 	const fallbackNotes: HighwayNote[] = [];
 	for (const hit of normalization.firstHits) {
-		const atSeconds = (hit.tick / maxTick) * durationSeconds;
+		const atSeconds = effectiveNoteTime(
+			(hit.tick / maxTick) * durationSeconds,
+			previewOffsetMs,
+		);
 		const lane = pieceToHighwayLane(hit.piece);
 		if (!lane) continue;
 		const yPercent = highwayYPercent(

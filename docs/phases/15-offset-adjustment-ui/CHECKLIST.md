@@ -2,18 +2,18 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/phases/14a-audio-waveform-timeline-preview/PRD.md`.
-- [ ] Read `docs/phases/14b-clone-hero-highway-preview/PRD.md`.
-- [ ] Read this phase PRD.
-- [ ] Read this phase ADR.
-- [ ] Review visual reference:
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/phases/14a-audio-waveform-timeline-preview/PRD.md`.
+- [x] Read `docs/phases/14b-clone-hero-highway-preview/PRD.md`.
+- [x] Read this phase PRD.
+- [x] Read this phase ADR.
+- [x] Review visual reference:
   - `docs/desktop/mockups/08-preview-offset.png`
-- [ ] Read OpenSpec:
+- [x] Read OpenSpec:
   - `openspec/changes/phase-15-offset-adjustment-loop/proposal.md`
   - `openspec/changes/phase-15-offset-adjustment-loop/design.md`
   - `openspec/changes/phase-15-offset-adjustment-loop/tasks.md`
@@ -22,34 +22,34 @@
 
 ## Implementation
 
-- [ ] Implement only Phase 15 scope.
-- [ ] Add Chart Offset controls to Preview page.
-- [ ] Show saved offset.
-- [ ] Show preview offset.
-- [ ] Show delta from saved offset.
-- [ ] Add quick nudge buttons.
-- [ ] Add manual ms input.
-- [ ] Add reset/revert.
-- [ ] Add apply/save.
-- [ ] Preview offset updates timeline notes live.
-- [ ] Preview offset updates highway notes live.
-- [ ] Apply/save updates project offset.
-- [ ] Apply/save updates generated `notes.chart` `[Song] Offset`.
-- [ ] Do not shift note ticks.
-- [ ] Do not modify audio.
-- [ ] Preserve Phase 14A/14B preview.
-- [ ] Preserve validation/generation/project behavior.
-- [ ] Preserve Electron security boundaries.
-- [ ] Add/update tests.
+- [x] Implement only Phase 15 scope.
+- [x] Add Chart Offset controls to Preview page.
+- [x] Show saved offset.
+- [x] Show preview offset.
+- [x] Show delta from saved offset.
+- [x] Add quick nudge buttons.
+- [x] Add manual ms input.
+- [x] Add reset/revert.
+- [x] Add apply/save.
+- [x] Preview offset updates timeline notes live.
+- [x] Preview offset updates highway notes live.
+- [x] Apply/save updates project offset.
+- [x] Apply/save updates generated `notes.chart` `[Song] Offset`.
+- [x] Do not shift note ticks.
+- [x] Do not modify audio.
+- [x] Preserve Phase 14A/14B preview.
+- [x] Preserve validation/generation/project behavior.
+- [x] Preserve Electron security boundaries.
+- [x] Add/update tests.
 
 ## Validation
 
-- [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
-- [ ] `pnpm --filter @chdg/desktop build` passes.
-- [ ] `pnpm --filter @chdg/desktop typecheck` passes.
-- [ ] `pnpm chdg --help` passes.
+- [x] `pnpm build` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `pnpm test` passes.
+- [x] `pnpm --filter @chdg/desktop build` passes.
+- [x] `pnpm --filter @chdg/desktop typecheck` passes.
+- [x] `pnpm chdg --help` passes.
 - [ ] Manual desktop validation recorded if relevant.
 
 ## Manual desktop smoke
@@ -71,9 +71,9 @@
 
 ## Deferred
 
-- [ ] No automatic offset detection.
-- [ ] No note editing.
-- [ ] No mapping overrides.
-- [ ] No packaging.
-- [ ] No full UX polish pass.
-- [ ] Do not implement future phases unless explicitly approved.
+- [x] No automatic offset detection.
+- [x] No note editing.
+- [x] No mapping overrides.
+- [x] No packaging.
+- [x] No full UX polish pass.
+- [x] Do not implement future phases unless explicitly approved.

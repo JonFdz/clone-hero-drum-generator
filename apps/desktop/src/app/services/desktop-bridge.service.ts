@@ -59,6 +59,12 @@ export type ChartPreviewData = {
 	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
 };
 
+export type ApplyChartOffsetInput = {
+	outputDir: string;
+	chartPath?: string;
+	offsetMs: number;
+};
+
 export type ProjectStatePayload = {
 	projectName: string;
 	projectFilePath?: string;
@@ -231,6 +237,12 @@ export class DesktopBridgeService {
 		chartPath?: string;
 	}): Promise<JsonEnvelope<ChartPreviewData>> {
 		return this.requireBridge().getChartPreviewData(input);
+	}
+
+	async applyChartOffset(
+		input: ApplyChartOffsetInput,
+	): Promise<JsonEnvelope<{ chartPath: string; offsetSeconds: number }>> {
+		return this.requireBridge().applyChartOffset(input);
 	}
 
 	private requireBridge(): NonNullable<Window["chdg"]> {
