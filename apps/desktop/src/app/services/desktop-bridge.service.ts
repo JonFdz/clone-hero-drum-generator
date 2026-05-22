@@ -13,7 +13,7 @@ import type {
 	MappingOverrideProfile,
 	RecentProject,
 	ProjectMappingOverrides,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import { unavailableDesktopHealth } from "./desktop-bridge-model";
 
 export type DesktopAppInfo = {

@@ -3,7 +3,7 @@ import type {
 	ChdgOutputStatus,
 	DesktopSettings,
 	RecentProject,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import { DesktopBridgeService } from "./desktop-bridge.service";
 import type {
 	FfmpegDiagnostic,

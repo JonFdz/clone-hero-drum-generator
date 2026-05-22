@@ -6,7 +6,7 @@ import {
 	type MappingOverrideProfile,
 	type MappingProfileApplyMode,
 	type ProjectMappingOverrides,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { buildMappingRows, type MappingRow } from "./mapping-page.model";

@@ -11,7 +11,7 @@ import type {
 	DesktopSettings,
 	MappingOverrideProfile,
 	RecentProject,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import type {
 	DesktopAppInfo,
 	DesktopHealthStatus,

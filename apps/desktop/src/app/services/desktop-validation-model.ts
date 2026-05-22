@@ -3,7 +3,7 @@ import type {
 	ValidationCategory,
 	ValidationItem,
 	ValidationSummary,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import { detectDesktopSourceKind } from "./desktop-generate-model";
 import type { DesktopGenerateState } from "./desktop-generate-state.service";
 import type { DesktopProjectState } from "./desktop-project-state.service";
