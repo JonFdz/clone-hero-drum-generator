@@ -5,6 +5,12 @@ export type {
 	ProjectMappingOverrides,
 	MappingOverrideTarget,
 } from "./mappingOverrides.js";
+export { applyMappingProfile } from "./mappingProfiles.js";
+export type {
+	MappingOverrideProfile,
+	MappingOverrideProfileStore,
+	MappingProfileApplyMode,
+} from "./mappingProfiles.js";
 export type { DesktopSettings, RecentProject } from "./settingsTypes.js";
 export type {
 	InspectSourceInput,
