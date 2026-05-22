@@ -10,6 +10,7 @@ import type {
 	ChdgProjectFile,
 	ChdgOutputStatus,
 	DesktopSettings,
+	MappingOverrideProfile,
 	RecentProject,
 	ProjectMappingOverrides,
 } from "@chdg/project";
@@ -220,6 +221,22 @@ export class DesktopBridgeService {
 		settings: DesktopSettings,
 	): Promise<JsonEnvelope<DesktopSettings>> {
 		return this.requireBridge().writeSettings(settings);
+	}
+
+	async readMappingProfiles(): Promise<JsonEnvelope<MappingOverrideProfile[]>> {
+		return this.requireBridge().readMappingProfiles();
+	}
+
+	async saveMappingProfile(
+		profile: MappingOverrideProfile,
+	): Promise<JsonEnvelope<MappingOverrideProfile[]>> {
+		return this.requireBridge().saveMappingProfile(profile);
+	}
+
+	async deleteMappingProfile(
+		profileId: string,
+	): Promise<JsonEnvelope<MappingOverrideProfile[]>> {
+		return this.requireBridge().deleteMappingProfile(profileId);
 	}
 
 	async testFfmpeg(input: string): Promise<JsonEnvelope<FfmpegDiagnostic>> {

@@ -9,6 +9,7 @@ import type {
 	ChdgProjectFile,
 	ChdgOutputStatus,
 	DesktopSettings,
+	MappingOverrideProfile,
 	RecentProject,
 } from "@chdg/project";
 import type {
@@ -69,6 +70,13 @@ declare global {
 			writeSettings: (
 				settings: DesktopSettings,
 			) => Promise<JsonEnvelope<DesktopSettings>>;
+			readMappingProfiles: () => Promise<JsonEnvelope<MappingOverrideProfile[]>>;
+			saveMappingProfile: (
+				profile: MappingOverrideProfile,
+			) => Promise<JsonEnvelope<MappingOverrideProfile[]>>;
+			deleteMappingProfile: (
+				profileId: string,
+			) => Promise<JsonEnvelope<MappingOverrideProfile[]>>;
 			testFfmpeg: (input: string) => Promise<JsonEnvelope<FfmpegDiagnostic>>;
 			getAudioPreviewSource: (input: {
 				outputDir?: string;

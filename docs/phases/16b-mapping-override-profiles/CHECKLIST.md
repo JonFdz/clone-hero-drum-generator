@@ -2,17 +2,17 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/phases/16a-project-mapping-overrides/PRD.md`.
-- [ ] Read `docs/phases/16a-project-mapping-overrides/ADR.md`.
-- [ ] Read `docs/phases/16b-mapping-override-profiles/PRD.md`.
-- [ ] Read `docs/phases/16b-mapping-override-profiles/ADR.md`.
-- [ ] Read this checklist.
-- [ ] Read OpenSpec if present:
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/phases/16a-project-mapping-overrides/PRD.md`.
+- [x] Read `docs/phases/16a-project-mapping-overrides/ADR.md`.
+- [x] Read `docs/phases/16b-mapping-override-profiles/PRD.md`.
+- [x] Read `docs/phases/16b-mapping-override-profiles/ADR.md`.
+- [x] Read this checklist.
+- [x] Read OpenSpec if present:
   - `openspec/changes/phase-16b-mapping-override-profiles/proposal.md`
   - `openspec/changes/phase-16b-mapping-override-profiles/design.md`
   - `openspec/changes/phase-16b-mapping-override-profiles/tasks.md`
@@ -22,34 +22,34 @@
 ## Implementation
 
 - [ ] Implement only Phase 16B scope.
-- [ ] Add mapping profile model.
-- [ ] Add local profile persistence.
+- [x] Add mapping profile model.
+- [x] Add local profile persistence.
 - [ ] Preserve valid profiles across app restart.
-- [ ] Validate malformed profiles safely.
-- [ ] Add profile list UI.
-- [ ] Add create profile from current project overrides.
-- [ ] Add edit profile metadata.
-- [ ] Add update profile from current project overrides.
-- [ ] Add delete profile.
-- [ ] Add apply profile to project.
-- [ ] Support replace mode.
-- [ ] Support merge mode.
-- [ ] Show conflict/overwrite summary.
-- [ ] Applying profile updates project overrides.
-- [ ] Applying profile marks preview/output stale.
+- [x] Validate malformed profiles safely.
+- [x] Add profile list UI.
+- [x] Add create profile from current project overrides.
+- [x] Add edit profile metadata.
+- [x] Add update profile from current project overrides.
+- [x] Add delete profile.
+- [x] Add apply profile to project.
+- [x] Support replace mode.
+- [x] Support merge mode.
+- [x] Show conflict/overwrite summary.
+- [x] Applying profile updates project overrides.
+- [x] Applying profile marks preview/output stale.
 - [ ] Preserve Phase 16A project overrides.
 - [ ] Preserve generation/validation/preview/highway/offset.
 - [ ] Preserve Electron security boundaries.
-- [ ] Add/update tests.
+- [x] Add/update tests.
 
 ## Validation
 
 - [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
+- [ ] `pnpm typecheck` passes. (fails in `apps/desktop` due `ng build` abort trap in this environment)
+- [x] `pnpm test` passes.
 - [ ] `pnpm --filter @chdg/desktop build` passes.
 - [ ] `pnpm --filter @chdg/desktop typecheck` passes.
-- [ ] `pnpm chdg --help` passes.
+- [ ] `pnpm chdg --help` passes. (fails in sandbox with EPERM on tsx IPC pipe)
 - [ ] Manual desktop validation recorded if relevant.
 
 ## Manual desktop smoke
