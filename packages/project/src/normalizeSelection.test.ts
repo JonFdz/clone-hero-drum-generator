@@ -62,6 +62,41 @@ describe("normalizeSelection", () => {
 		]);
 	});
 
+	it("applies mapping override during normalization preview", async () => {
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53 },
+			hits: [
+				{
+					tick: 0,
+					piece: "kick",
+					velocity: 96,
+					durationTicks: 0,
+					source: {
+						midiNote: 37,
+						trackIndex: 53,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+			unknownNotes: [],
+		});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			mappingOverrides: {
+				"midi:37": {
+					sourceKind: "midi",
+					key: "midi:37",
+					target: { kind: "piece", piece: "snare" },
+				},
+			},
+		});
+
+		expect(result.pieceSummary).toEqual({ snare: 1 });
+	});
+
 	it("returns GPIF normalization preview DTO", async () => {
 		mocks.normalizeGpDrums.mockResolvedValue({
 			trackIndex: 3,

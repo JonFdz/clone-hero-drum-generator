@@ -9,3 +9,4 @@ export * from "./validatePackage.js";
 export * from "./validation.js";
 export * from "./projectFile.js";
 export * from "./settings.js";
+export * from "./mappingOverrides.js";

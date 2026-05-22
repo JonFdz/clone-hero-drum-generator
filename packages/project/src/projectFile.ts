@@ -1,3 +1,5 @@
+import { validateMappingOverrides } from "./mappingOverrides.js";
+
 export type ChdgOutputStatus =
 	| "not-generated"
 	| "generated"
@@ -44,6 +46,7 @@ export type ChdgProjectFile = {
 		lastResultSummary?: unknown;
 	};
 	settings?: Record<string, unknown>;
+	mappingOverrides?: Record<string, unknown>;
 };
 
 export type ChdgProjectFileValidationResult =
@@ -104,6 +107,9 @@ export function validateProjectFile(
 		const metadata = validateMetadata(obj["metadata"]);
 		const generation = validateGeneration(obj["generation"]);
 		const settings = validateSettings(obj["settings"]);
+		const mappingOverrides = validateMappingOverridesField(
+			obj["mappingOverrides"],
+		);
 
 		const safeProject: ChdgProjectFile = {
 			schemaVersion: 1,
@@ -122,6 +128,9 @@ export function validateProjectFile(
 		}
 		if (settings !== undefined) {
 			safeProject.settings = settings;
+		}
+		if (Object.keys(mappingOverrides).length > 0) {
+			safeProject.mappingOverrides = mappingOverrides;
 		}
 
 		return {
@@ -142,6 +151,13 @@ export function validateProjectFile(
 			message: "Project file is not valid.",
 		};
 	}
+}
+
+function validateMappingOverridesField(
+	input: unknown,
+): Record<string, unknown> {
+	if (input === undefined) return {};
+	return validateMappingOverrides(input) as Record<string, unknown>;
 }
 
 export function createProjectFile(

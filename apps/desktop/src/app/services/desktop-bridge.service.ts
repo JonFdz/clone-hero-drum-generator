@@ -11,6 +11,7 @@ import type {
 	ChdgOutputStatus,
 	DesktopSettings,
 	RecentProject,
+	ProjectMappingOverrides,
 } from "@chdg/project";
 import { unavailableDesktopHealth } from "./desktop-bridge-model";
 
@@ -89,6 +90,7 @@ export type ProjectStatePayload = {
 		songIni?: string;
 		songOgg?: string;
 	};
+	mappingOverrides?: ProjectMappingOverrides;
 };
 
 export type SaveProjectResult = {

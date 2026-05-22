@@ -24,6 +24,7 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import { normalizeDrumsFromFile } from "@chdg/midi";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
+import { applyProjectMappingOverrides } from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type {
@@ -159,7 +160,10 @@ async function normalizeGenerateSource(
 				: [],
 		);
 		const merged = mergeDrumHits(
-			results.flatMap((result) => result.hits),
+			applyProjectMappingOverrides(
+				results.flatMap((result) => result.hits),
+				input.mappingOverrides,
+			),
 			selectedTracks,
 		);
 
@@ -219,7 +223,10 @@ async function normalizeGenerateSource(
 		),
 	]);
 	const merged = mergeDrumHits(
-		results.flatMap((result) => result.hits),
+		applyProjectMappingOverrides(
+			results.flatMap((result) => result.hits),
+			input.mappingOverrides,
+		),
 		selectedTracks,
 	);
 

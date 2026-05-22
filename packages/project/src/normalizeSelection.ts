@@ -6,6 +6,7 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 import type { DrumHit } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
+import { applyProjectMappingOverrides, type ProjectMappingOverrides } from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type { NormalizationPreview, ProjectIssue } from "./types.js";
@@ -16,6 +17,7 @@ export type NormalizeSelectionInput = {
 	sourcePath: string;
 	trackIndex?: number;
 	trackIndexes?: number[];
+	mappingOverrides?: ProjectMappingOverrides;
 };
 
 export async function normalizeSelection(
@@ -54,7 +56,10 @@ export async function normalizeSelection(
 				sourceKind,
 				sourcePath: input.sourcePath,
 				selectedTracks,
-				hits: results.flatMap((result) => result.hits),
+				hits: applyProjectMappingOverrides(
+					results.flatMap((result) => result.hits),
+					input.mappingOverrides,
+				),
 				sourceIssues,
 				includeMergeSummary: selectedTracks.length > 1,
 			});
@@ -104,7 +109,10 @@ export async function normalizeSelection(
 			sourceKind,
 			sourcePath: input.sourcePath,
 			selectedTracks,
-			hits: results.flatMap((result) => result.hits),
+			hits: applyProjectMappingOverrides(
+				results.flatMap((result) => result.hits),
+				input.mappingOverrides,
+			),
 			sourceIssues,
 			includeMergeSummary: selectedTracks.length > 1,
 		});

@@ -7,6 +7,7 @@ import type {
 	ProjectIssue,
 	SourceInspectionResult,
 	SourceKind,
+	ProjectMappingOverrides,
 } from "@chdg/project";
 import {
 	chooseDefaultTracks,
@@ -53,6 +54,7 @@ export type DesktopGenerateState = {
 		songIni?: string;
 		songOgg?: string;
 	};
+	mappingOverrides: ProjectMappingOverrides;
 	issues: ProjectIssue[];
 	logs: string[];
 	status: DesktopGenerateStatus;
@@ -67,6 +69,7 @@ export type GenerateValidationResult = {
 const initialState: DesktopGenerateState = {
 	metadata: {},
 	selectedTracks: [],
+	mappingOverrides: {},
 	issues: [],
 	logs: [],
 	status: "idle",
@@ -265,12 +268,17 @@ export class DesktopGenerateStateService {
 		sourcePath: string;
 		trackIndex?: number;
 		trackIndexes?: number[];
+		mappingOverrides?: ProjectMappingOverrides;
 	} | null {
 		const state = this.state();
 		if (!state.sourcePath || state.selectedTracks.length === 0) {
 			return null;
 		}
-		return toTrackInput({ sourcePath: state.sourcePath }, state.selectedTracks);
+		const base = toTrackInput(
+			{ sourcePath: state.sourcePath },
+			state.selectedTracks,
+		);
+		return { ...base, mappingOverrides: state.mappingOverrides };
 	}
 
 	buildGenerateInput(
@@ -296,6 +304,7 @@ export class DesktopGenerateStateService {
 				offsetMs: state.offsetMs,
 				...cleanMetadata(state.metadata),
 				overwriteKnownFiles,
+				mappingOverrides: state.mappingOverrides,
 			},
 			state.selectedTracks,
 		);
@@ -313,6 +322,7 @@ export class DesktopGenerateStateService {
 		selectedTracks: number[];
 		metadata: DesktopMetadata;
 		offsetMs?: number;
+		mappingOverrides?: ProjectMappingOverrides;
 		generationResult?: GeneratePackageResult;
 		lastGeneratedAt?: string;
 		outputFiles?: {
@@ -334,6 +344,7 @@ export class DesktopGenerateStateService {
 			generationResult: payload.generationResult,
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
+			mappingOverrides: payload.mappingOverrides ?? {},
 			status:
 				payload.generationResult || payload.outputFiles
 					? "generated"
@@ -364,7 +375,16 @@ export class DesktopGenerateStateService {
 						songOgg: state.generationResult.files.songOgg,
 				  }
 				: state.outputFiles,
+			mappingOverrides: state.mappingOverrides,
 		};
+	}
+
+	setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {
+		this.patch({
+			mappingOverrides: { ...mappingOverrides },
+			normalizationPreview: undefined,
+		});
+		this.projectState.markNeedsRegenerate();
 	}
 
 	private patch(patch: Partial<DesktopGenerateState>): void {

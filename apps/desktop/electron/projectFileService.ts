@@ -2,6 +2,7 @@ import { access, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { ChdgProjectFile } from "@chdg/project";
 import { validateProjectFile, createProjectFile } from "@chdg/project";
+import type { ProjectMappingOverrides } from "@chdg/project";
 import { app } from "electron";
 
 export async function readProjectFile(filePath: string): Promise<{
@@ -100,6 +101,7 @@ export function buildProjectFileFromState(
 		generationStatus: "not-generated" | "generated" | "needs-regenerate" | "failed";
 		lastGeneratedAt?: string;
 		outputFiles?: { chart?: string; songIni?: string; songOgg?: string };
+		mappingOverrides?: ProjectMappingOverrides;
 	},
 ): ChdgProjectFile {
 	const now = new Date().toISOString();
@@ -129,6 +131,7 @@ export function buildProjectFileFromState(
 			lastGeneratedAt: state.lastGeneratedAt,
 			outputFiles: state.outputFiles,
 		},
+		mappingOverrides: state.mappingOverrides,
 	};
 }
 

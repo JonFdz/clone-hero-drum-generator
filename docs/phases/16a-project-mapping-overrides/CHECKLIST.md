@@ -2,19 +2,19 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/phases/16a-project-mapping-overrides/PRD.md`.
-- [ ] Read `docs/phases/16a-project-mapping-overrides/ADR.md`.
-- [ ] Read this checklist.
-- [ ] Read Phase 15 docs.
-- [ ] Read Phase 14A/14B docs.
-- [ ] Review visual reference:
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/phases/16a-project-mapping-overrides/PRD.md`.
+- [x] Read `docs/phases/16a-project-mapping-overrides/ADR.md`.
+- [x] Read this checklist.
+- [x] Read Phase 15 docs.
+- [x] Read Phase 14A/14B docs.
+- [x] Review visual reference:
   - `docs/desktop/mockups/09-mapping-overrides.png`
-- [ ] Read OpenSpec if present:
+- [x] Read OpenSpec if present:
   - `openspec/changes/phase-16a-project-mapping-overrides/proposal.md`
   - `openspec/changes/phase-16a-project-mapping-overrides/design.md`
   - `openspec/changes/phase-16a-project-mapping-overrides/tasks.md`
@@ -24,30 +24,30 @@
 ## Implementation
 
 - [ ] Implement only Phase 16A scope.
-- [ ] Add project-level mapping override model.
-- [ ] Add `.chdg` persistence for overrides.
-- [ ] Preserve loading old `.chdg` files without overrides.
+- [x] Add project-level mapping override model.
+- [x] Add `.chdg` persistence for overrides.
+- [x] Preserve loading old `.chdg` files without overrides.
 - [ ] Show source notes/articulations where data is available.
 - [ ] Show automatic/current mapping where data is available.
-- [ ] Allow MIDI note -> `DrumPiece` override.
-- [ ] Allow GPIF source/articulation -> `DrumPiece` override.
-- [ ] Allow ignore override.
-- [ ] Allow reset to automatic/default.
+- [x] Allow MIDI note -> `DrumPiece` override.
+- [x] Allow GPIF source/articulation -> `DrumPiece` override.
+- [x] Allow ignore override.
+- [x] Allow reset to automatic/default.
 - [ ] Support sidestick -> snare or ignore.
-- [ ] Apply overrides during normalization/generation.
-- [ ] Mark preview/output stale or needs-regenerate when overrides change.
+- [x] Apply overrides during normalization/generation.
+- [x] Mark preview/output stale or needs-regenerate when overrides change.
 - [ ] Preserve validation/generation/preview/offset behavior.
 - [ ] Preserve Electron security boundaries.
-- [ ] Add/update tests.
+- [x] Add/update tests.
 
 ## Validation
 
 - [ ] `pnpm build` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `pnpm test` passes.
+- [ ] `pnpm typecheck` passes. (fails in `apps/desktop` due `ng build` abort trap in this environment)
+- [x] `pnpm test` passes.
 - [ ] `pnpm --filter @chdg/desktop build` passes.
 - [ ] `pnpm --filter @chdg/desktop typecheck` passes.
-- [ ] `pnpm chdg --help` passes.
+- [ ] `pnpm chdg --help` passes. (fails in sandbox with EPERM on tsx IPC pipe)
 - [ ] Manual desktop validation recorded if relevant.
 
 ## Manual desktop smoke

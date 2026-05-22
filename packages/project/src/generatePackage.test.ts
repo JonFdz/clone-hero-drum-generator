@@ -154,4 +154,46 @@ describe("generatePackage", () => {
 			}),
 		).rejects.toThrow(/missing required --track/i);
 	});
+
+	it("applies ignore override during generation", async () => {
+		const outDir = join(tempDir, "output-ignore");
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53, name: "Drums" },
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 0, name: "Intro" }],
+			hits: [
+				{
+					tick: 0,
+					piece: "snare",
+					velocity: 100,
+					durationTicks: 0,
+					source: {
+						midiNote: 37,
+						trackIndex: 53,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+			unknownNotes: [],
+		});
+
+		const result = await generatePackage({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			outDir,
+			mappingOverrides: {
+				"midi:37": {
+					sourceKind: "midi",
+					key: "midi:37",
+					target: { kind: "ignore" },
+				},
+			},
+		});
+
+		expect(result.hitCount).toBe(0);
+		expect(result.mappedNoteCount).toBe(0);
+	});
 });
