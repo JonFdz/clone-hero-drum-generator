@@ -743,6 +743,7 @@ function assertNormalizeInput(input: unknown): NormalizeSelectionInput {
 			value["trackIndexes"],
 			"Track indexes must be numeric.",
 		),
+		mappingOverrides: optionalMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
@@ -781,6 +782,7 @@ function assertGenerateInput(input: unknown): DesktopGeneratePackageInput {
 			value["overwriteKnownFiles"],
 			"overwriteKnownFiles must be boolean.",
 		),
+		mappingOverrides: optionalMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
@@ -835,6 +837,13 @@ function optionalNumberArray(
 		throw new DesktopIpcError("INVALID_INPUT", message);
 	}
 	return input;
+}
+
+function optionalMappingOverrides(
+	value: unknown,
+): ProjectMappingOverrides | undefined {
+	if (value === undefined) return undefined;
+	return validateMappingOverrides(value);
 }
 
 function assertProjectStatePayload(input: unknown): ProjectStatePayload {
