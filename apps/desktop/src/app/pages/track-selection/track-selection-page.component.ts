@@ -3,6 +3,7 @@ import { Component } from "@angular/core";
 import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { formatTrackNoteCount } from "../../services/track-note-count";
 
 @Component({
 	selector: "chdg-track-selection-page",
@@ -33,7 +34,7 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
                 <td>{{ track.index }}</td>
                 <td>{{ track.name || "Untitled" }}</td>
                 <td>{{ track.role }}</td>
-                <td>{{ track.noteCount }}</td>
+                <td>{{ noteCountLabel(track.noteCount) }}</td>
                 <td>{{ track.strength }}</td>
               </tr>
             </tbody>
@@ -139,6 +140,10 @@ export class TrackSelectionPageComponent {
 		summary: Record<string, number>,
 	): Array<[string, number]> {
 		return Object.entries(summary).sort(([a], [b]) => a.localeCompare(b));
+	}
+
+	noteCountLabel(noteCount: number | null | undefined): string {
+		return formatTrackNoteCount(noteCount);
 	}
 
 	sourceLabel(source: unknown): string {

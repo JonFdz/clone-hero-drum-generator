@@ -28,7 +28,7 @@ export type TrackCandidate = {
 	index: number;
 	name?: string;
 	channel?: number;
-	noteCount: number;
+	noteCount: number | null;
 	strength: TrackCandidateStrength;
 	role: TrackCandidateRole;
 	reasons?: string[];
