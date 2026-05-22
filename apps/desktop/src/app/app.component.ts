@@ -77,6 +77,7 @@ export class AppComponent implements OnInit {
         offsetMs: payload.offsetMs,
         lastGeneratedAt: payload.lastGeneratedAt,
         outputFiles: payload.outputFiles,
+        mappingOverrides: payload.mappingOverrides,
       });
       await this.router.navigateByUrl("/new-project");
     }

@@ -74,6 +74,13 @@ describe("projectFile", () => {
 					},
 					lastResultSummary: { ok: true },
 				},
+				mappingOverrides: {
+					"midi:37": {
+						sourceKind: "midi",
+						key: "midi:37",
+						target: { kind: "piece", piece: "snare" },
+					},
+				},
 			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
@@ -85,6 +92,15 @@ describe("projectFile", () => {
 				expect(result.project.generation.outputFiles?.chart).toBe(
 					"/tmp/out/notes.chart",
 				);
+				expect(result.project.mappingOverrides).toBeDefined();
+			}
+		});
+
+		it("loads old project without mappingOverrides", () => {
+			const result = validateProjectFile(baseProject({}));
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.mappingOverrides).toBeUndefined();
 			}
 		});
 

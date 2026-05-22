@@ -4,6 +4,10 @@ import type {
 	TempoEvent,
 	TimeSignatureEvent,
 } from "@chdg/core";
+import type {
+	MappingCandidate,
+	ProjectMappingOverrides,
+} from "./mappingOverrides.js";
 
 export type SourceKind = "midi" | "gpif";
 
@@ -68,6 +72,7 @@ export type NormalizationPreview = {
 	pieceSummary: Record<string, number>;
 	firstHits: NormalizationHitPreview[];
 	mergeSummary?: MultiTrackMergeSummary;
+	mappingCandidates: MappingCandidate[];
 	issues: ProjectIssue[];
 };
 
@@ -88,6 +93,7 @@ export type GeneratePackageInput = SongMetadataInput & {
 	audioFile?: string;
 	audioSource?: string;
 	offsetMs?: number;
+	mappingOverrides?: ProjectMappingOverrides;
 };
 
 export type GeneratePackageResult = {

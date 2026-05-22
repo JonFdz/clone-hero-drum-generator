@@ -62,6 +62,108 @@ describe("normalizeSelection", () => {
 		]);
 	});
 
+	it("applies mapping override during normalization preview", async () => {
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53 },
+			hits: [
+				{
+					tick: 0,
+					piece: "kick",
+					velocity: 96,
+					durationTicks: 0,
+					source: {
+						midiNote: 37,
+						trackIndex: 53,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+			unknownNotes: [],
+		});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			mappingOverrides: {
+				"midi:37": {
+					sourceKind: "midi",
+					key: "midi:37",
+					target: { kind: "piece", piece: "snare" },
+				},
+			},
+		});
+
+		expect(result.pieceSummary).toEqual({ snare: 1 });
+		expect(result.mappingCandidates).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					key: "midi:37",
+					automaticPiece: "kick",
+				}),
+			]),
+		);
+	});
+
+	it("includes mapping candidates from all normalized hits, not only firstHits", async () => {
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53 },
+			hits: Array.from({ length: 12 }, (_, index) => ({
+				tick: index * 10,
+				piece: "unknown",
+				velocity: 90,
+				durationTicks: 0,
+				source: {
+					midiNote: 60 + index,
+					trackIndex: 53,
+					trackName: "Drums",
+					channel: 9,
+				},
+			})),
+			unknownNotes: [60, 61],
+		});
+		const result = await normalizeSelection({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+		});
+		expect(result.firstHits).toHaveLength(10);
+		expect(result.mappingCandidates).toHaveLength(12);
+		expect(result.mappingCandidates.find((candidate) => candidate.key === "midi:71")).toBeTruthy();
+	});
+
+	it("filters unknown midi warning when note is mapped by override", async () => {
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53 },
+			hits: [
+				{
+					tick: 0,
+					piece: "unknown",
+					velocity: 90,
+					durationTicks: 0,
+					source: {
+						midiNote: 39,
+						trackIndex: 53,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+			unknownNotes: [39],
+		});
+		const result = await normalizeSelection({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			mappingOverrides: {
+				"midi:39": {
+					sourceKind: "midi",
+					key: "midi:39",
+					target: { kind: "piece", piece: "snare" },
+				},
+			},
+		});
+		expect(result.issues.find((issue) => issue.code === "UNKNOWN_MIDI_NOTES")).toBeUndefined();
+	});
+
 	it("returns GPIF normalization preview DTO", async () => {
 		mocks.normalizeGpDrums.mockResolvedValue({
 			trackIndex: 3,
@@ -98,6 +200,40 @@ describe("normalizeSelection", () => {
 				expect.objectContaining({ code: "UNKNOWN_GPIF_ARTICULATION" }),
 			]),
 		);
+	});
+
+	it("filters unknown GPIF articulation warning when mapped by override", async () => {
+		mocks.normalizeGpDrums.mockResolvedValue({
+			trackIndex: 3,
+			hits: [
+				{
+					tick: 120,
+					piece: "unknown",
+					velocity: 100,
+					durationTicks: 0,
+					source: { kind: "gpif", trackIndex: 3, rawArticulation: "Mystery" },
+				},
+			],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [{ rawArticulation: "Mystery", count: 2 }],
+		});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.gp",
+			trackIndex: 3,
+			mappingOverrides: {
+				"gpif:mystery": {
+					sourceKind: "gpif",
+					key: "gpif:mystery",
+					target: { kind: "piece", piece: "snare" },
+				},
+			},
+		});
+
+		expect(
+			result.issues.find((issue) => issue.code === "UNKNOWN_GPIF_ARTICULATION"),
+		).toBeUndefined();
 	});
 
 	it("returns merged MIDI preview for multiple tracks", async () => {

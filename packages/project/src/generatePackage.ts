@@ -24,6 +24,11 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import { normalizeDrumsFromFile } from "@chdg/midi";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
+import {
+	applyProjectMappingOverrides,
+	hasPieceOverrideForGpifArticulation,
+	hasPieceOverrideForMidiNote,
+} from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type {
@@ -144,22 +149,29 @@ async function normalizeGenerateSource(
 		);
 		const selectedTracks = results.map((result) => result.track.index);
 		const sourceIssues = results.flatMap((result) =>
-			result.unknownNotes.length > 0
+			result.unknownNotes.filter(
+				(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
+			).length > 0
 				? [
 						issue(
 							"warning",
 							"UNKNOWN_MIDI_NOTES",
-							"Unknown MIDI notes were skipped during generation.",
+							"Unknown MIDI notes without mapping overrides were skipped during generation.",
 							{
 								trackIndex: result.track.index,
-								notes: result.unknownNotes,
+								notes: result.unknownNotes.filter(
+									(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
+								),
 							},
 						),
 					]
 				: [],
 		);
 		const merged = mergeDrumHits(
-			results.flatMap((result) => result.hits),
+			applyProjectMappingOverrides(
+				results.flatMap((result) => result.hits),
+				input.mappingOverrides,
+			),
 			selectedTracks,
 		);
 
@@ -202,7 +214,15 @@ async function normalizeGenerateSource(
 				trackIndex: result.trackIndex,
 			}),
 		),
-		...result.unknownArticulations.map((item) =>
+		...result.unknownArticulations
+			.filter(
+				(item) =>
+					!hasPieceOverrideForGpifArticulation(
+						input.mappingOverrides,
+						item.rawArticulation,
+					),
+			)
+			.map((item) =>
 			issue(
 				"warning",
 				"UNKNOWN_GPIF_ARTICULATION",
@@ -219,7 +239,10 @@ async function normalizeGenerateSource(
 		),
 	]);
 	const merged = mergeDrumHits(
-		results.flatMap((result) => result.hits),
+		applyProjectMappingOverrides(
+			results.flatMap((result) => result.hits),
+			input.mappingOverrides,
+		),
 		selectedTracks,
 	);
 

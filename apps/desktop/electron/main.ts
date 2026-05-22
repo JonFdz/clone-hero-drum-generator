@@ -16,6 +16,8 @@ import {
 	type ChdgProjectFile,
 	type ChdgOutputStatus,
 	type RecentProject,
+	type ProjectMappingOverrides,
+	validateMappingOverrides,
 } from "@chdg/project";
 import { addAllowedPath, assertAllowedPath } from "./pathAllowlist.js";
 import {
@@ -104,6 +106,7 @@ type ProjectStatePayload = {
 		songIni?: string;
 		songOgg?: string;
 	};
+	mappingOverrides?: ProjectMappingOverrides;
 };
 
 type SaveProjectResult = {
@@ -356,6 +359,7 @@ app.whenReady().then(() => {
 					selectedTracks: [],
 					metadata: {},
 					generationStatus: "not-generated" as ChdgOutputStatus,
+					mappingOverrides: {},
 				};
 			});
 		},
@@ -455,6 +459,7 @@ app.whenReady().then(() => {
 					generationStatus: project.generation.status,
 					lastGeneratedAt: project.generation.lastGeneratedAt,
 					outputFiles: project.generation.outputFiles,
+					mappingOverrides: validateMappingOverrides(project.mappingOverrides),
 					missingPaths,
 				};
 			});
@@ -821,6 +826,7 @@ function assertProjectStatePayload(input: unknown): ProjectStatePayload {
 		generationStatus: assertGenerationStatus(value["generationStatus"]),
 		lastGeneratedAt: optionalString(value["lastGeneratedAt"], "lastGeneratedAt must be a string."),
 		outputFiles: optionalOutputFiles(value["outputFiles"]),
+		mappingOverrides: validateMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
