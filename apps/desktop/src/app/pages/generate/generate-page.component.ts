@@ -1,7 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component } from "@angular/core";
 import { RouterModule } from "@angular/router";
-import type { ValidationItem } from "@chdg/project";
+import type { ValidationItem } from "@chdg/project/browser";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { DesktopValidationService } from "../../services/desktop-validation.service";

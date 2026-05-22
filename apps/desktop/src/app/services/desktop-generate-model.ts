@@ -1,4 +1,4 @@
-import type { SourceKind, TrackCandidate } from "@chdg/project";
+import type { SourceKind, TrackCandidate } from "@chdg/project/browser";
 import type {
 	DesktopGenerateState,
 	DesktopMetadata,

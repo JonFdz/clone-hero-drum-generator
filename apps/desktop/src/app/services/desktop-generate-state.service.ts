@@ -8,7 +8,7 @@ import type {
 	SourceInspectionResult,
 	SourceKind,
 	ProjectMappingOverrides,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 import {
 	chooseDefaultTracks,
 	cleanMetadata,

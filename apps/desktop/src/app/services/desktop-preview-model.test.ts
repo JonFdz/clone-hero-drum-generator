@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NormalizationHitPreview, NormalizationPreview } from "@chdg/project";
+import type { NormalizationHitPreview, NormalizationPreview } from "@chdg/project/browser";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,

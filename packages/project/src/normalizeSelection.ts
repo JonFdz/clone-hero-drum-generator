@@ -11,20 +11,13 @@ import {
 	buildMappingCandidates,
 	hasPieceOverrideForGpifArticulation,
 	hasPieceOverrideForMidiNote,
-	type ProjectMappingOverrides,
 } from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
+import type { NormalizeSelectionInput } from "./operationTypes.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type { NormalizationPreview, ProjectIssue } from "./types.js";
 
 const generalMidiDrums = generalMidiDrumsUntyped as MidiDrumPieceMap;
-
-export type NormalizeSelectionInput = {
-	sourcePath: string;
-	trackIndex?: number;
-	trackIndexes?: number[];
-	mappingOverrides?: ProjectMappingOverrides;
-};
 
 export async function normalizeSelection(
 	input: NormalizeSelectionInput,

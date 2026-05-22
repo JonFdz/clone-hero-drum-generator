@@ -1,7 +1,7 @@
 import type {
 	MappingCandidate,
 	ProjectMappingOverrides,
-} from "@chdg/project";
+} from "@chdg/project/browser";
 
 export type MappingRow = {
 	key: string;

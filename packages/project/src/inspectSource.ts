@@ -5,16 +5,11 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { issue, toProjectServiceError } from "./issues.js";
+import type { InspectSourceInput } from "./operationTypes.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type { SourceInspectionResult, TrackCandidate } from "./types.js";
 
 const generalMidiDrums = generalMidiDrumsUntyped as MidiDrumPieceMap;
-
-export type InspectSourceInput = {
-	sourcePath: string;
-	trackIndex?: number;
-	drumsOnly?: boolean;
-};
 
 export async function inspectSource(
 	input: InspectSourceInput,

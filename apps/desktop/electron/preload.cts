@@ -32,6 +32,11 @@ const api = {
 	readSettings: () => ipcRenderer.invoke("chdg:read-settings"),
 	writeSettings: (settings: unknown) =>
 		ipcRenderer.invoke("chdg:write-settings", settings),
+	readMappingProfiles: () => ipcRenderer.invoke("chdg:read-mapping-profiles"),
+	saveMappingProfile: (profile: unknown) =>
+		ipcRenderer.invoke("chdg:save-mapping-profile", profile),
+	deleteMappingProfile: (profileId: string) =>
+		ipcRenderer.invoke("chdg:delete-mapping-profile", profileId),
 	testFfmpeg: (input: string) => ipcRenderer.invoke("chdg:test-ffmpeg", input),
 	getAudioPreviewSource: (input: unknown) =>
 		ipcRenderer.invoke("chdg:get-audio-preview-source", input),

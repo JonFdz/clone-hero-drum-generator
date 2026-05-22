@@ -1,4 +1,4 @@
-import type { NormalizationPreview } from "@chdg/project";
+import type { NormalizationPreview } from "@chdg/project/browser";
 import type { ChartPreviewData } from "./desktop-bridge.service";
 
 export type TimelineNote = {

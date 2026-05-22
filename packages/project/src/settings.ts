@@ -1,21 +1,6 @@
 import { join } from "node:path";
-
-export type DesktopSettings = {
-	schemaVersion: number;
-	theme: "dark";
-	accentColor?: string;
-	projectLocation: string;
-	defaultOutputFolder?: string;
-	defaultCharter?: string;
-	defaultOffsetMs?: number;
-	ffmpegPath?: string;
-};
-
-export type RecentProject = {
-	path: string;
-	name: string;
-	lastOpenedAt: string;
-};
+import type { DesktopSettings, RecentProject } from "./settingsTypes.js";
+export type { DesktopSettings, RecentProject } from "./settingsTypes.js";
 
 export const DEFAULT_SETTINGS: DesktopSettings = {
 	schemaVersion: 1,

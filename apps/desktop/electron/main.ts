@@ -17,6 +17,7 @@ import {
 	type ChdgOutputStatus,
 	type RecentProject,
 	type ProjectMappingOverrides,
+	type MappingOverrideProfile,
 	validateMappingOverrides,
 } from "@chdg/project";
 import { addAllowedPath, assertAllowedPath } from "./pathAllowlist.js";
@@ -34,6 +35,10 @@ import {
 	addRecentProject,
 	removeRecentProject,
 } from "./settingsService.js";
+import {
+	readMappingProfiles,
+	writeMappingProfiles,
+} from "./mappingProfileService.js";
 import { testFfmpeg } from "./ffmpegDiagnostic.js";
 import {
 	addAllowedProjectFile,
@@ -483,6 +488,27 @@ app.whenReady().then(() => {
 	ipcMain.handle("chdg:read-settings", async (): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
 		return toEnvelope(() => readSettings());
 	});
+	ipcMain.handle("chdg:read-mapping-profiles", async (): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+		return toEnvelope(() => readMappingProfiles());
+	});
+	ipcMain.handle("chdg:save-mapping-profile", async (_event, input: unknown): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+		return toEnvelope(async () => {
+			const profile = assertMappingProfile(input);
+			const current = await readMappingProfiles();
+			const next = current.filter((item) => item.id !== profile.id);
+			next.push(profile);
+			await writeMappingProfiles(next);
+			return next.sort((a, b) => a.name.localeCompare(b.name));
+		});
+	});
+	ipcMain.handle("chdg:delete-mapping-profile", async (_event, profileId: unknown): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+		return toEnvelope(async () => {
+			const id = assertNonEmptyString(profileId, "Profile id is required.");
+			const next = (await readMappingProfiles()).filter((item) => item.id !== id);
+			await writeMappingProfiles(next);
+			return next.sort((a, b) => a.name.localeCompare(b.name));
+		});
+	});
 
 	ipcMain.handle(
 		"chdg:write-settings",
@@ -717,6 +743,7 @@ function assertNormalizeInput(input: unknown): NormalizeSelectionInput {
 			value["trackIndexes"],
 			"Track indexes must be numeric.",
 		),
+		mappingOverrides: optionalMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
@@ -755,6 +782,7 @@ function assertGenerateInput(input: unknown): DesktopGeneratePackageInput {
 			value["overwriteKnownFiles"],
 			"overwriteKnownFiles must be boolean.",
 		),
+		mappingOverrides: optionalMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
@@ -811,6 +839,13 @@ function optionalNumberArray(
 	return input;
 }
 
+function optionalMappingOverrides(
+	value: unknown,
+): ProjectMappingOverrides | undefined {
+	if (value === undefined) return undefined;
+	return validateMappingOverrides(value);
+}
+
 function assertProjectStatePayload(input: unknown): ProjectStatePayload {
 	const value = assertRecord(input, "Project state payload is required.");
 	return {
@@ -841,6 +876,27 @@ function assertSettingsPayload(input: unknown): import("@chdg/project").DesktopS
 		defaultCharter: optionalString(value["defaultCharter"], "defaultCharter must be a string."),
 		defaultOffsetMs: optionalNumber(value["defaultOffsetMs"], "defaultOffsetMs must be numeric."),
 		ffmpegPath: optionalString(value["ffmpegPath"], "ffmpegPath must be a string."),
+	};
+}
+
+function assertMappingProfile(input: unknown): MappingOverrideProfile {
+	const value = assertRecord(input, "Mapping profile payload is required.");
+	const id = assertNonEmptyString(value["id"], "Profile id is required.");
+	const name = assertNonEmptyString(value["name"], "Profile name is required.");
+	const createdAt = assertNonEmptyString(value["createdAt"], "Profile createdAt is required.");
+	const updatedAt = assertNonEmptyString(value["updatedAt"], "Profile updatedAt is required.");
+	const sourceKind = value["sourceKind"];
+	if (sourceKind !== undefined && sourceKind !== "midi" && sourceKind !== "gpif") {
+		throw new DesktopIpcError("INVALID_PROFILE_SOURCE_KIND", "Profile sourceKind must be midi or gpif.");
+	}
+	return {
+		id,
+		name,
+		description: typeof value["description"] === "string" ? value["description"] : undefined,
+		sourceKind,
+		overrides: validateMappingOverrides(value["overrides"]),
+		createdAt,
+		updatedAt,
 	};
 }
 
