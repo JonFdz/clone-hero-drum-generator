@@ -7,6 +7,11 @@ export type {
 } from "./mappingOverrides.js";
 export type { DesktopSettings, RecentProject } from "./settingsTypes.js";
 export type {
+	InspectSourceInput,
+	NormalizeSelectionInput,
+} from "./operationTypes.js";
+export type { ChdgProjectFile, ChdgOutputStatus } from "./projectFileTypes.js";
+export type {
 	ValidationCategory,
 	ValidationFixAction,
 	ValidationItem,
