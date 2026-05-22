@@ -3,15 +3,7 @@ import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import type { ProjectMappingOverrides } from "@chdg/project";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
-
-type MappingRow = {
-	key: string;
-	sourceKind: "midi" | "gpif";
-	sourceValue: string;
-	automatic: string;
-	count: number;
-};
+import { buildMappingRows, type MappingRow } from "./mapping-page.model";
 
 const PIECES = [
 	"kick",
@@ -36,7 +28,13 @@ const PIECES = [
       <p>Project mapping overrides affect normalization/generation for this project only. They do not edit individual notes.</p>
     </header>
 
-    @if (!state().normalizationPreview) {
+    @if (state().normalizationPreviewStale) {
+      <section class="card message warning">
+        <p>Mapping overrides changed. Re-run normalization/generation to refresh preview/output.</p>
+      </section>
+    }
+
+    @if (rows().length === 0) {
       <section class="card">
         <p>Run normalization first to populate source mapping candidates.</p>
       </section>
@@ -50,8 +48,11 @@ const PIECES = [
           <tbody>
             @for (row of rows(); track row.key) {
               <tr>
-                <td>{{ row.sourceKind }} · {{ row.sourceValue }} ({{ row.count }})</td>
-                <td>{{ row.automatic }}</td>
+                <td>
+                  {{ row.sourceKind }} · {{ row.label ?? row.sourceValue }}
+                  @if (row.count !== undefined) { <span>({{ row.count }})</span> }
+                </td>
+                <td>{{ row.automaticPiece ?? "Source not in current preview" }}</td>
                 <td>
                   <select [ngModel]="overrideLabel(row.key)" (ngModelChange)="setOverride(row, $event)">
                     <option value="">Automatic/default</option>
@@ -61,14 +62,17 @@ const PIECES = [
                     }
                   </select>
                 </td>
-                <td>{{ statusLabel(row.key) }}</td>
+                <td>
+                  @if (row.status === "existing-override") {
+                    Existing override
+                  } @else {
+                    {{ row.status }}
+                  }
+                </td>
               </tr>
             }
           </tbody>
         </table>
-      </section>
-      <section class="card">
-        <p>When overrides change: project is marked dirty, output becomes needs-regenerate (if generated), and normalization preview is marked stale.</p>
       </section>
     }
   `,
@@ -77,53 +81,19 @@ export class MappingPageComponent {
 	readonly state = this.generateState.state;
 	readonly pieces = PIECES;
 
-	constructor(
-		private readonly generateState: DesktopGenerateStateService,
-		private readonly projectState: DesktopProjectStateService,
-	) {}
+	constructor(private readonly generateState: DesktopGenerateStateService) {}
 
 	rows(): MappingRow[] {
-		const preview = this.state().normalizationPreview;
-		if (!preview) return [];
-		const byKey = new Map<string, MappingRow>();
-		for (const hit of preview.firstHits) {
-			const source = hit.source;
-			if ("midiNote" in source) {
-				const key = `midi:${source.midiNote}`;
-				const current = byKey.get(key);
-				byKey.set(key, {
-					key,
-					sourceKind: "midi",
-					sourceValue: `note ${source.midiNote}`,
-					automatic: hit.piece,
-					count: (current?.count ?? 0) + 1,
-				});
-				continue;
-			}
-			const raw = source.rawArticulation?.trim();
-			if (!raw) continue;
-			const key = `gpif:${raw.toLowerCase()}`;
-			const current = byKey.get(key);
-			byKey.set(key, {
-				key,
-				sourceKind: "gpif",
-				sourceValue: raw,
-				automatic: hit.piece,
-				count: (current?.count ?? 0) + 1,
-			});
-		}
-		return Array.from(byKey.values()).sort((a, b) => a.key.localeCompare(b.key));
+		return buildMappingRows(
+			this.state().normalizationPreview?.mappingCandidates,
+			this.state().mappingOverrides,
+		);
 	}
 
 	overrideLabel(key: string): string {
 		const override = this.state().mappingOverrides[key];
 		if (!override) return "";
 		return override.target.kind === "ignore" ? "ignore" : override.target.piece;
-	}
-
-	statusLabel(key: string): string {
-		const override = this.state().mappingOverrides[key];
-		return override ? "override" : "default";
 	}
 
 	setOverride(row: MappingRow, value: string): void {
@@ -146,6 +116,5 @@ export class MappingPageComponent {
 						target: { kind: "piece" as const, piece: value as (typeof PIECES)[number] },
 				  };
 		this.generateState.setMappingOverrides(current as ProjectMappingOverrides);
-		this.projectState.markNeedsRegenerate();
 	}
 }

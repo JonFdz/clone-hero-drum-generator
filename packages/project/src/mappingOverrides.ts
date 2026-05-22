@@ -15,15 +15,35 @@ export type ProjectMappingOverride = {
 
 export type ProjectMappingOverrides = Record<string, ProjectMappingOverride>;
 
+export type MappingCandidateSourceKind = "midi" | "gpif";
+
+export type MappingCandidate = {
+	key: string;
+	sourceKind: MappingCandidateSourceKind;
+	sourceValue: string;
+	label?: string;
+	automaticPiece: DrumHit["piece"];
+	count: number;
+	firstTick?: number;
+};
+
 export function buildMappingOverrideKeyFromHit(hit: DrumHit): string | undefined {
 	if ("midiNote" in hit.source) {
-		return `midi:${hit.source.midiNote}`;
+		return buildMidiOverrideKey(hit.source.midiNote);
 	}
 	const raw = hit.source.rawArticulation?.trim();
 	if (raw) {
-		return `gpif:${raw.toLowerCase()}`;
+		return buildGpifOverrideKey(raw);
 	}
 	return undefined;
+}
+
+export function buildMidiOverrideKey(noteNumber: number): string {
+	return `midi:${noteNumber}`;
+}
+
+export function buildGpifOverrideKey(rawArticulation: string): string {
+	return `gpif:${rawArticulation.trim().toLowerCase()}`;
 }
 
 export function applyProjectMappingOverrides(
@@ -51,6 +71,61 @@ export function applyProjectMappingOverrides(
 		});
 	}
 	return next;
+}
+
+export function buildMappingCandidates(hits: DrumHit[]): MappingCandidate[] {
+	const byKey = new Map<string, MappingCandidate>();
+	for (const hit of hits) {
+		const key = buildMappingOverrideKeyFromHit(hit);
+		if (!key) continue;
+		const existing = byKey.get(key);
+		if (existing) {
+			existing.count += 1;
+			if (existing.firstTick === undefined || hit.tick < existing.firstTick) {
+				existing.firstTick = hit.tick;
+			}
+			continue;
+		}
+		if ("midiNote" in hit.source) {
+			byKey.set(key, {
+				key,
+				sourceKind: "midi",
+				sourceValue: String(hit.source.midiNote),
+				label: `Note ${hit.source.midiNote}`,
+				automaticPiece: hit.piece,
+				count: 1,
+				firstTick: hit.tick,
+			});
+			continue;
+		}
+		const raw = hit.source.rawArticulation?.trim();
+		byKey.set(key, {
+			key,
+			sourceKind: "gpif",
+			sourceValue: raw ?? key.replace("gpif:", ""),
+			label: raw,
+			automaticPiece: hit.piece,
+			count: 1,
+			firstTick: hit.tick,
+		});
+	}
+	return Array.from(byKey.values()).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+export function hasPieceOverrideForMidiNote(
+	overrides: ProjectMappingOverrides | undefined,
+	noteNumber: number,
+): boolean {
+	const key = buildMidiOverrideKey(noteNumber);
+	return overrides?.[key]?.target.kind === "piece";
+}
+
+export function hasPieceOverrideForGpifArticulation(
+	overrides: ProjectMappingOverrides | undefined,
+	rawArticulation: string,
+): boolean {
+	const key = buildGpifOverrideKey(rawArticulation);
+	return overrides?.[key]?.target.kind === "piece";
 }
 
 export function validateMappingOverrides(

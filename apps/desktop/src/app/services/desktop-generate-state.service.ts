@@ -47,6 +47,7 @@ export type DesktopGenerateState = {
 	inspection?: SourceInspectionResult;
 	selectedTracks: number[];
 	normalizationPreview?: NormalizationPreview;
+	normalizationPreviewStale?: boolean;
 	generationResult?: GeneratePackageResult;
 	lastGeneratedAt?: string;
 	outputFiles?: {
@@ -95,7 +96,8 @@ export class DesktopGenerateStateService {
 			sourcePath,
 			sourceKind,
 			inspection: undefined,
-			normalizationPreview: undefined,
+	normalizationPreview: undefined,
+	normalizationPreviewStale: undefined,
 			generationResult: undefined,
 			selectedTracks: [],
 			issues: [],
@@ -213,6 +215,7 @@ export class DesktopGenerateStateService {
 			normalizationPreview: envelope.data,
 			issues: envelope.issues,
 			status: "ready-to-generate",
+			normalizationPreviewStale: false,
 			logs: appendLog(
 				this.state().logs,
 				`Normalization complete: ${envelope.data.hitCount} hit(s).`,
@@ -345,6 +348,7 @@ export class DesktopGenerateStateService {
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
 			mappingOverrides: payload.mappingOverrides ?? {},
+			normalizationPreviewStale: false,
 			status:
 				payload.generationResult || payload.outputFiles
 					? "generated"
@@ -382,7 +386,7 @@ export class DesktopGenerateStateService {
 	setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {
 		this.patch({
 			mappingOverrides: { ...mappingOverrides },
-			normalizationPreview: undefined,
+			normalizationPreviewStale: true,
 		});
 		this.projectState.markNeedsRegenerate();
 	}

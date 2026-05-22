@@ -6,7 +6,13 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 import type { DrumHit } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
-import { applyProjectMappingOverrides, type ProjectMappingOverrides } from "./mappingOverrides.js";
+import {
+	applyProjectMappingOverrides,
+	buildMappingCandidates,
+	hasPieceOverrideForGpifArticulation,
+	hasPieceOverrideForMidiNote,
+	type ProjectMappingOverrides,
+} from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type { NormalizationPreview, ProjectIssue } from "./types.js";
@@ -38,28 +44,35 @@ export async function normalizeSelection(
 			);
 			const selectedTracks = results.map((result) => result.track.index);
 			const sourceIssues = results.flatMap((result) =>
-				result.unknownNotes.length > 0
+				result.unknownNotes.filter(
+					(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
+				).length > 0
 					? [
 							issue(
 								"warning",
 								"UNKNOWN_MIDI_NOTES",
-								"Unknown MIDI notes were found during normalization.",
+								"Unknown MIDI notes without mapping overrides were found during normalization.",
 								{
 									trackIndex: result.track.index,
-									notes: result.unknownNotes,
+									notes: result.unknownNotes.filter(
+										(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
+									),
 								},
 							),
 						]
 					: [],
 			);
+			const rawHits = results.flatMap((result) => result.hits);
+			const mappingCandidates = buildMappingCandidates(rawHits);
 			return toPreview({
 				sourceKind,
 				sourcePath: input.sourcePath,
 				selectedTracks,
 				hits: applyProjectMappingOverrides(
-					results.flatMap((result) => result.hits),
+					rawHits,
 					input.mappingOverrides,
 				),
+				mappingCandidates,
 				sourceIssues,
 				includeMergeSummary: selectedTracks.length > 1,
 			});
@@ -88,7 +101,15 @@ export async function normalizeSelection(
 					trackIndex: result.trackIndex,
 				}),
 			),
-			...result.unknownArticulations.map((item) =>
+			...result.unknownArticulations
+				.filter(
+					(item) =>
+						!hasPieceOverrideForGpifArticulation(
+							input.mappingOverrides,
+							item.rawArticulation,
+						),
+				)
+				.map((item) =>
 				issue(
 					"warning",
 					"UNKNOWN_GPIF_ARTICULATION",
@@ -104,15 +125,18 @@ export async function normalizeSelection(
 				),
 			),
 		]);
+		const rawHits = results.flatMap((result) => result.hits);
+		const mappingCandidates = buildMappingCandidates(rawHits);
 
 		return toPreview({
 			sourceKind,
 			sourcePath: input.sourcePath,
 			selectedTracks,
 			hits: applyProjectMappingOverrides(
-				results.flatMap((result) => result.hits),
+				rawHits,
 				input.mappingOverrides,
 			),
+			mappingCandidates,
 			sourceIssues,
 			includeMergeSummary: selectedTracks.length > 1,
 		});
@@ -145,6 +169,7 @@ function toPreview(input: {
 	sourcePath: string;
 	selectedTracks: number[];
 	hits: DrumHit[];
+	mappingCandidates: NormalizationPreview["mappingCandidates"];
 	sourceIssues: ProjectIssue[];
 	includeMergeSummary: boolean;
 }): NormalizationPreview {
@@ -161,6 +186,7 @@ function toPreview(input: {
 		mergeSummary: input.includeMergeSummary
 			? { ...merged.summary, issues: merged.summary.issues }
 			: undefined,
+		mappingCandidates: input.mappingCandidates,
 		issues,
 	};
 }
