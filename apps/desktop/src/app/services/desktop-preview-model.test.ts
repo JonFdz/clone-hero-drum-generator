@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { NormalizationHitPreview, NormalizationPreview } from "@chdg/project/browser";
+import type {
+	NormalizationHitPreview,
+	NormalizationPreview,
+} from "@chdg/project/browser";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,
@@ -68,7 +71,12 @@ describe("desktop-preview-model", () => {
 			0,
 		);
 		expect(notes).toHaveLength(1);
-		expect(notes[0]).toMatchObject({ lane: "yellow", cymbal: true, accent: true, ghost: true });
+		expect(notes[0]).toMatchObject({
+			lane: "yellow",
+			cymbal: true,
+			accent: true,
+			ghost: true,
+		});
 	});
 
 	it("ignores orphan modifiers without crashing", () => {
@@ -106,9 +114,15 @@ describe("desktop-preview-model", () => {
 			10,
 			0,
 		);
-		expect(notes.find((n) => n.lane === "yellow")?.yPercent).toBe(HIGHWAY_HIT_LINE_PERCENT);
-		expect(notes.find((n) => n.lane === "red")?.yPercent).toBeLessThan(HIGHWAY_HIT_LINE_PERCENT);
-		expect(notes.find((n) => n.lane === "blue")?.yPercent).toBeGreaterThan(HIGHWAY_HIT_LINE_PERCENT);
+		expect(notes.find((n) => n.lane === "yellow")?.yPercent).toBe(
+			HIGHWAY_HIT_LINE_PERCENT,
+		);
+		expect(notes.find((n) => n.lane === "red")?.yPercent).toBeLessThan(
+			HIGHWAY_HIT_LINE_PERCENT,
+		);
+		expect(notes.find((n) => n.lane === "blue")?.yPercent).toBeGreaterThan(
+			HIGHWAY_HIT_LINE_PERCENT,
+		);
 	});
 
 	it("omits notes outside lookbehind/lookahead via y-range visibility", () => {
@@ -143,24 +157,34 @@ describe("desktop-preview-model", () => {
 			10,
 			0,
 		);
-		expect(notes.find((n) => n.atSeconds === 10)?.yPercent).toBeGreaterThan(HIGHWAY_HIT_LINE_PERCENT);
+		expect(notes.find((n) => n.atSeconds === 10)?.yPercent).toBeGreaterThan(
+			HIGHWAY_HIT_LINE_PERCENT,
+		);
 	});
 
 	it("returns honest limitation copy for normalization fallback", () => {
 		expect(
 			deriveHighwayLimitations(
 				null,
-				makeNormalizationPreview([{ tick: 0, piece: "kick", velocity: 100, source: midiSource() }]),
+				makeNormalizationPreview([
+					{ tick: 0, piece: "kick", velocity: 100, source: midiSource() },
+				]),
 			)[0],
-		).toBe("Using normalization fallback data; timing is approximate and modifier data may be incomplete.");
+		).toBe(
+			"Using normalization fallback data; timing is approximate and modifier data may be incomplete.",
+		);
 	});
 
 	it("returns limited state when no highway data", () => {
-		expect(deriveHighwayLimitations(null, undefined)[0]).toContain("No generated chart");
+		expect(deriveHighwayLimitations(null, undefined)[0]).toContain(
+			"No generated chart",
+		);
 	});
 });
 
-function makeNormalizationPreview(firstHits: NormalizationHitPreview[]): NormalizationPreview {
+function makeNormalizationPreview(
+	firstHits: NormalizationHitPreview[],
+): NormalizationPreview {
 	return {
 		sourceKind: "midi",
 		sourcePath: "/tmp/demo.mid",
@@ -170,6 +194,7 @@ function makeNormalizationPreview(firstHits: NormalizationHitPreview[]): Normali
 		pieceSummary: { kick: firstHits.length },
 		firstHits,
 		issues: [],
+		mappingCandidates: [],
 	};
 }
 

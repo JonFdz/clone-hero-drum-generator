@@ -16,6 +16,7 @@ function state(
 		selectedTracks: [],
 		issues: [],
 		logs: [],
+		mappingOverrides: {},
 		status: "idle",
 		...overrides,
 	};
@@ -100,7 +101,9 @@ describe("desktop generate state source regressions", () => {
 	it("metadata changes use markNeedsRegenerate instead of markDirty", () => {
 		expect(source).toContain("setMetadata(metadata: DesktopMetadata): void {");
 		expect(source).toContain("this.projectState.markNeedsRegenerate();");
-		expect(source).not.toContain("setMetadata(metadata: DesktopMetadata): void {\n\t\tthis.patch({ metadata: { ...this.state().metadata, ...metadata } });\n\t\tthis.projectState.markDirty();");
+		expect(source).not.toContain(
+			"setMetadata(metadata: DesktopMetadata): void {\n\t\tthis.patch({ metadata: { ...this.state().metadata, ...metadata } });\n\t\tthis.projectState.markDirty();",
+		);
 	});
 
 	it("preserves outputFiles and lastGeneratedAt in project payload rebuild", () => {
@@ -110,6 +113,8 @@ describe("desktop generate state source regressions", () => {
 
 	it("setMappingOverrides marks preview stale without clearing normalization preview", () => {
 		expect(source).toContain("normalizationPreviewStale: true");
-		expect(source).not.toContain("setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {\n\t\tthis.patch({\n\t\t\tmappingOverrides: { ...mappingOverrides },\n\t\t\tnormalizationPreview: undefined,");
+		expect(source).not.toContain(
+			"setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {\n\t\tthis.patch({\n\t\t\tmappingOverrides: { ...mappingOverrides },\n\t\t\tnormalizationPreview: undefined,",
+		);
 	});
 });
