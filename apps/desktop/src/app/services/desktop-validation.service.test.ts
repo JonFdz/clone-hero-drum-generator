@@ -3,18 +3,23 @@ import type { DesktopGenerateState } from "./desktop-generate-state.service";
 import type { DesktopProjectState } from "./desktop-project-state.service";
 import { buildDesktopValidationSummary } from "./desktop-validation-model";
 
-function generateState(overrides: Partial<DesktopGenerateState> = {}): DesktopGenerateState {
+function generateState(
+	overrides: Partial<DesktopGenerateState> = {},
+): DesktopGenerateState {
 	return {
 		metadata: {},
 		selectedTracks: [],
 		issues: [],
 		logs: [],
+		mappingOverrides: {},
 		status: "idle",
 		...overrides,
 	};
 }
 
-function projectState(overrides: Partial<DesktopProjectState> = {}): DesktopProjectState {
+function projectState(
+	overrides: Partial<DesktopProjectState> = {},
+): DesktopProjectState {
 	return {
 		projectName: "Test Project",
 		dirty: false,
@@ -28,7 +33,10 @@ function projectState(overrides: Partial<DesktopProjectState> = {}): DesktopProj
 
 describe("desktop validation model", () => {
 	it("returns blocking errors for missing required inputs", () => {
-		const summary = buildDesktopValidationSummary(generateState(), projectState());
+		const summary = buildDesktopValidationSummary(
+			generateState(),
+			projectState(),
+		);
 
 		expect(summary.canGenerate).toBe(false);
 		expect(summary.items).toEqual(
@@ -56,7 +64,10 @@ describe("desktop validation model", () => {
 		expect(summary.canGenerate).toBe(false);
 		expect(summary.items).toEqual(
 			expect.arrayContaining([
-				expect.objectContaining({ id: "source.unsupported", severity: "error" }),
+				expect.objectContaining({
+					id: "source.unsupported",
+					severity: "error",
+				}),
 				expect.objectContaining({ id: "offset.invalid", severity: "error" }),
 			]),
 		);
@@ -72,8 +83,16 @@ describe("desktop validation model", () => {
 			}),
 			projectState({
 				missingPaths: [
-					{ kind: "sourcePath", path: "song.mid", message: "Missing sourcePath: song.mid" },
-					{ kind: "audioPath", path: "song.wav", message: "Missing audioPath: song.wav" },
+					{
+						kind: "sourcePath",
+						path: "song.mid",
+						message: "Missing sourcePath: song.mid",
+					},
+					{
+						kind: "audioPath",
+						path: "song.wav",
+						message: "Missing audioPath: song.wav",
+					},
 				],
 			}),
 		);
@@ -96,7 +115,11 @@ describe("desktop validation model", () => {
 				selectedTracks: [3],
 				metadata: {},
 				issues: [
-					{ severity: "warning", code: "IMPOSSIBLE_HAND_CHORD", message: "Detected impossible chord." },
+					{
+						severity: "warning",
+						code: "IMPOSSIBLE_HAND_CHORD",
+						message: "Detected impossible chord.",
+					},
 				],
 			}),
 			projectState({ outputStatus: "needs-regenerate" }),
@@ -105,10 +128,26 @@ describe("desktop validation model", () => {
 		expect(summary.canGenerate).toBe(true);
 		expect(summary.items).toEqual(
 			expect.arrayContaining([
-				expect.objectContaining({ id: "generation.needs-regenerate", severity: "warning", blocking: false }),
-				expect.objectContaining({ id: "metadata.missing-artist", severity: "warning", blocking: false }),
-				expect.objectContaining({ id: "metadata.missing-charter", severity: "warning", blocking: false }),
-				expect.objectContaining({ id: "chart.impossible-hand-chord", severity: "warning", blocking: false }),
+				expect.objectContaining({
+					id: "generation.needs-regenerate",
+					severity: "warning",
+					blocking: false,
+				}),
+				expect.objectContaining({
+					id: "metadata.missing-artist",
+					severity: "warning",
+					blocking: false,
+				}),
+				expect.objectContaining({
+					id: "metadata.missing-charter",
+					severity: "warning",
+					blocking: false,
+				}),
+				expect.objectContaining({
+					id: "chart.impossible-hand-chord",
+					severity: "warning",
+					blocking: false,
+				}),
 			]),
 		);
 	});
@@ -121,12 +160,18 @@ describe("desktop validation model", () => {
 				outputDir: "/tmp/out",
 				selectedTracks: [3],
 			}),
-			projectState({ ffmpegDiagnostic: { available: false, message: "FFmpeg not found." } }),
+			projectState({
+				ffmpegDiagnostic: { available: false, message: "FFmpeg not found." },
+			}),
 		);
 
 		expect(summary.canGenerate).toBe(false);
 		expect(summary.items).toContainEqual(
-			expect.objectContaining({ id: "ffmpeg.unavailable", category: "ffmpeg", blocking: true }),
+			expect.objectContaining({
+				id: "ffmpeg.unavailable",
+				category: "ffmpeg",
+				blocking: true,
+			}),
 		);
 	});
 
@@ -139,12 +184,18 @@ describe("desktop validation model", () => {
 				selectedTracks: [3],
 				metadata: { artist: "Artist", charter: "Charter" },
 			}),
-			projectState({ ffmpegDiagnostic: { available: false, message: "FFmpeg not found." } }),
+			projectState({
+				ffmpegDiagnostic: { available: false, message: "FFmpeg not found." },
+			}),
 		);
 
 		expect(summary.canGenerate).toBe(true);
 		expect(summary.items).toContainEqual(
-			expect.objectContaining({ id: "ffmpeg.not-required", category: "ffmpeg", blocking: false }),
+			expect.objectContaining({
+				id: "ffmpeg.not-required",
+				category: "ffmpeg",
+				blocking: false,
+			}),
 		);
 	});
 
@@ -167,7 +218,10 @@ describe("desktop validation model", () => {
 		expect(summary.canGenerate).toBe(true);
 		expect(summary.items).toEqual(
 			expect.arrayContaining([
-				expect.objectContaining({ id: "generation.generated", severity: "info" }),
+				expect.objectContaining({
+					id: "generation.generated",
+					severity: "info",
+				}),
 				expect.objectContaining({ id: "ffmpeg.available", severity: "info" }),
 			]),
 		);

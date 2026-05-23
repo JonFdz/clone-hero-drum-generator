@@ -2,75 +2,75 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/desktop/bug-and-ui-backlog.md`.
-- [ ] Read `docs/phases/17b-real-waveform-preview/PRD.md`.
-- [ ] Read `docs/phases/17c-preview-highway-ux-redesign/PRD.md`.
-- [ ] Read `docs/phases/17c-preview-highway-ux-redesign/ADR.md`.
-- [ ] Read `docs/phases/17c-preview-highway-ux-redesign/COMPONENTS.md`.
-- [ ] Read this checklist.
-- [ ] Open `docs/desktop/mockups/08a-preview-highway-redesign.png`.
-- [ ] Read OpenSpec if present.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/desktop/bug-and-ui-backlog.md`.
+- [x] Read `docs/phases/17b-real-waveform-preview/PRD.md`.
+- [x] Read `docs/phases/17c-preview-highway-ux-redesign/PRD.md`.
+- [x] Read `docs/phases/17c-preview-highway-ux-redesign/ADR.md`.
+- [x] Read `docs/phases/17c-preview-highway-ux-redesign/COMPONENTS.md`.
+- [x] Read this checklist.
+- [x] Open `docs/desktop/mockups/08a-preview-highway-redesign.png`.
+- [x] Read OpenSpec if present.
 
 ## Current repo review
 
-- [ ] Review `apps/desktop/src/app/pages/preview/preview-page.component.ts`.
-- [ ] Review `apps/desktop/src/app/services/desktop-preview.service.ts`.
-- [ ] Review `apps/desktop/src/app/services/desktop-preview-model.ts`.
-- [ ] Review `apps/desktop/src/app/services/desktop-waveform-overview.ts`.
-- [ ] Identify existing offset methods and keep behavior unchanged.
-- [ ] Identify existing chartData/waveform/currentTime/duration signals.
+- [x] Review `apps/desktop/src/app/pages/preview/preview-page.component.ts`.
+- [x] Review `apps/desktop/src/app/services/desktop-preview.service.ts`.
+- [x] Review `apps/desktop/src/app/services/desktop-preview-model.ts`.
+- [x] Review `apps/desktop/src/app/services/desktop-waveform-overview.ts`.
+- [x] Identify existing offset methods and keep behavior unchanged.
+- [x] Identify existing chartData/waveform/currentTime/duration signals.
 
 ## Pure helper/model work
 
-- [ ] Add `preview-chart-stage-model.ts`.
-- [ ] Add lane definitions in required order.
-- [ ] Add piece-to-lane mapping.
-- [ ] Add piece-to-glyph style mapping.
-- [ ] Add viewport helper.
-- [ ] Add time projection helper.
-- [ ] Add visible note filtering.
-- [ ] Add chart note adapter.
-- [ ] Add unit tests.
+- [x] Add `preview-chart-stage-model.ts`.
+- [x] Add lane definitions in required order.
+- [x] Add piece-to-lane mapping.
+- [x] Add piece-to-glyph style mapping.
+- [x] Add viewport helper.
+- [x] Add time projection helper.
+- [x] Add visible note filtering.
+- [x] Add chart note adapter.
+- [x] Add unit tests.
 
 ## Component work
 
-- [ ] Extract/add `PreviewTransportCardComponent`.
-- [ ] Extract/add `PreviewOffsetPanelComponent`.
-- [ ] Add `PreviewChartStageComponent`.
-- [ ] Add `PreviewTimeRulerComponent`.
-- [ ] Add `PreviewWaveformBackgroundComponent`.
-- [ ] Add `PreviewLaneLabelsComponent`.
-- [ ] Add `PreviewLaneGridComponent`.
-- [ ] Add `PreviewNoteLayerComponent`.
-- [ ] Add `PreviewPlayheadComponent`.
-- [ ] Add `PreviewFooterStatsComponent`.
+- [x] Extract/add `PreviewTransportCardComponent`.
+- [x] Extract/add `PreviewOffsetPanelComponent`.
+- [x] Add `PreviewChartStageComponent`.
+- [x] Add `PreviewTimeRulerComponent`.
+- [x] Add `PreviewWaveformBackgroundComponent`.
+- [x] Add `PreviewLaneLabelsComponent`.
+- [x] Add `PreviewLaneGridComponent`.
+- [x] Add `PreviewNoteLayerComponent`.
+- [x] Add `PreviewPlayheadComponent`.
+- [x] Add `PreviewFooterStatsComponent`.
 
 ## Visual rules
 
-- [ ] Match `08a-preview-highway-redesign.png` as closely as practical.
-- [ ] Use left-to-right 2D layout.
-- [ ] Draw one waveform background behind all lanes.
-- [ ] Do not repeat waveform per lane.
-- [ ] Use vertical purple playhead.
-- [ ] Use top time ruler.
-- [ ] Use right offset panel.
-- [ ] Use bottom stats/source strip.
+- [x] Match `08a-preview-highway-redesign.png` as closely as practical.
+- [x] Use left-to-right 2D layout.
+- [x] Draw one waveform background behind all lanes.
+- [x] Do not repeat waveform per lane.
+- [x] Use vertical purple playhead.
+- [x] Use top time ruler.
+- [x] Use right offset panel.
+- [x] Use bottom stats/source strip.
 
 ## Lane rules
 
-- [ ] KICK = orange circle.
-- [ ] SNARE = red circle.
-- [ ] HI-HAT = yellow diamond.
-- [ ] TOM 1 / tom_high = yellow circle.
-- [ ] RIDE = blue diamond.
-- [ ] TOM 2 / tom_mid = blue circle.
-- [ ] CRASH = green diamond.
-- [ ] TOM 3 / tom_floor = green circle.
+- [x] KICK = orange circle.
+- [x] SNARE = red circle.
+- [x] HI-HAT = yellow diamond.
+- [x] TOM 1 / tom_high = yellow circle.
+- [x] RIDE = blue diamond.
+- [x] TOM 2 / tom_mid = blue circle.
+- [x] CRASH = green diamond.
+- [x] TOM 3 / tom_floor = green circle.
 
 ## Behavior preservation
 
@@ -88,8 +88,8 @@
 
 ## Remove/deprioritize old visuals
 
-- [ ] Old Timeline Notes panel is removed or no longer primary.
-- [ ] Old rough Clone Hero Highway block is replaced by the new chart stage.
+- [x] Old Timeline Notes panel is removed or no longer primary.
+- [x] Old rough Clone Hero Highway block is replaced by the new chart stage.
 
 ## Validation
 
@@ -121,10 +121,10 @@ pnpm chdg --help
 
 Do not implement:
 
-- [ ] note editing;
-- [ ] automatic offset detection;
-- [ ] new rendering dependency;
-- [ ] sidebar/global UI redesign;
-- [ ] Home/Projects redesign;
-- [ ] packaging;
-- [ ] external editor integration.
+- [x] note editing;
+- [x] automatic offset detection;
+- [x] new rendering dependency;
+- [x] sidebar/global UI redesign;
+- [x] Home/Projects redesign;
+- [x] packaging;
+- [x] external editor integration.

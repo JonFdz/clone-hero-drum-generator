@@ -39,9 +39,9 @@ export class DesktopPreviewService {
 	readonly offsetStatus = signal<string | null>(null);
 	readonly offsetInputValid = signal(true);
 	readonly waveformOverview = signal<WaveformOverview | null>(null);
-	readonly waveformStatus = signal<"idle" | "loading" | "ready" | "error" | "empty">(
-		"idle",
-	);
+	readonly waveformStatus = signal<
+		"idle" | "loading" | "ready" | "error" | "empty"
+	>("idle");
 	readonly waveformError = signal<string | null>(null);
 
 	readonly savedOffsetMs = computed(
@@ -65,6 +65,33 @@ export class DesktopPreviewService {
 		if (sourceKind === "generated") return "generated song.ogg";
 		if (sourceKind === "selected-audio") return "project audio";
 		return "unknown";
+	});
+	readonly previewTitle = computed(
+		() =>
+			this.generateState.state().metadata.name?.trim() || "Untitled Project",
+	);
+	readonly previewSubtitle = computed(() => {
+		const artist =
+			this.generateState.state().metadata.artist?.trim() || "Unknown artist";
+		return `${artist} • Expert Pro Drums`;
+	});
+	readonly normalizationPreview = computed(
+		() => this.generateState.state().normalizationPreview,
+	);
+	readonly previewNoteCount = computed(() => {
+		const chartEvents = this.chartData()?.noteEvents;
+		if (chartEvents?.length) {
+			return chartEvents.filter((event) => event.lane >= 0 && event.lane <= 4)
+				.length;
+		}
+		return this.generateState.state().normalizationPreview?.hitCount ?? 0;
+	});
+	readonly previewStatus = computed(() => {
+		if (this.error()) return "Preview unavailable";
+		if (this.waveformStatus() === "loading") return "Loading waveform";
+		if (this.waveformStatus() === "error")
+			return "Preview ready · waveform unavailable";
+		return "Preview up to date";
 	});
 	readonly highwayHitLinePercent = HIGHWAY_HIT_LINE_PERCENT;
 	readonly timelineNotes = computed(() =>
@@ -282,7 +309,9 @@ export class DesktopPreviewService {
 				if (!Number.isFinite(this.duration()) || this.duration() <= 0) {
 					this.duration.set(overview.durationSeconds);
 				}
-				this.waveformStatus.set(overview.buckets.length > 0 ? "ready" : "empty");
+				this.waveformStatus.set(
+					overview.buckets.length > 0 ? "ready" : "empty",
+				);
 			} finally {
 				await audioContext.close();
 			}
