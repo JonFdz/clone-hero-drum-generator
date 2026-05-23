@@ -3,6 +3,7 @@ import type { RecentProject } from "@chdg/project/browser";
 import type { DesktopGenerateState } from "./desktop-generate-state.service";
 import type { DesktopProjectState } from "./desktop-project-state.service";
 import {
+	deriveHomeDashboardModel,
 	deriveHomeNextAction,
 	deriveWorkflowStepStatuses,
 	formatHomeOutputStatus,
@@ -158,6 +159,64 @@ describe("home dashboard helpers", () => {
 		expect(
 			limitRecentProjects([recent(1), recent(2), recent(3), recent(4)]),
 		).toEqual([recent(1), recent(2), recent(3)]);
+	});
+
+	it("folds project health into compact readiness badges", () => {
+		const model = deriveHomeDashboardModel({
+			project: project({
+				outputStatus: "generated",
+				recentProjects: [recent(1)],
+			}),
+			generate: generate({
+				sourcePath: "demo.mid",
+				audioPath: "demo.ogg",
+				outputDir: "/tmp/out",
+			}),
+			hasProject: true,
+			isDirty: false,
+		});
+
+		expect(model.readinessBadges.map((badge) => badge.label)).toEqual([
+			"Project saved",
+			"Generated",
+			"Paths ready",
+			"1 recent",
+		]);
+		expect(model.nextAction.id).toBe("preview");
+	});
+
+	it("keeps secondary hero actions compact and deduplicated", () => {
+		const model = deriveHomeDashboardModel({
+			project: project({ outputStatus: "generated" }),
+			generate: generate({
+				sourcePath: "demo.mid",
+				audioPath: "demo.ogg",
+				outputDir: "/tmp/out",
+			}),
+			hasProject: true,
+			isDirty: false,
+		});
+
+		expect(model.secondaryActions.map((action) => action.label)).toEqual([
+			"Validate",
+			"Generate Again",
+			"New Project",
+			"Open Project",
+		]);
+	});
+
+	it("does not duplicate the no-project primary action", () => {
+		const model = deriveHomeDashboardModel({
+			project: project({ projectName: "Untitled" }),
+			generate: generate(),
+			hasProject: false,
+			isDirty: false,
+		});
+
+		expect(model.nextAction.label).toBe("New Project");
+		expect(model.secondaryActions.map((action) => action.label)).toEqual([
+			"Open Project",
+		]);
 	});
 
 	it("keeps output labels stable", () => {

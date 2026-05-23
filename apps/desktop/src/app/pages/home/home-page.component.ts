@@ -4,11 +4,11 @@ import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
-import { deriveHomeDashboardModel } from "../../services/home-dashboard-model";
+import {
+	deriveHomeDashboardModel,
+	type HomeSecondaryAction,
+} from "../../services/home-dashboard-model";
 import { HomeDashboardHeroComponent } from "./components/home-dashboard-hero.component";
-import { HomeNextStepCardComponent } from "./components/home-next-step-card.component";
-import { HomeProjectStatusCardsComponent } from "./components/home-project-status-cards.component";
-import { HomeQuickActionsComponent } from "./components/home-quick-actions.component";
 import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
 import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
 import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress.component";
@@ -20,59 +20,39 @@ import { HomeWorkflowProgressComponent } from "./components/home-workflow-progre
 		CommonModule,
 		RouterModule,
 		HomeDashboardHeroComponent,
-		HomeNextStepCardComponent,
-		HomeProjectStatusCardsComponent,
-		HomeQuickActionsComponent,
 		HomeRecentProjectsCompactComponent,
 		HomeWarningsPanelComponent,
 		HomeWorkflowProgressComponent,
 	],
 	template: `
-		<div class="home-dashboard">
+		<div class="home-dashboard mock-home">
 			<chdg-home-dashboard-hero
 				[model]="model()"
 				(primaryAction)="navigateTo(model().nextAction.route)"
-				(newProject)="navigateTo('/new-project')"
-				(openProject)="openProject()"
+				(secondaryAction)="activateSecondaryAction($event)"
 			/>
 
-			<chdg-home-project-status-cards [cards]="model().statusCards" />
-
-			<chdg-home-warnings-panel
-				[model]="model()"
-				[warnings]="model().missingPathWarnings"
-			/>
-
-			<div class="dashboard-grid">
-				<chdg-home-next-step-card
-					[action]="model().nextAction"
-					(primaryAction)="navigateTo(model().nextAction.route)"
-					(secondaryAction)="navigateTo(model().nextAction.secondaryRoute || model().nextAction.route)"
-				/>
-				<chdg-home-quick-actions
-					[actions]="model().quickActions"
-					(routeAction)="navigateTo($event)"
-					(openProject)="openProject()"
-				/>
-			</div>
-
-			<div class="dashboard-grid wide-left">
-				<chdg-home-workflow-progress [steps]="model().workflow" />
+			<div class="home-secondary-grid">
 				<chdg-home-recent-projects-compact
 					[projects]="model().recentProjects"
 					(openProject)="openRecent($event)"
 					(removeProject)="removeRecent($event)"
 					(viewAll)="navigateTo('/projects')"
 				/>
+				<chdg-home-workflow-progress [steps]="model().workflow" />
 			</div>
+
+			<chdg-home-warnings-panel
+				[model]="model()"
+				[warnings]="model().missingPathWarnings"
+			/>
 		</div>
 	`,
 	styles: [
 		`
 		.home-dashboard { display: grid; gap: var(--space-5); }
-		.dashboard-grid { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.42fr); }
-		.dashboard-grid.wide-left { grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.8fr); }
-		@media (max-width: 1000px) { .dashboard-grid, .dashboard-grid.wide-left { grid-template-columns: 1fr; } }
+		.home-secondary-grid { display: grid; gap: var(--space-5); grid-template-columns: minmax(18rem, 0.78fr) minmax(0, 1.22fr); }
+		@media (max-width: 1100px) { .home-secondary-grid { grid-template-columns: 1fr; } }
 	`,
 	],
 })
@@ -93,6 +73,14 @@ export class HomePageComponent {
 
 	async navigateTo(route: string): Promise<void> {
 		await this.router.navigateByUrl(route);
+	}
+
+	async activateSecondaryAction(action: HomeSecondaryAction): Promise<void> {
+		if (action.kind === "open-project") {
+			await this.openProject();
+			return;
+		}
+		if (action.route) await this.navigateTo(action.route);
 	}
 
 	async openRecent(filePath: string): Promise<void> {

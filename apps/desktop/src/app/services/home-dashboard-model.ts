@@ -23,6 +23,8 @@ export type HomeWorkflowStepStatus =
 	| "upcoming"
 	| "unknown";
 
+export type HomeTone = "neutral" | "success" | "warning" | "danger";
+
 export type HomeNextAction = {
 	id: HomeNextActionId;
 	label: string;
@@ -32,25 +34,24 @@ export type HomeNextAction = {
 	secondaryRoute?: string;
 };
 
+export type HomeSecondaryAction = {
+	id: HomeNextActionId | "projects";
+	label: string;
+	route?: string;
+	kind: "route" | "open-project";
+};
+
+export type HomeReadinessBadge = {
+	label: string;
+	detail: string;
+	tone: HomeTone;
+};
+
 export type HomeWorkflowStep = {
 	index: number;
 	label: string;
 	description: string;
 	status: HomeWorkflowStepStatus;
-};
-
-export type HomeStatusCard = {
-	label: string;
-	value: string;
-	detail: string;
-	tone: "neutral" | "success" | "warning" | "danger";
-};
-
-export type HomeQuickAction = {
-	id: HomeNextActionId | "projects";
-	label: string;
-	route?: string;
-	kind: "route" | "open-project";
 };
 
 export type HomeDashboardModel = {
@@ -62,10 +63,10 @@ export type HomeDashboardModel = {
 	missingPathWarnings: MissingPathWarning[];
 	missingPathCount: number;
 	nextAction: HomeNextAction;
-	statusCards: HomeStatusCard[];
+	secondaryActions: HomeSecondaryAction[];
+	readinessBadges: HomeReadinessBadge[];
 	recentProjects: RecentProject[];
 	workflow: HomeWorkflowStep[];
-	quickActions: HomeQuickAction[];
 };
 
 export type HomeDashboardModelInput = {
@@ -88,12 +89,12 @@ const workflowDescriptions: Record<
 	(typeof HOME_WORKFLOW_LABELS)[number],
 	string
 > = {
-	"Import source": "Choose a MIDI or GPIF source file.",
-	Inspect: "Review source structure before selection.",
-	"Select track(s)": "Choose the drum track(s) to generate.",
-	Generate: "Create the Clone Hero output folder.",
-	Validate: "Check the generated package for issues.",
-	Preview: "Review notes.chart with song.ogg.",
+	"Import source": "Source file",
+	Inspect: "Review data",
+	"Select track(s)": "Choose drums",
+	Generate: "Write output",
+	Validate: "Check package",
+	Preview: "Listen back",
 };
 
 export function deriveHomeDashboardModel(
@@ -106,21 +107,19 @@ export function deriveHomeDashboardModel(
 		hasProject: input.hasProject,
 		projectName: input.hasProject
 			? input.project.projectName
-			: "No project selected",
-		projectFilePathLabel: compactPathLabel(input.project.projectFilePath),
+			: "Start a new drum chart project",
+		projectFilePathLabel: input.hasProject
+			? compactPathLabel(input.project.projectFilePath)
+			: "Create a local .chdg project or open an existing one.",
 		isDirty: input.isDirty,
 		outputStatus,
 		missingPathWarnings: input.project.missingPaths,
 		missingPathCount: input.project.missingPaths.length,
 		nextAction,
-		statusCards: deriveStatusCards(
-			input,
-			outputStatus.label,
-			recentProjects.length,
-		),
+		secondaryActions: deriveSecondaryActions(input, nextAction),
+		readinessBadges: deriveReadinessBadges(input, outputStatus, recentProjects.length),
 		recentProjects,
 		workflow: deriveWorkflowStepStatuses(input),
-		quickActions: deriveQuickActions(input, nextAction),
 	};
 }
 
@@ -179,7 +178,7 @@ export function deriveHomeNextAction(
 			id: "preview",
 			label: "Preview",
 			description:
-				"A Clone Hero output exists. Preview the chart and audio together.",
+				"Ready to preview notes.chart with song.ogg from the output folder.",
 			route: "/preview",
 			secondaryLabel: "Validate",
 			secondaryRoute: "/validation",
@@ -245,7 +244,7 @@ export function deriveWorkflowStepStatuses(
 export function formatHomeOutputStatus(status: ChdgOutputStatus): {
 	label: string;
 	detail: string;
-	tone: "neutral" | "success" | "warning" | "danger";
+	tone: HomeTone;
 } {
 	switch (status) {
 		case "generated":
@@ -304,98 +303,112 @@ function countMissingSetupPaths(generate: DesktopGenerateState): number {
 	).length;
 }
 
-function deriveStatusCards(
+function deriveReadinessBadges(
 	input: HomeDashboardModelInput,
-	outputLabel: string,
+	outputStatus: ReturnType<typeof formatHomeOutputStatus>,
 	recentCount: number,
-): HomeStatusCard[] {
-	const pathsMissing = input.project.missingPaths.length;
-	const setupPathsMissing = countMissingSetupPaths(input.generate);
-	const hasPathIssue = pathsMissing > 0 || setupPathsMissing > 0;
-	return [
+): HomeReadinessBadge[] {
+	const missingPathCount = Math.max(
+		input.project.missingPaths.length,
+		countMissingSetupPaths(input.generate),
+	);
+	const badges: HomeReadinessBadge[] = [
 		{
-			label: "Project",
-			value: input.hasProject ? input.project.projectName : "None",
-			detail: input.isDirty
-				? "Modified locally"
-				: input.hasProject
-					? "Ready to continue"
-					: "Create or open a project",
-			tone: input.hasProject ? "success" : "neutral",
+			label: input.hasProject
+				? input.isDirty
+					? "Modified"
+					: "Project saved"
+				: "Local project",
+			detail: input.hasProject
+				? input.isDirty
+					? "Project has unsaved edits."
+					: "Current .chdg is ready to continue."
+				: "Start with a local source and audio file.",
+			tone: input.hasProject ? (input.isDirty ? "warning" : "success") : "neutral",
 		},
 		{
-			label: "Output",
-			value: outputLabel,
-			detail: formatHomeOutputStatus(input.project.outputStatus).detail,
-			tone: formatHomeOutputStatus(input.project.outputStatus).tone,
+			label: outputStatus.label,
+			detail: outputStatus.detail,
+			tone: outputStatus.tone,
 		},
 		{
-			label: "Paths",
-			value: !input.hasProject
-				? "Not set"
-				: hasPathIssue
-					? `${Math.max(pathsMissing, setupPathsMissing)} missing`
-					: "Ready",
+			label: !input.hasProject
+				? "Paths not set"
+				: missingPathCount > 0
+					? `${missingPathCount} missing path${missingPathCount === 1 ? "" : "s"}`
+					: "Paths ready",
 			detail: !input.hasProject
-				? "Create or open a project first"
-				: hasPathIssue
-					? "Complete source, audio, and output setup"
-					: "Source, audio, and output are set",
+				? "Choose source, audio, and output during setup."
+				: missingPathCount > 0
+					? "Repair source, audio, or output folder."
+					: "Source, audio, and output are set.",
 			tone: !input.hasProject
 				? "neutral"
-				: hasPathIssue
+				: missingPathCount > 0
 					? "warning"
 					: "success",
 		},
-		{
-			label: "Recent",
-			value: `${recentCount}`,
+	];
+
+	if (recentCount > 0) {
+		badges.push({
+			label: `${recentCount} recent`,
 			detail: recentCount === 1 ? "Recent project" : "Recent projects",
 			tone: "neutral",
-		},
-	];
+		});
+	}
+
+	return badges;
 }
 
-function deriveQuickActions(
+function deriveSecondaryActions(
 	input: HomeDashboardModelInput,
 	nextAction: HomeNextAction,
-): HomeQuickAction[] {
-	const actions: HomeQuickAction[] = [
-		{
-			id: "new_project",
-			label: "New Project",
-			route: "/new-project",
-			kind: "route",
-		},
-		{ id: "open_project", label: "Open Project", kind: "open-project" },
-	];
+): HomeSecondaryAction[] {
+	const actions: HomeSecondaryAction[] = [];
 
 	if (
 		input.hasProject &&
-		nextAction.id !== "new_project" &&
-		nextAction.id !== "open_project"
+		nextAction.secondaryLabel &&
+		nextAction.secondaryRoute
 	) {
 		actions.push({
 			id: nextAction.id,
-			label: nextAction.label,
-			route: nextAction.route,
+			label: nextAction.secondaryLabel,
+			route: nextAction.secondaryRoute,
 			kind: "route",
 		});
 	}
 
-	actions.push({
-		id: "projects",
-		label: "Open Projects Library",
-		route: "/projects",
-		kind: "route",
-	});
-	return dedupeActions(actions);
+	if (input.hasProject && input.project.outputStatus === "generated") {
+		actions.push({
+			id: "generate",
+			label: "Generate Again",
+			route: "/generate",
+			kind: "route",
+		});
+	}
+
+	if (nextAction.id !== "new_project") {
+		actions.push({
+			id: "new_project",
+			label: "New Project",
+			route: "/new-project",
+			kind: "route",
+		});
+	}
+
+	actions.push({ id: "open_project", label: "Open Project", kind: "open-project" });
+
+	return dedupeSecondaryActions(actions).slice(0, 4);
 }
 
-function dedupeActions(actions: HomeQuickAction[]): HomeQuickAction[] {
+function dedupeSecondaryActions(
+	actions: HomeSecondaryAction[],
+): HomeSecondaryAction[] {
 	const seen = new Set<string>();
 	return actions.filter((action) => {
-		const key = `${action.kind}:${action.route ?? action.id}`;
+		const key = `${action.kind}:${action.route ?? action.id}:${action.label}`;
 		if (seen.has(key)) return false;
 		seen.add(key);
 		return true;
