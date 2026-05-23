@@ -6,7 +6,8 @@ import {
 	ViewChild,
 } from "@angular/core";
 import { DesktopPreviewService } from "../../services/desktop-preview.service";
-import type { HighwayLane } from "../../services/desktop-preview-model";
+import type { HighwayLane, TimelineNote } from "../../services/desktop-preview-model";
+import type { WaveformBucket } from "../../services/desktop-waveform-overview";
 
 @Component({
 	selector: "chdg-preview-page",
@@ -28,7 +29,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
       <section class="card" *ngIf="preview.audioSrc(); else missingAudio">
         <div class="split-row">
           <h2>Audio Preview</h2>
-          <span class="pill">Source: {{ preview.sourceKind() || "unknown" }}</span>
+          <span class="pill">Audio source: {{ preview.audioSourceLabel() }}</span>
         </div>
         <audio #audio [src]="preview.audioSrc()!" (loadedmetadata)="onLoadedMetadata()" (timeupdate)="onTimeUpdate()" (error)="onAudioError()"></audio>
 
@@ -39,12 +40,17 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
           <span>{{ preview.currentTimeText() }} / {{ preview.durationText() }}</span>
         </div>
 
-        <h3>Waveform-like overview</h3>
-        <p class="field-hint">Lightweight preview overview (not decoded audio waveform yet).</p>
-        <div class="waveform" *ngIf="preview.waveformBars().length > 0; else noWaveform">
-          <span *ngFor="let bar of preview.waveformBars()" class="bar" [style.height.%]="bar * 100"></span>
+        <h3>Waveform overview</h3>
+        <p class="field-hint">Real waveform from {{ preview.audioSourceLabel() }}.</p>
+        <p *ngIf="preview.waveformStatus() === 'loading'">Loading waveform preview…</p>
+        <p *ngIf="preview.waveformStatus() === 'error'">Could not decode waveform preview. Audio playback/generation may still work.</p>
+        <p *ngIf="preview.waveformStatus() === 'empty'">No audio available for waveform preview.</p>
+        <div class="waveform-shell" *ngIf="preview.waveformStatus() === 'ready' && preview.waveformOverview() as overview">
+          <svg class="waveform-svg" viewBox="0 0 1000 120" preserveAspectRatio="none" role="img" aria-label="Audio waveform preview">
+            <path [attr.d]="waveformPath(overview.buckets)" class="waveform-fill" />
+          </svg>
+          <span class="waveform-playhead" [style.left.%]="(preview.currentTime() / (preview.duration() || 1)) * 100"></span>
         </div>
-        <ng-template #noWaveform><p>Waveform unavailable.</p></ng-template>
       </section>
 
       <section class="card timeline">
@@ -55,7 +61,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
             *ngFor="let note of preview.timelineNotes()"
             class="note"
             [class.active]="note.highlighted"
-            [style.left.%]="(note.atSeconds / (preview.duration() || 1)) * 100"
+            [style.left.%]="timelineLeftPercent(note)"
             [attr.title]="note.lane"
           ></span>
           <span class="playhead" [style.left.%]="(preview.currentTime() / (preview.duration() || 1)) * 100"></span>
@@ -117,7 +123,7 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
     <ng-template #missingAudio>
       <section class="card">
         <h2>No preview audio</h2>
-        <p>Generated song.ogg and selected project audio are unavailable.</p>
+        <p>No audio available for waveform preview.</p>
       </section>
     </ng-template>
   `,
@@ -125,8 +131,10 @@ import type { HighwayLane } from "../../services/desktop-preview-model";
 		`
       .controls { display: flex; gap: 12px; align-items: center; margin: 12px 0; }
       .controls input[type="range"] { flex: 1; }
-      .waveform { height: 72px; display: flex; align-items: end; gap: 2px; border: 1px solid var(--color-border); padding: 8px; border-radius: var(--radius-md); }
-      .bar { display: inline-block; width: 4px; background: #9b6dff; border-radius: 2px; opacity: 0.85; }
+      .waveform-shell { position: relative; height: 120px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: rgba(255,255,255,0.02); }
+      .waveform-svg { width: 100%; height: 100%; display: block; }
+      .waveform-fill { fill: rgba(155, 109, 255, 0.4); stroke: #9b6dff; stroke-width: 1; }
+      .waveform-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #c084ff; }
       .timeline-grid { position: relative; height: 110px; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
       .note { position: absolute; top: 38px; width: 6px; height: 32px; background: #6ea8ff; border-radius: 4px; opacity: 0.8; }
       .note.active { background: #f6b450; height: 40px; top: 34px; }
@@ -191,6 +199,27 @@ export class PreviewPageComponent implements AfterViewInit {
 	async applyOffset(): Promise<void> {
 		await this.preview.applyOffset();
 		await this.preview.load();
+	}
+
+	waveformPath(buckets: WaveformBucket[]): string {
+		if (buckets.length === 0) return "";
+		const maxPoints: string[] = [];
+		const minPoints: string[] = [];
+		const size = Math.max(1, buckets.length - 1);
+		for (let index = 0; index < buckets.length; index += 1) {
+			const x = (index / size) * 1000;
+			const maxY = 60 - buckets[index].max * 55;
+			const minY = 60 - buckets[index].min * 55;
+			maxPoints.push(`${x},${maxY}`);
+			minPoints.push(`${x},${minY}`);
+		}
+		return `M ${maxPoints.join(" L ")} L ${minPoints.reverse().join(" L ")} Z`;
+	}
+
+	timelineLeftPercent(note: TimelineNote): number {
+		const overviewDuration = this.preview.waveformOverview()?.durationSeconds;
+		const duration = overviewDuration && overviewDuration > 0 ? overviewDuration : this.preview.duration() || 1;
+		return (note.atSeconds / duration) * 100;
 	}
 
 	laneLeftPercent(lane: HighwayLane): number {

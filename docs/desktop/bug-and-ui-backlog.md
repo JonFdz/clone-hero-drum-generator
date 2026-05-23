@@ -29,7 +29,7 @@ Never show false 0.
 ### BUG-02 — Preview waveform is placeholder/decorative
 
 **Area:** Preview  
-**Status:** Deferred to Preview UX Redesign unless blocking offset flow  
+**Status:** Fixed in Phase 17B (pending manual desktop validation)  
 **Priority:** High-Medium
 
 Observed:
@@ -39,15 +39,16 @@ Waveform-like overview is not decoded real audio waveform.
 It does not help synchronize song and notes.
 ```
 
-Expected future behavior:
+Implemented behavior in Phase 17B:
 
 ```txt
-Decoded real waveform.
-Useful playhead alignment.
-Zoom/scroll suitable for offset sync.
+Real waveform overview decoded from actual preview audio.
+Preview labels audio source (generated song.ogg vs project audio).
+Waveform loading/empty/error states added.
+Playhead overlays waveform while preserving existing timeline/highway/offset flows.
 ```
 
-This is not part of Phase 17A unless a minimal bug fix is needed to avoid misleading copy.
+Deferred follow-up (17C+): zoom/scroll and broader timeline/highway redesign.
 
 ## UI / UX redesign backlog
 
@@ -155,7 +156,8 @@ Preview
 
 ```txt
 Phase 17A — Desktop Bug Bash
-Phase 17B — Preview UX Redesign
-Phase 17C — General UI Polish / Information Architecture
+Phase 17B — Real Waveform Preview
+Phase 17C — Timeline + Clone Hero Preview UX Redesign
+Phase 17D — General UI Polish / Information Architecture
 Phase 18  — Packaging / Distribution
 ```
