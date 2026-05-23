@@ -2,76 +2,76 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/desktop/bug-and-ui-backlog.md`.
-- [ ] Read `docs/phases/17d-home-dashboard-redesign/PRD.md`.
-- [ ] Read `docs/phases/17d-home-dashboard-redesign/ADR.md`.
-- [ ] Read `docs/phases/17d-home-dashboard-redesign/COMPONENTS.md`.
-- [ ] Open `docs/desktop/mockups/01-home-dashboard.png`.
-- [ ] Read OpenSpec if present.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/desktop/bug-and-ui-backlog.md`.
+- [x] Read `docs/phases/17d-home-dashboard-redesign/PRD.md`.
+- [x] Read `docs/phases/17d-home-dashboard-redesign/ADR.md`.
+- [x] Read `docs/phases/17d-home-dashboard-redesign/COMPONENTS.md`.
+- [x] Open `docs/desktop/mockups/01-home-dashboard.png`.
+- [x] Read OpenSpec if present.
 
 ## Current repo review
 
-- [ ] Review `apps/desktop/src/app/pages/home/home-page.component.ts`.
-- [ ] Review `apps/desktop/src/app/pages/projects/projects-page.component.ts`.
-- [ ] Review `apps/desktop/src/app/services/desktop-project-state.service.ts`.
-- [ ] Review `apps/desktop/src/app/services/desktop-generate-state.service.ts`.
-- [ ] Review current open/recent project behavior.
-- [ ] Identify current project, output, dirty, missing paths, and recent project data.
+- [x] Review `apps/desktop/src/app/pages/home/home-page.component.ts`.
+- [x] Review `apps/desktop/src/app/pages/projects/projects-page.component.ts`.
+- [x] Review `apps/desktop/src/app/services/desktop-project-state.service.ts`.
+- [x] Review `apps/desktop/src/app/services/desktop-generate-state.service.ts`.
+- [x] Review current open/recent project behavior.
+- [x] Identify current project, output, dirty, missing paths, and recent project data.
 
 ## Model/helper work
 
-- [ ] Add `home-dashboard-model.ts`.
-- [ ] Add next action derivation.
-- [ ] Add workflow status derivation.
-- [ ] Add output status formatting.
-- [ ] Add compact recent project limiting helper if useful.
-- [ ] Add tests.
+- [x] Add `home-dashboard-model.ts`.
+- [x] Add next action derivation.
+- [x] Add workflow status derivation.
+- [x] Add output status formatting.
+- [x] Add compact recent project limiting helper if useful.
+- [x] Add tests.
 
 ## Component work
 
-- [ ] Add `HomeDashboardHeroComponent`.
-- [ ] Add `HomeNextStepCardComponent` or equivalent hero section.
-- [ ] Add `HomeProjectStatusCardsComponent`.
-- [ ] Add `HomeRecentProjectsCompactComponent`.
-- [ ] Add `HomeWorkflowProgressComponent`.
-- [ ] Add `HomeWarningsPanelComponent`.
-- [ ] Add `HomeQuickActionsComponent` if useful.
-- [ ] Keep `HomePageComponent` as container/composer.
+- [x] Add `HomeDashboardHeroComponent`.
+- [x] Add `HomeNextStepCardComponent` or equivalent hero section.
+- [x] Add `HomeProjectStatusCardsComponent`.
+- [x] Add `HomeRecentProjectsCompactComponent`.
+- [x] Add `HomeWorkflowProgressComponent`.
+- [x] Add `HomeWarningsPanelComponent`.
+- [x] Add `HomeQuickActionsComponent` if useful.
+- [x] Keep `HomePageComponent` as container/composer.
 
 ## Visual work
 
-- [ ] Follow `01-home-dashboard.png` direction.
-- [ ] Make current project / next action dominant.
-- [ ] Make Recent Projects compact.
-- [ ] Keep workflow canonical and visually clear.
-- [ ] Use dark cards, purple accents, rounded corners, and spacing consistent with current app.
-- [ ] Avoid making Home look like Projects.
+- [x] Follow `01-home-dashboard.png` direction.
+- [x] Make current project / next action dominant.
+- [x] Make Recent Projects compact.
+- [x] Keep workflow canonical and visually clear.
+- [x] Use dark cards, purple accents, rounded corners, and spacing consistent with current app.
+- [x] Avoid making Home look like Projects.
 
 ## Behavior preservation
 
-- [ ] New Project action still routes to `/new-project`.
-- [ ] Open Project dialog still works.
-- [ ] Open Recent still loads project state and generate state.
-- [ ] Remove Recent still works.
-- [ ] Missing paths still appear after opening project.
-- [ ] Dirty/generated/needs-regenerate/failed statuses are preserved.
-- [ ] Projects page behavior remains unchanged.
+- [x] New Project action still routes to `/new-project`.
+- [x] Open Project dialog still works.
+- [x] Open Recent still loads project state and generate state.
+- [x] Remove Recent still works.
+- [x] Missing paths still appear after opening project.
+- [x] Dirty/generated/needs-regenerate/failed statuses are preserved.
+- [x] Projects page behavior remains unchanged.
 
 ## Tests
 
-- [ ] Test no-project next action.
-- [ ] Test missing paths next action.
-- [ ] Test generated next action.
-- [ ] Test needs-regenerate next action.
-- [ ] Test failed next action.
-- [ ] Test workflow order.
-- [ ] Test compact recent project limit.
-- [ ] Preserve existing tests.
+- [x] Test no-project next action.
+- [x] Test missing paths next action.
+- [x] Test generated next action.
+- [x] Test needs-regenerate next action.
+- [x] Test failed next action.
+- [x] Test workflow order.
+- [x] Test compact recent project limit.
+- [x] Preserve existing tests.
 
 ## Validation
 
@@ -104,9 +104,9 @@ pnpm chdg --help
 
 Do not implement:
 
-- [ ] Projects redesign;
-- [ ] `.chdg` bundle/format changes;
-- [ ] global sidebar/header redesign;
-- [ ] packaging;
-- [ ] new dependencies;
-- [ ] external editor integration.
+- [x] Projects redesign;
+- [x] `.chdg` bundle/format changes;
+- [x] global sidebar/header redesign;
+- [x] packaging;
+- [x] new dependencies;
+- [x] external editor integration.

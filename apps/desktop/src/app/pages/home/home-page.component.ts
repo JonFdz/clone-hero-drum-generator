@@ -1,126 +1,137 @@
 import { CommonModule } from "@angular/common";
-import { Component, inject } from "@angular/core";
+import { Component, computed, inject } from "@angular/core";
 import { Router, RouterModule } from "@angular/router";
-import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { deriveHomeDashboardModel } from "../../services/home-dashboard-model";
+import { HomeDashboardHeroComponent } from "./components/home-dashboard-hero.component";
+import { HomeNextStepCardComponent } from "./components/home-next-step-card.component";
+import { HomeProjectStatusCardsComponent } from "./components/home-project-status-cards.component";
+import { HomeQuickActionsComponent } from "./components/home-quick-actions.component";
+import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
+import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
+import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress.component";
 
 @Component({
-  selector: "chdg-home-page",
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
-    <header class="page-header">
-      <p class="eyebrow">Local desktop shell</p>
-      <h1>Welcome to CHDG.</h1>
-      <p>Build Clone Hero drum packages from local MIDI and Guitar Pro / GPIF sources.</p>
-    </header>
+	selector: "chdg-home-page",
+	standalone: true,
+	imports: [
+		CommonModule,
+		RouterModule,
+		HomeDashboardHeroComponent,
+		HomeNextStepCardComponent,
+		HomeProjectStatusCardsComponent,
+		HomeQuickActionsComponent,
+		HomeRecentProjectsCompactComponent,
+		HomeWarningsPanelComponent,
+		HomeWorkflowProgressComponent,
+	],
+	template: `
+		<div class="home-dashboard">
+			<chdg-home-dashboard-hero
+				[model]="model()"
+				(primaryAction)="navigateTo(model().nextAction.route)"
+				(newProject)="navigateTo('/new-project')"
+				(openProject)="openProject()"
+			/>
 
-    <div class="grid two">
-      <section class="card">
-        <h2>Recent Projects</h2>
-        @if (recentProjects.length === 0) {
-          <p>No recent projects. Create a new project to get started.</p>
-        } @else {
-          <div class="card-list">
-            @for (project of recentProjects; track project.path) {
-              <div class="mini-card project-card" (click)="openRecent(project.path)">
-                <div class="split-row">
-                  <strong>{{ project.name }}</strong>
-                  <button class="button ghost small" type="button" (click)="removeRecent($event, project.path)">Remove</button>
-                </div>
-                <p class="path-text">{{ project.path }}</p>
-              </div>
-            }
-          </div>
-        }
-        <div class="action-row">
-          <a class="button primary" routerLink="/new-project">New Project</a>
-          <button class="button secondary" type="button" (click)="openProject()">Open Project</button>
-        </div>
-      </section>
+			<chdg-home-project-status-cards [cards]="model().statusCards" />
 
-      <section class="card">
-        <h2>Workflow overview</h2>
-        <div class="workflow" aria-label="Planned desktop workflow">
-          @for (step of workflow; track step.label) {
-            <div class="workflow-step">
-              <div class="step-icon" aria-hidden="true">{{ step.icon }}</div>
-              <strong>{{ step.label }}</strong>
-              <p>{{ step.description }}</p>
-            </div>
-          }
-        </div>
-      </section>
-    </div>
-  `,
-  styles: [`
-    .project-card { cursor: pointer; }
-    .project-card:hover { background: rgba(151, 83, 229, 0.12); }
-    .path-text { color: var(--color-muted); font-size: 0.85rem; word-break: break-all; }
-  `]
+			<chdg-home-warnings-panel
+				[model]="model()"
+				[warnings]="model().missingPathWarnings"
+			/>
+
+			<div class="dashboard-grid">
+				<chdg-home-next-step-card
+					[action]="model().nextAction"
+					(primaryAction)="navigateTo(model().nextAction.route)"
+					(secondaryAction)="navigateTo(model().nextAction.secondaryRoute || model().nextAction.route)"
+				/>
+				<chdg-home-quick-actions
+					[actions]="model().quickActions"
+					(routeAction)="navigateTo($event)"
+					(openProject)="openProject()"
+				/>
+			</div>
+
+			<div class="dashboard-grid wide-left">
+				<chdg-home-workflow-progress [steps]="model().workflow" />
+				<chdg-home-recent-projects-compact
+					[projects]="model().recentProjects"
+					(openProject)="openRecent($event)"
+					(removeProject)="removeRecent($event)"
+					(viewAll)="navigateTo('/projects')"
+				/>
+			</div>
+		</div>
+	`,
+	styles: [
+		`
+		.home-dashboard { display: grid; gap: var(--space-5); }
+		.dashboard-grid { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.42fr); }
+		.dashboard-grid.wide-left { grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.8fr); }
+		@media (max-width: 1000px) { .dashboard-grid, .dashboard-grid.wide-left { grid-template-columns: 1fr; } }
+	`,
+	],
 })
 export class HomePageComponent {
-  private readonly projectState = inject(DesktopProjectStateService);
-  private readonly bridge = inject(DesktopBridgeService);
-  private readonly generateState = inject(DesktopGenerateStateService);
-  private readonly router = inject(Router);
+	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly bridge = inject(DesktopBridgeService);
+	private readonly generateState = inject(DesktopGenerateStateService);
+	private readonly router = inject(Router);
 
-  get recentProjects() {
-    return this.projectState.state().recentProjects;
-  }
+	readonly model = computed(() =>
+		deriveHomeDashboardModel({
+			project: this.projectState.state(),
+			generate: this.generateState.state(),
+			hasProject: this.projectState.hasProject(),
+			isDirty: this.projectState.isDirty(),
+		}),
+	);
 
-  readonly workflow = [
-    { icon: "↓", label: "Import source", description: "Use local .mid, .midi, or .gp / GPIF files." },
-    { icon: "⌕", label: "Inspect", description: "Review source structure before generation." },
-    { icon: "♬", label: "Select track(s)", description: "Choose drum candidates in a future phase." },
-    { icon: "✦", label: "Generate", description: "Create the Clone Hero song folder later." },
-    { icon: "◇", label: "Validate", description: "Check generated package consistency." },
-    { icon: "▷", label: "Preview", description: "Review notes.chart with song.ogg in future phases." },
-  ];
+	async navigateTo(route: string): Promise<void> {
+		await this.router.navigateByUrl(route);
+	}
 
-  async openRecent(filePath: string): Promise<void> {
-    const payload = await this.projectState.openProject(filePath);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	async openRecent(filePath: string): Promise<void> {
+		const payload = await this.projectState.openProject(filePath);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.navigateTo(this.model().nextAction.route);
+		}
+	}
 
-  async removeRecent(event: Event, filePath: string): Promise<void> {
-    event.stopPropagation();
-    await this.projectState.removeRecentProject(filePath);
-  }
+	async removeRecent(filePath: string): Promise<void> {
+		await this.projectState.removeRecentProject(filePath);
+	}
 
-  async openProject(): Promise<void> {
-    const picked = await this.bridge.openProjectFile();
-    if (!picked) return;
-    const payload = await this.projectState.openProject(picked.path);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	async openProject(): Promise<void> {
+		const picked = await this.bridge.openProjectFile();
+		if (!picked) return;
+		const payload = await this.projectState.openProject(picked.path);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.navigateTo(this.model().nextAction.route);
+		}
+	}
+
+	private loadProjectState(
+		payload: Awaited<ReturnType<DesktopProjectStateService["openProject"]>>,
+	): void {
+		if (!payload) return;
+		this.generateState.loadProjectState({
+			sourcePath: payload.sourcePath,
+			audioPath: payload.audioPath,
+			outputDir: payload.outputDir,
+			sourceKind: payload.sourceKind,
+			selectedTracks: payload.selectedTracks,
+			metadata: payload.metadata,
+			offsetMs: payload.offsetMs,
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			mappingOverrides: payload.mappingOverrides,
+		});
+	}
 }
