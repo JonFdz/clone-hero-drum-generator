@@ -1,299 +1,144 @@
-# Component Breakdown Phase 17D: Home Dashboard Redesign
+# Component Breakdown Phase 17D: Home Pixel-Perfect Correction
 
-This document is the implementation blueprint for Phase 17D.
+## Current PR state
 
-Visual reference:
+PR #47 currently creates:
+
+```txt
+HomeDashboardHeroComponent
+HomeNextStepCardComponent
+HomeProjectStatusCardsComponent
+HomeQuickActionsComponent
+HomeRecentProjectsCompactComponent
+HomeWorkflowProgressComponent
+HomeWarningsPanelComponent
+home-dashboard-model.ts
+```
+
+The model/helper work is useful. The visual composition should be corrected.
+
+## Target direction
+
+Build Home to match:
 
 ```txt
 docs/desktop/mockups/01-home-dashboard.png
 ```
 
-## Current files
+as closely as practical.
 
-Current Home:
+## Components to keep/adapt
+
+### HomePageComponent
+
+Should compose a smaller number of mock-like regions.
+
+Recommended structure:
 
 ```txt
-apps/desktop/src/app/pages/home/home-page.component.ts
+home-shell
+  home-hero/current-project
+  home-main-grid
+    recent/continue card
+    workflow/overview card
+  warnings if needed
 ```
 
-Related current Projects page:
+### HomeDashboardHeroComponent
+
+Keep, but redesign to match the mock.
+
+It should absorb:
 
 ```txt
-apps/desktop/src/app/pages/projects/projects-page.component.ts
-```
-
-Current state/services:
-
-```txt
-apps/desktop/src/app/services/desktop-project-state.service.ts
-apps/desktop/src/app/services/desktop-generate-state.service.ts
-apps/desktop/src/app/services/desktop-bridge.service.ts
-```
-
-## New suggested file layout
-
-```txt
-apps/desktop/src/app/pages/home/components/home-dashboard-hero.component.ts
-apps/desktop/src/app/pages/home/components/home-next-step-card.component.ts
-apps/desktop/src/app/pages/home/components/home-project-status-cards.component.ts
-apps/desktop/src/app/pages/home/components/home-recent-projects-compact.component.ts
-apps/desktop/src/app/pages/home/components/home-workflow-progress.component.ts
-apps/desktop/src/app/pages/home/components/home-warnings-panel.component.ts
-apps/desktop/src/app/pages/home/components/home-quick-actions.component.ts
-
-apps/desktop/src/app/services/home-dashboard-model.ts
-apps/desktop/src/app/services/home-dashboard-model.test.ts
-```
-
-Exact names may follow repo style, but keep responsibilities separated.
-
-## HomePageComponent
-
-Keep as page-level container.
-
-Responsibilities:
-
-```txt
-compose dashboard components
-provide state from DesktopProjectStateService and DesktopGenerateStateService
-handle routing
-handle open recent project
-handle open project dialog
-handle remove recent project
-```
-
-Avoid:
-
-```txt
-large inline workflow card template
-large inline recent project template
-next-action decision logic embedded directly in template
-```
-
-## HomeDashboardHeroComponent
-
-Main dashboard card.
-
-Visual role:
-
-```txt
-largest Home card
-first thing user sees after page title
-```
-
-Display:
-
-```txt
-project name
-project path or "Unsaved project"
-dirty/modified state
-output status pill
-missing path count warning if any
-primary action button
+primary next action
 secondary actions
+project state badges
 ```
 
-Primary action examples:
+Do not require a separate large Next Recommended Action card.
+
+### HomeRecentProjectsCompactComponent
+
+Keep.
+
+Use as a compact section only.
+
+### HomeWorkflowProgressComponent
+
+Keep but make compact.
+
+Do not render long explanations below each step if the mock uses a simpler workflow overview.
+
+### HomeWarningsPanelComponent
+
+Keep conditional.
+
+Only show when warnings exist.
+
+## Components to remove or visually fold
+
+### HomeProjectStatusCardsComponent
+
+Do not show four large metric cards as a full row unless the mock clearly supports it.
+
+Replace with compact badges/readiness strip:
 
 ```txt
-No project -> New Project
-Missing paths -> Continue Setup
-Needs regenerate -> Generate
-Generated -> Preview
-Failed -> Review Generate
+Generated
+Paths ready
+Modified
+1 recent
 ```
 
-Inputs:
+inside the hero or current project card.
 
-```txt
-dashboardModel
-```
+### HomeNextStepCardComponent
 
-Outputs:
+Remove as a standalone large card.
 
-```txt
-action
-newProject
-openProject
-```
+The next action belongs in the hero/current-project card.
 
-## HomeNextStepCardComponent
+### HomeQuickActionsComponent
 
-Focused "next best action" card.
+Remove as a standalone card if it duplicates hero actions.
 
-Display:
-
-```txt
-short title
-one-sentence reason
-primary button
-secondary link if useful
-```
-
-It may be merged into `HomeDashboardHeroComponent` if the mock and layout are cleaner, but the next-action model must stay clear/testable.
-
-## HomeProjectStatusCardsComponent
-
-Small status cards row.
-
-Cards:
-
-```txt
-Project
-Output
-Paths
-Recent
-```
-
-Optional card only if already available:
-
-```txt
-FFmpeg
-```
-
-Do not run new diagnostics automatically.
-
-## HomeRecentProjectsCompactComponent
-
-Compact list, not full library.
-
-Display:
-
-```txt
-up to 3 recent projects
-name
-path
-Open action
-Remove action
-View all projects link
-```
-
-Rules:
-
-```txt
-Do not duplicate the full Projects page.
-Do not dominate the Home screen.
-```
-
-## HomeWorkflowProgressComponent
-
-Six-step workflow strip.
-
-Canonical steps:
-
-```txt
-1 Import source
-2 Inspect
-3 Select track(s)
-4 Generate
-5 Validate
-6 Preview
-```
-
-Display state:
-
-```txt
-complete
-current
-available
-blocked
-upcoming
-unknown
-```
-
-Avoid misleading completion if data is unavailable.
-
-## HomeWarningsPanelComponent
-
-Conditional.
-
-Show only when:
-
-```txt
-missingPathWarnings.length > 0
-outputStatus === "failed"
-other existing project-state warning is available
-```
-
-Display:
-
-```txt
-warning title
-short message
-action to fix
-```
-
-Do not create new warning systems.
-
-## HomeQuickActionsComponent
-
-Small action group.
-
-Actions may include:
+Actions should be available in the main Home card:
 
 ```txt
 New Project
 Open Project
-Continue Setup
-Generate
-Preview
-Open Projects Library
+Preview/Generate/Continue
+Projects Library
 ```
 
-Only show actions that make sense.
+## Model helper
 
-## Pure model helper
-
-Create:
+Keep:
 
 ```txt
 apps/desktop/src/app/services/home-dashboard-model.ts
 ```
 
-Suggested exports:
+But adjust output to support a compact mock-like layout:
 
 ```txt
-deriveHomeDashboardModel()
-deriveHomeNextAction()
-deriveWorkflowStepStatuses()
-formatHomeOutputStatus()
-compactPathLabel()
-```
-
-## Implementation order
-
-1. Add model helper and tests.
-2. Extract compact Recent Projects component.
-3. Add Dashboard Hero and Next Step.
-4. Add Status Cards.
-5. Add Workflow Progress.
-6. Add Warnings Panel.
-7. Compose HomePage.
-8. Visual polish against `01-home-dashboard.png`.
-9. Manual validate routes/actions.
-
-## Required tests
-
-Test:
-
-```txt
-no project -> next action is New Project
-missing paths -> next action is Continue Setup
-not-generated -> safe setup/generate route
-needs-regenerate -> next action is Generate
-generated -> next action is Preview
-failed -> next action is Review Generate
-workflow has six canonical steps in order
-recent project compact count limits to 3
-output labels are stable
+primaryAction
+secondaryActions
+badges
+workflow
+recentProjects
+warnings
 ```
 
 ## Hard rules
 
 ```txt
-Do not redesign Projects page in this phase.
-Do not change .chdg format.
-Do not add dependencies.
-Do not present .chdg as generated song package.
-Do not claim workflow steps are complete unless state supports it.
+Pixel-perfect mock direction over generic dashboard interpretation.
+No separate metrics dashboard row.
+No duplicated CTA cards.
+No duplicated quick actions.
+No large empty dashboard cards.
+Projects page unchanged.
+OpenSpec not committed unless requested.
 ```

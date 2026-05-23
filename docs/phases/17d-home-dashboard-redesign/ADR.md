@@ -1,4 +1,4 @@
-# ADR Phase 17D: Home Dashboard Redesign
+# ADR Phase 17D: Home Dashboard Pixel-Perfect Redesign
 
 ## Status
 
@@ -6,117 +6,69 @@ Proposed.
 
 ## Decision
 
-Redesign Home as a dashboard / launchpad for the current project, not as another project library page.
-
-Primary visual reference:
+Treat Phase 17D Home as a near pixel-perfect implementation of:
 
 ```txt
 docs/desktop/mockups/01-home-dashboard.png
 ```
 
+The previous loose dashboard interpretation should be corrected.
+
 ## Context
 
-The current Home and Projects screens overlap heavily.
-
-Current Home:
+The first implementation of Phase 17D created a clean dashboard, but it drifted from the mock and added too many large sections:
 
 ```txt
-apps/desktop/src/app/pages/home/home-page.component.ts
+status card grid
+standalone next action card
+standalone quick actions card
+large workflow card
+recent projects card
 ```
 
-shows Recent Projects and Workflow overview.
+This is visually heavier and less direct than the intended Home mock.
 
-Current Projects:
+## Decision
 
-```txt
-apps/desktop/src/app/pages/projects/projects-page.component.ts
-```
-
-also shows Recent Projects and project open/create actions.
-
-This causes Home and Projects to feel like the same screen.
-
-## Decision details
-
-Home becomes:
+Recompose Home around fewer, more direct areas:
 
 ```txt
-current project dashboard
-next action launcher
-project status summary
+current project / continue card
+compact actions
 compact recent projects
-workflow progress
-warnings/health
+compact workflow overview
+conditional warnings
 ```
 
-Projects remains:
-
-```txt
-full recent/project library
-open/remove/manage .chdg files
-```
+Status should be integrated as badges/strips inside these cards rather than shown as a separate metrics dashboard.
 
 ## Component decision
 
-Split Home into focused components:
+Keep components only where they support the target mock.
+
+Recommended:
 
 ```txt
-HomeDashboardHeroComponent
-HomeNextStepCardComponent
-HomeProjectStatusCardsComponent
+HomeHeroComponent or HomeCurrentProjectCardComponent
 HomeRecentProjectsCompactComponent
-HomeWorkflowProgressComponent
+HomeWorkflowOverviewComponent
 HomeWarningsPanelComponent
+HomeReadinessBadgesComponent
+```
+
+Avoid separate large components for:
+
+```txt
+HomeProjectStatusCardsComponent
+HomeNextStepCardComponent
 HomeQuickActionsComponent
 ```
 
-`HomePageComponent` remains the container/composer.
-
-## Model/helper decision
-
-Add an Angular-free helper if practical:
-
-```txt
-apps/desktop/src/app/services/home-dashboard-model.ts
-```
-
-This helper should derive:
-
-```txt
-next action
-workflow statuses
-status labels
-compact dashboard model
-```
-
-The helper must be unit tested.
-
-## Data decision
-
-Use existing state only:
-
-```txt
-DesktopProjectStateService
-DesktopGenerateStateService
-DesktopBridgeService for open project dialog only
-```
-
-No new persistence, no `.chdg` format change, no new background scanning.
-
-## Visual decision
-
-Follow the dark/purple mock style, but keep canonical product rules.
-
-Important correction:
-
-```txt
-.chdg is the project file, not the generated Clone Hero package.
-```
+unless they are visually folded into the mock-like layout.
 
 ## Non-goals
 
-- No Projects page redesign.
-- No global header/sidebar redesign.
-- No `.chdg` bundling/format changes.
-- No packaging/distribution.
+- No Projects redesign.
+- No `.chdg` format change.
+- No global shell/header/sidebar redesign.
 - No new dependencies.

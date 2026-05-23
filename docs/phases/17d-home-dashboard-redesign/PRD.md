@@ -1,97 +1,68 @@
-# PRD Phase 17D: Home Dashboard Redesign
+# PRD Phase 17D: Home Dashboard Pixel-Perfect Redesign
 
 ## Goal
 
-Redesign the Home screen so it behaves like a useful project dashboard / launchpad instead of duplicating the Projects page.
+Rework the Home screen so it follows the existing Home mockup as closely as practical.
 
-Primary visual reference:
+Primary visual target:
 
 ```txt
 docs/desktop/mockups/01-home-dashboard.png
 ```
 
-Use the mock as a visual/product reference, applying canonical corrections from:
+This phase should be treated as a **near pixel-perfect Home implementation**, not a loose dashboard interpretation.
+
+## Current PR correction
+
+The first Phase 17D implementation improved the old Home, but it drifted away from the mockup by adding a generic dashboard structure with too many repeated/abstract cards:
 
 ```txt
-docs/desktop/mockup-corrections.md
+Current Project hero
+Project / Output / Paths / Recent status cards
+Next Recommended Action
+Quick Actions
+Workflow
+Recent Projects
 ```
 
-This phase is Home-only.
-
-## Current repo baseline
-
-Current Home implementation:
+The desired correction is:
 
 ```txt
-apps/desktop/src/app/pages/home/home-page.component.ts
+Home should look and behave like the mockup.
+Home should be direct and operational.
+Home should not become a generic metrics dashboard.
 ```
-
-Current Projects implementation:
-
-```txt
-apps/desktop/src/app/pages/projects/projects-page.component.ts
-```
-
-Current state source for Home:
-
-```txt
-apps/desktop/src/app/services/desktop-project-state.service.ts
-apps/desktop/src/app/services/desktop-generate-state.service.ts
-apps/desktop/src/app/services/desktop-bridge.service.ts
-```
-
-Current Home is too similar to Projects:
-
-```txt
-Home currently shows Recent Projects and Workflow overview.
-Projects also shows Recent Projects and project open/create actions.
-```
-
-Phase 17D should make Home a dashboard and keep Projects as the dedicated project library.
-
-## Roadmap context
-
-```txt
-Phase 17A — Desktop Bug Bash
-Phase 17B — Real Waveform Preview
-Phase 17C — Preview Highway UX Redesign
-Phase 17D — Home Dashboard Redesign
-Phase 17E — Projects Library Redesign
-Phase 18  — Desktop Packaging / Distribution
-```
-
-This phase is **17D only**.
 
 ## Product direction
 
-Home should answer:
+Home is the first landing/launchpad screen.
+
+It should help the user immediately:
 
 ```txt
-What project am I working on?
-What is the current project state?
-What should I do next?
-Can I quickly continue/open/create?
-Are there any missing paths or output status issues?
+continue the current project
+start a new project
+open an existing project
+understand the current workflow state at a glance
+open recent projects quickly
 ```
 
-Projects should remain the place to manage the full library/list of recent `.chdg` files.
+It should not force the user to interpret many status cards.
 
 ## Scope
 
 Included:
 
 ```txt
-Home page redesign only
-componentized Home dashboard
-current project summary / resume card
-primary next-step card
+Home page only
+near pixel-perfect composition based on 01-home-dashboard.png
+recomposition of the current PR #47 Home layout
+current project / continue work card
 compact recent projects section
-workflow progress/status strip
-quick actions
-missing path warnings
-generated/needs-regenerate/not-generated/failed output state display
-empty state for no current project
-tests for pure Home dashboard model helpers
+compact workflow overview/progress
+clear primary and secondary actions
+minimal status badges integrated into cards
+responsive behavior that preserves the mock composition
 ```
 
 Out of scope:
@@ -99,231 +70,110 @@ Out of scope:
 ```txt
 Projects page redesign
 New Project redesign
-Preview/Mapping/Generate/Validation redesign
+Preview redesign
+Generate/Validation/Mapping/Settings redesign
 global sidebar/header redesign
-.chdg bundle format
-packaging/distribution
+.chdg bundle/format changes
 new persistence model
-new external dependencies
-OpenSpec commit
+new dependencies
 ```
 
-## Visual target
+## Design correction from current PR
 
-Use:
+Remove or collapse these as separate large sections:
 
 ```txt
-docs/desktop/mockups/01-home-dashboard.png
+HomeProjectStatusCardsComponent as a full row of four metric cards
+HomeNextStepCardComponent as a large standalone card
+HomeQuickActionsComponent as a standalone sidebar card duplicating hero actions
+large descriptive workflow card with long descriptions
 ```
 
-as the reference for:
+Keep useful logic from the current PR, but the UI must be recomposed.
+
+## Required target structure
+
+The Home content should be closer to this structure:
 
 ```txt
-dashboard-like composition
-dark/purple cards
-strong project summary
-clear primary CTA
-workflow progress
-compact recent projects
-status cards
+[Top content header / hero area]
+- compact app/project intro
+- current project name when available
+- primary CTA to continue
+- secondary actions: New Project / Open Project
+
+[Main content grid]
+Left:
+- Continue / current project card
+- recent projects compact card
+
+Right:
+- workflow overview / next steps card
+- quick project state hints if needed
+
+[Optional warning strip]
+- only when there are missing paths or failed output
 ```
 
-Do not treat the mock as pixel-perfect if it conflicts with current product decisions.
+Do not render a separate grid of generic "Project / Output / Paths / Recent" metric cards unless the mock explicitly supports it visually. Prefer badges inside the main project card.
 
-## Canonical corrections
+## Current project card
 
-Follow:
+When a project exists, show:
 
 ```txt
-docs/desktop/mockup-corrections.md
+project name
+project path
+generated/needs-regenerate/not-generated/failed badge
+dirty/modified badge if applicable
+primary action
+secondary actions
+small readiness indicators
 ```
 
-Relevant Home correction:
+Recommended actions:
 
 ```txt
-Workflow step order:
-1 Import source
-2 Inspect
-3 Select track(s)
-4 Generate
-5 Validate
-6 Preview
-```
-
-Do not present `.chdg` as Clone Hero generated output.
-
-Canonical rule:
-
-```txt
-.chdg = project file
-Clone Hero output = notes.chart + song.ini + song.ogg in an output folder
-```
-
-## Required Home information hierarchy
-
-The Home screen should prioritize:
-
-```txt
-1. Current project / resume work
-2. Next recommended action
-3. Project health/status
-4. Recent projects
-5. Workflow overview/progress
-```
-
-Do not make Recent Projects the dominant Home feature. That belongs more to the Projects page.
-
-## Required component breakdown
-
-Keep `HomePageComponent` as a container/composer and split the dashboard into focused components where practical.
-
-Suggested folder:
-
-```txt
-apps/desktop/src/app/pages/home/components/
-```
-
-### HomePageComponent
-
-Current file:
-
-```txt
-apps/desktop/src/app/pages/home/home-page.component.ts
-```
-
-Responsibilities after redesign:
-
-```txt
-load/use DesktopProjectStateService
-load/use DesktopGenerateStateService if needed
-compose Home dashboard components
-route actions to existing pages
-open recent project using existing logic
-do not contain large repeated dashboard card templates
-```
-
-### HomeDashboardHeroComponent
-
-Main top card / hero.
-
-Responsibilities:
-
-```txt
-show current project name
-show dirty/modified state if available
-show .chdg path if saved
-show output status pill
-show primary CTA
-show secondary actions: New Project, Open Project
-```
-
-Inputs:
-
-```txt
-projectName
-projectFilePath
-dirty
-outputStatus
-hasProject
-missingPathCount
-```
-
-Outputs:
-
-```txt
-primaryAction
-newProject
-openProject
-```
-
-Primary CTA rules:
-
-```txt
-no current project -> New Project
-project exists but source/audio/output missing -> Continue Setup
-not-generated -> Inspect Source or Generate depending available state
-needs-regenerate -> Generate
 generated -> Preview
+needs-regenerate -> Generate
 failed -> Review Generate
+missing paths -> Continue Setup
+no project -> New Project
 ```
 
-The exact route can use the best available current state. If uncertain, prefer the safest next route and keep labels honest.
+Secondary actions should not duplicate across separate cards.
 
-### HomeNextStepCardComponent
+## No-project state
 
-A smaller "what to do next" card.
-
-Responsibilities:
+When no project exists, Home should invite the user to:
 
 ```txt
-derive next recommended step
-explain why
-show one primary button
-show optional secondary link
+New Project
+Open Project
 ```
 
-Inputs:
+and show the workflow overview as guidance.
+
+## Recent projects
+
+Recent projects on Home should be compact:
 
 ```txt
-homeDashboardModel / current project state
+max 2 or 3 items
+name
+path
+Open
+Remove
+View all Projects
 ```
 
-Outputs:
+Do not make it the main focus.
 
-```txt
-goToStep
-```
+## Workflow overview
 
-### HomeProjectStatusCardsComponent
+Workflow should be compact and visually similar to the mock.
 
-Small status cards row.
-
-Responsibilities:
-
-```txt
-show project saved/unsaved
-show output status
-show missing paths count
-show recent project count
-optional ffmpeg status if already available
-```
-
-Do not perform new expensive checks automatically.
-
-### HomeRecentProjectsCompactComponent
-
-Compact recent projects section.
-
-Responsibilities:
-
-```txt
-show up to 3 recent projects
-show project name and path
-open recent on click
-remove recent
-link to Projects page for full library
-```
-
-Rules:
-
-```txt
-Home recent list must be compact.
-Projects page remains full project library.
-```
-
-### HomeWorkflowProgressComponent
-
-Workflow progress strip.
-
-Responsibilities:
-
-```txt
-render six canonical steps
-mark current/available/completed where the state supports it
-avoid claiming completion when state is unknown
-```
-
-Steps:
+Canonical steps:
 
 ```txt
 Import source
@@ -334,181 +184,68 @@ Validate
 Preview
 ```
 
-Possible statuses:
+Avoid long paragraphs under each step. Use short labels/statuses. Do not mark multiple steps as "current" unless there is a clear reason.
+
+## Component guidance
+
+The current PR created several components. Reuse only what helps the mock implementation.
+
+Recommended final component split:
 
 ```txt
-complete
-current
-available
-blocked
-upcoming
-unknown
+HomePageComponent
+HomeHeroComponent / HomeCurrentProjectCardComponent
+HomeRecentProjectsCompactComponent
+HomeWorkflowOverviewComponent
+HomeWarningsPanelComponent
 ```
 
-If the current state cannot reliably determine a step, show neutral/upcoming rather than misleading completion.
-
-### HomeWarningsPanelComponent
-
-Only show when useful.
-
-Responsibilities:
+Optional:
 
 ```txt
-show missing source/audio/output warnings from DesktopProjectStateService
-show concise recovery action
-do not duplicate global error UI
+HomeActionBarComponent
+HomeReadinessBadgesComponent
 ```
 
-Inputs:
+Avoid standalone components that exist only to create extra dashboard sections:
 
 ```txt
-missingPathWarnings
+large NextStep card
+large QuickActions card
+four-card status metrics row
 ```
 
-### HomeQuickActionsComponent
+## Data/model guidance
 
-Optional compact actions card.
-
-Responsibilities:
-
-```txt
-New Project
-Open Project
-Continue Setup
-Generate
-Preview
-Open Projects Library
-```
-
-Only show actions that make sense for current state.
-
-## Required pure helper/model
-
-Create a small Angular-free model helper if practical:
+Keep the pure model helper from the current PR:
 
 ```txt
 apps/desktop/src/app/services/home-dashboard-model.ts
 ```
 
-Tests:
+But adjust it if needed so the model supports:
 
 ```txt
-apps/desktop/src/app/services/home-dashboard-model.test.ts
+primary action
+secondary actions
+compact badges
+workflow step statuses
+recent projects subset
+warnings
 ```
 
-Suggested responsibilities:
-
-```txt
-deriveHomeDashboardModel()
-deriveHomeNextAction()
-deriveWorkflowStepStatuses()
-formatProjectPath()
-formatOutputStatusLabel()
-```
-
-Suggested model:
-
-```ts
-type HomeNextActionId =
-  | "new_project"
-  | "continue_setup"
-  | "inspect_source"
-  | "generate"
-  | "validate"
-  | "preview"
-  | "review_generate"
-  | "open_project";
-
-type HomeDashboardModel = {
-  hasProject: boolean;
-  projectName: string;
-  projectFilePath?: string;
-  dirty: boolean;
-  outputStatus: ChdgOutputStatus;
-  missingPathCount: number;
-  recentProjectCount: number;
-  nextAction: {
-    id: HomeNextActionId;
-    label: string;
-    route?: string;
-  };
-  workflowSteps: Array<{
-    id: "import" | "inspect" | "select_tracks" | "generate" | "validate" | "preview";
-    label: string;
-    status: "complete" | "current" | "available" | "blocked" | "upcoming" | "unknown";
-  }>;
-};
-```
-
-Use actual repo types where available.
-
-## State sources
-
-Use existing state only:
-
-```txt
-DesktopProjectStateService.state()
-DesktopProjectStateService.hasProject()
-DesktopProjectStateService.isDirty()
-DesktopProjectStateService.outputStatus()
-DesktopProjectStateService.missingPathWarnings()
-DesktopProjectStateService.recentProjects
-DesktopGenerateStateService state if needed for source/audio/output/selected tracks
-```
-
-Do not add new persistence in this phase.
-
-## Navigation rules
-
-Use existing routes:
-
-```txt
-/home
-/projects
-/new-project
-/inspect-source
-/track-selection
-/generate
-/validation
-/preview
-/mapping
-/settings
-```
-
-When opening a recent project, preserve existing behavior of loading project state into `DesktopGenerateStateService`.
-
-## Empty state
-
-If there is no active/current project:
-
-```txt
-Hero should invite the user to create or open a project.
-Recent projects should be compact.
-Workflow should explain the process but not dominate the screen.
-```
-
-## Current project state
-
-If a project is active:
-
-```txt
-Hero should show the project name.
-Show saved/modified status.
-Show generation status.
-Show missing path warning if any.
-Next action should point to the most useful screen.
-```
+Model logic is good; the main correction is visual composition.
 
 ## Acceptance criteria
 
-- Home no longer feels like a duplicate of Projects.
-- Home visually follows `01-home-dashboard.png` direction.
-- Recent Projects is compact and not the dominant section.
-- Current project / next action is the dominant section.
-- Workflow order is canonical.
-- Missing path warnings are visible when present.
-- Output status is visible.
-- Existing New Project / Open Project / open recent behavior still works.
-- No Projects page redesign is included.
-- No new external dependencies are added.
-- Tests cover pure helper decisions where practical.
+- Home closely follows `docs/desktop/mockups/01-home-dashboard.png`.
+- Home does not look like a generic dashboard of many cards.
+- The current project / continue action is direct and dominant.
+- Next action is integrated into the main card, not duplicated as a separate large card.
+- Quick actions do not duplicate hero/current-project actions.
+- Status information is compact, using badges/strips rather than many large metric cards.
+- Recent projects are compact.
+- Workflow is compact and canonical.
+- Existing project actions still work.
+- Projects page remains unchanged.
+- Tests still pass.
