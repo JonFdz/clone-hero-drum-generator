@@ -70,25 +70,25 @@ describe("preview-chart-stage-model", () => {
 	});
 
 	it("computes a clamped current-time viewport", () => {
-		expect(computePreviewViewport(12, 60)).toEqual({
-			startSeconds: 10,
-			endSeconds: 18,
-			durationSeconds: 60,
-		});
-		expect(computePreviewViewport(1, 60)).toEqual({
-			startSeconds: 0,
-			endSeconds: 8,
-			durationSeconds: 60,
-		});
-		expect(computePreviewViewport(58, 60)).toEqual({
-			startSeconds: 52,
-			endSeconds: 60,
-			durationSeconds: 60,
-		});
-		expect(computePreviewViewport(3, 5)).toEqual({
+		expect(computePreviewViewport(0, 60)).toEqual({
 			startSeconds: 0,
 			endSeconds: 5,
-			durationSeconds: 5,
+			durationSeconds: 60,
+		});
+		expect(computePreviewViewport(10, 60)).toEqual({
+			startSeconds: 9,
+			endSeconds: 14,
+			durationSeconds: 60,
+		});
+		expect(computePreviewViewport(178, 180)).toEqual({
+			startSeconds: 175,
+			endSeconds: 180,
+			durationSeconds: 180,
+		});
+		expect(computePreviewViewport(3, 4)).toEqual({
+			startSeconds: 0,
+			endSeconds: 4,
+			durationSeconds: 4,
 		});
 	});
 
@@ -184,10 +184,10 @@ describe("preview-chart-stage-model", () => {
 				hasAccurateTiming: true,
 				limitations: [],
 				noteEvents: [
-					{ tick: 1, lane: 0, seconds: 9.6 },
-					{ tick: 2, lane: 1, seconds: 10 },
-					{ tick: 3, lane: 2, seconds: 16 },
-					{ tick: 4, lane: 3, seconds: 18.4 },
+					{ tick: 1, lane: 0, seconds: 10.6 },
+					{ tick: 2, lane: 1, seconds: 11 },
+					{ tick: 3, lane: 2, seconds: 14 },
+					{ tick: 4, lane: 3, seconds: 16.4 },
 				],
 			},
 			undefined,

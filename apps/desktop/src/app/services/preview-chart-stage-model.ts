@@ -154,8 +154,8 @@ export function pieceToPreviewGlyph(piece: string): PreviewGlyph | null {
 export function computePreviewViewport(
 	currentTimeSeconds: number,
 	durationSeconds: number,
-	lookbehindSeconds = 2,
-	lookaheadSeconds = 6,
+	lookbehindSeconds = 1,
+	lookaheadSeconds = 4,
 ): PreviewViewport {
 	const safeCurrent = Number.isFinite(currentTimeSeconds)
 		? Math.max(0, currentTimeSeconds)

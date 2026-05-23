@@ -22,7 +22,16 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			<div class="transport-side">
 				<span class="pill">{{ previewStatus }}</span>
 				<span class="source">Audio source: {{ audioSourceLabel }}</span>
-				<input type="range" min="0" [max]="duration || 0" [value]="currentTime" (input)="onSeek($event)" aria-label="Preview seek" />
+				<input
+					type="range"
+					min="0"
+					[max]="duration > 0 ? duration : 0"
+					step="0.001"
+					[value]="safeCurrentTime()"
+					[disabled]="duration <= 0"
+					(input)="onSeek($event)"
+					aria-label="Preview seek"
+				/>
 			</div>
 		</section>
 	`,
@@ -75,18 +84,23 @@ export class PreviewTransportCardComponent {
 		else this.play.emit();
 	}
 
+	safeCurrentTime(): number {
+		return this.clampToDuration(this.currentTime);
+	}
+
 	onSeek(event: Event): void {
 		const input = event.target as HTMLInputElement;
 		const value = Number(input.value);
-		if (Number.isFinite(value)) this.seek.emit(value);
+		if (Number.isFinite(value)) this.seek.emit(this.clampToDuration(value));
 	}
 
 	seekBy(deltaSeconds: number): void {
-		this.seek.emit(
-			Math.min(
-				Math.max(this.currentTime + deltaSeconds, 0),
-				this.duration || 0,
-			),
-		);
+		this.seek.emit(this.clampToDuration(this.currentTime + deltaSeconds));
+	}
+
+	private clampToDuration(value: number): number {
+		if (!Number.isFinite(value)) return 0;
+		if (!Number.isFinite(this.duration) || this.duration <= 0) return 0;
+		return Math.min(Math.max(value, 0), this.duration);
 	}
 }
