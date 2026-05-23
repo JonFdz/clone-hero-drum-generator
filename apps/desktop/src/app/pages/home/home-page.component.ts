@@ -1,126 +1,192 @@
 import { CommonModule } from "@angular/common";
-import { Component, inject } from "@angular/core";
-import { Router, RouterModule } from "@angular/router";
-import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { Component, computed, inject } from "@angular/core";
+import { Router } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { deriveHomeDashboardModel } from "../../services/home-dashboard-model";
+import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
+import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
+import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress.component";
 
 @Component({
-  selector: "chdg-home-page",
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
-    <header class="page-header">
-      <p class="eyebrow">Local desktop shell</p>
-      <h1>Welcome to CHDG.</h1>
-      <p>Build Clone Hero drum packages from local MIDI and Guitar Pro / GPIF sources.</p>
-    </header>
+	selector: "chdg-home-page",
+	standalone: true,
+	imports: [
+		CommonModule,
+		HomeRecentProjectsCompactComponent,
+		HomeWarningsPanelComponent,
+		HomeWorkflowProgressComponent,
+	],
+	template: `
+		<div class="home-mock-page">
+			<header class="home-welcome">
+				<h1>Welcome back!</h1>
+				<p>Here's what's happening with your projects.</p>
+			</header>
 
-    <div class="grid two">
-      <section class="card">
-        <h2>Recent Projects</h2>
-        @if (recentProjects.length === 0) {
-          <p>No recent projects. Create a new project to get started.</p>
-        } @else {
-          <div class="card-list">
-            @for (project of recentProjects; track project.path) {
-              <div class="mini-card project-card" (click)="openRecent(project.path)">
-                <div class="split-row">
-                  <strong>{{ project.name }}</strong>
-                  <button class="button ghost small" type="button" (click)="removeRecent($event, project.path)">Remove</button>
-                </div>
-                <p class="path-text">{{ project.path }}</p>
-              </div>
-            }
-          </div>
-        }
-        <div class="action-row">
-          <a class="button primary" routerLink="/new-project">New Project</a>
-          <button class="button secondary" type="button" (click)="openProject()">Open Project</button>
-        </div>
-      </section>
+			<div class="home-mock-grid">
+				<chdg-home-recent-projects-compact
+					[projects]="model().recentProjects"
+					(openProject)="openRecent($event)"
+					(removeProject)="removeRecent($event)"
+					(viewAll)="navigateTo('/projects')"
+				/>
 
-      <section class="card">
-        <h2>Workflow overview</h2>
-        <div class="workflow" aria-label="Planned desktop workflow">
-          @for (step of workflow; track step.label) {
-            <div class="workflow-step">
-              <div class="step-icon" aria-hidden="true">{{ step.icon }}</div>
-              <strong>{{ step.label }}</strong>
-              <p>{{ step.description }}</p>
-            </div>
-          }
-        </div>
-      </section>
-    </div>
-  `,
-  styles: [`
-    .project-card { cursor: pointer; }
-    .project-card:hover { background: rgba(151, 83, 229, 0.12); }
-    .path-text { color: var(--color-muted); font-size: 0.85rem; word-break: break-all; }
-  `]
+				<section class="card mock-actions-card" aria-label="Quick actions">
+					<h2>Quick Actions</h2>
+					<div class="mock-action-list">
+						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+							<span class="mock-action-icon">▣</span>
+							<span>New Project</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="openProject()">
+							<span class="mock-action-icon">▰</span>
+							<span>Open Project</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+							<span class="mock-action-icon">♪</span>
+							<span>Import MIDI</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+							<span class="mock-action-icon gp-icon">GP</span>
+							<span>Import Guitar Pro</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="openOutputFolder()">
+							<span class="mock-action-icon">▭</span>
+							<span>Open Output Folder</span>
+						</button>
+					</div>
+				</section>
+
+				<chdg-home-workflow-progress [steps]="model().workflow" />
+
+				<section class="card mock-system-card" aria-label="System status">
+					<h2>System Status</h2>
+					<div class="system-row">
+						<span class="system-icon info">◎</span>
+						<div>
+							<strong>Audio conversion</strong>
+							<p>Uses local FFmpeg when available.</p>
+						</div>
+					</div>
+					<div class="system-row">
+						<span class="system-icon info">◎</span>
+						<div>
+							<strong>Local only / offline</strong>
+							<p>Working locally. No internet required.</p>
+						</div>
+					</div>
+					<div class="system-row project-format-row">
+						<span class="system-icon purple">▤</span>
+						<div>
+							<strong>Project format</strong>
+							<p>.chdg</p>
+						</div>
+						<button class="learn-more" type="button" (click)="navigateTo('/settings')">Learn more</button>
+					</div>
+				</section>
+			</div>
+
+			<chdg-home-warnings-panel
+				[model]="model()"
+				[warnings]="model().missingPathWarnings"
+			/>
+		</div>
+	`,
+	styles: [
+		`
+		.home-mock-page { display: grid; gap: 1.4rem; }
+		.home-welcome { margin: 0.25rem 0 0.05rem; }
+		.home-welcome h1 { font-size: clamp(2rem, 3vw, 2.35rem); letter-spacing: -0.035em; margin-bottom: 0.45rem; }
+		.home-welcome p { color: var(--color-text-soft); font-size: 1rem; margin: 0; }
+		.home-mock-grid { display: grid; gap: 1.4rem; grid-template-columns: minmax(0, 1.64fr) minmax(22rem, 0.95fr); }
+		.mock-actions-card, .mock-system-card { padding: 1.35rem; }
+		.mock-actions-card h2, .mock-system-card h2 { margin-bottom: 1rem; }
+		.mock-action-list { display: grid; gap: 0.65rem; }
+		.mock-action-button { align-items: center; background: linear-gradient(90deg, rgba(151, 83, 229, 0.18), rgba(151, 83, 229, 0.09)); border: 1px solid rgba(166, 108, 255, 0.44); border-radius: 0.48rem; display: grid; gap: 1rem; grid-template-columns: 2rem 1fr; justify-content: start; min-height: 3.4rem; padding: 0.75rem 1.25rem; text-align: left; width: 100%; }
+		.mock-action-button:hover { background: rgba(151, 83, 229, 0.24); }
+		.mock-action-icon { color: var(--color-accent-soft); display: inline-grid; font-size: 1.35rem; font-weight: 900; place-items: center; }
+		.gp-icon { background: var(--color-accent-soft); border-radius: 50%; color: #452166; font-size: 0.78rem; height: 1.65rem; width: 1.65rem; }
+		.system-row { align-items: center; border-top: 1px solid var(--color-border); display: grid; gap: 1rem; grid-template-columns: 3rem minmax(0, 1fr); padding: 1rem 0; }
+		.system-row:first-of-type { border-top: 0; padding-top: 0.35rem; }
+		.system-row strong { color: var(--color-text); display: block; margin-bottom: 0.15rem; }
+		.system-row p { font-size: 0.86rem; margin: 0; }
+		.system-icon { border-radius: 50%; display: grid; font-size: 1.35rem; font-weight: 900; height: 3rem; place-items: center; width: 3rem; }
+		.system-icon.info { background: rgba(80, 151, 255, 0.18); border: 1px solid rgba(80, 151, 255, 0.36); color: #7fb5ff; }
+		.system-icon.purple { background: rgba(151, 83, 229, 0.22); border: 1px solid rgba(151, 83, 229, 0.4); color: var(--color-accent-soft); }
+		.project-format-row { grid-template-columns: 3rem minmax(0, 1fr) auto; }
+		.learn-more { background: rgba(151, 83, 229, 0.14); border: 1px solid rgba(151, 83, 229, 0.42); color: var(--color-accent-soft); min-height: 2.25rem; padding: 0.45rem 0.9rem; }
+		@media (max-width: 1180px) { .home-mock-grid { grid-template-columns: 1fr; } }
+		@media (max-width: 680px) { .project-format-row { grid-template-columns: 3rem minmax(0, 1fr); } .learn-more { grid-column: 2; justify-self: start; } }
+	`,
+	],
 })
 export class HomePageComponent {
-  private readonly projectState = inject(DesktopProjectStateService);
-  private readonly bridge = inject(DesktopBridgeService);
-  private readonly generateState = inject(DesktopGenerateStateService);
-  private readonly router = inject(Router);
+	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly bridge = inject(DesktopBridgeService);
+	private readonly generateState = inject(DesktopGenerateStateService);
+	private readonly router = inject(Router);
 
-  get recentProjects() {
-    return this.projectState.state().recentProjects;
-  }
+	readonly model = computed(() =>
+		deriveHomeDashboardModel({
+			project: this.projectState.state(),
+			generate: this.generateState.state(),
+			hasProject: this.projectState.hasProject(),
+			isDirty: this.projectState.isDirty(),
+		}),
+	);
 
-  readonly workflow = [
-    { icon: "↓", label: "Import source", description: "Use local .mid, .midi, or .gp / GPIF files." },
-    { icon: "⌕", label: "Inspect", description: "Review source structure before generation." },
-    { icon: "♬", label: "Select track(s)", description: "Choose drum candidates in a future phase." },
-    { icon: "✦", label: "Generate", description: "Create the Clone Hero song folder later." },
-    { icon: "◇", label: "Validate", description: "Check generated package consistency." },
-    { icon: "▷", label: "Preview", description: "Review notes.chart with song.ogg in future phases." },
-  ];
+	async navigateTo(route: string): Promise<void> {
+		await this.router.navigateByUrl(route);
+	}
 
-  async openRecent(filePath: string): Promise<void> {
-    const payload = await this.projectState.openProject(filePath);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	async openRecent(filePath: string): Promise<void> {
+		const payload = await this.projectState.openProject(filePath);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.navigateTo(this.model().nextAction.route);
+		}
+	}
 
-  async removeRecent(event: Event, filePath: string): Promise<void> {
-    event.stopPropagation();
-    await this.projectState.removeRecentProject(filePath);
-  }
+	async removeRecent(filePath: string): Promise<void> {
+		await this.projectState.removeRecentProject(filePath);
+	}
 
-  async openProject(): Promise<void> {
-    const picked = await this.bridge.openProjectFile();
-    if (!picked) return;
-    const payload = await this.projectState.openProject(picked.path);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	async openProject(): Promise<void> {
+		const picked = await this.bridge.openProjectFile();
+		if (!picked) return;
+		const payload = await this.projectState.openProject(picked.path);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.navigateTo(this.model().nextAction.route);
+		}
+	}
+
+	async openOutputFolder(): Promise<void> {
+		const outputDir = this.generateState.state().outputDir;
+		if (!outputDir) {
+			await this.navigateTo("/new-project");
+			return;
+		}
+		await this.bridge.openOutputFolder(outputDir);
+	}
+
+	private loadProjectState(
+		payload: Awaited<ReturnType<DesktopProjectStateService["openProject"]>>,
+	): void {
+		if (!payload) return;
+		this.generateState.loadProjectState({
+			sourcePath: payload.sourcePath,
+			audioPath: payload.audioPath,
+			outputDir: payload.outputDir,
+			sourceKind: payload.sourceKind,
+			selectedTracks: payload.selectedTracks,
+			metadata: payload.metadata,
+			offsetMs: payload.offsetMs,
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			mappingOverrides: payload.mappingOverrides,
+		});
+	}
 }
