@@ -289,17 +289,16 @@ function deriveRecentProjectItems(
 	input: HomeDashboardModelInput,
 	outputStatus: ReturnType<typeof formatHomeOutputStatus>,
 ): HomeRecentProjectItem[] {
-	return projects.map((project, index) => {
+	return projects.map((project) => {
 		const isCurrentProject =
 			!!input.project.projectFilePath &&
 			project.path === input.project.projectFilePath;
-		const fallback = fallbackRecentStatus(index);
 		return {
 			...project,
 			icon: iconForRecentProject(project.name, project.path),
 			lastOpenedLabel: `Last opened: ${formatRecentOpened(project.lastOpenedAt)}`,
-			statusLabel: isCurrentProject ? outputStatus.label : fallback.label,
-			statusTone: isCurrentProject ? outputStatus.tone : fallback.tone,
+			statusLabel: isCurrentProject ? outputStatus.label : "Recent",
+			statusTone: isCurrentProject ? outputStatus.tone : "neutral",
 		};
 	});
 }
@@ -341,18 +340,6 @@ function formatRecentOpened(value: string): string {
 		day: "numeric",
 		year: "numeric",
 	});
-}
-
-function fallbackRecentStatus(index: number): {
-	label: string;
-	tone: HomeTone;
-} {
-	const statuses: Array<{ label: string; tone: HomeTone }> = [
-		{ label: "Ready", tone: "success" },
-		{ label: "Needs Generate", tone: "warning" },
-		{ label: "Validated", tone: "neutral" },
-	];
-	return statuses[index % statuses.length];
 }
 
 function hasMissingSetupPaths(generate: DesktopGenerateState): boolean {

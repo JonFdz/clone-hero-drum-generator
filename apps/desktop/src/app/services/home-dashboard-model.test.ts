@@ -182,8 +182,8 @@ describe("home dashboard helpers", () => {
 			statusTone: "success",
 		});
 		expect(model.recentProjects[1]).toMatchObject({
-			statusLabel: "Needs Generate",
-			statusTone: "warning",
+			statusLabel: "Recent",
+			statusTone: "neutral",
 		});
 		expect(model.nextAction.id).toBe("preview");
 	});

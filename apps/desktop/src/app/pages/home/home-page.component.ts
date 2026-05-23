@@ -64,10 +64,10 @@ import { HomeWorkflowProgressComponent } from "./components/home-workflow-progre
 				<section class="card mock-system-card" aria-label="System status">
 					<h2>System Status</h2>
 					<div class="system-row">
-						<span class="system-icon success">✓</span>
+						<span class="system-icon info">◎</span>
 						<div>
-							<strong>FFmpeg found</strong>
-							<p>FFmpeg is installed and ready.</p>
+							<strong>Audio conversion</strong>
+							<p>Uses local FFmpeg when available.</p>
 						</div>
 					</div>
 					<div class="system-row">
@@ -113,7 +113,6 @@ import { HomeWorkflowProgressComponent } from "./components/home-workflow-progre
 		.system-row strong { color: var(--color-text); display: block; margin-bottom: 0.15rem; }
 		.system-row p { font-size: 0.86rem; margin: 0; }
 		.system-icon { border-radius: 50%; display: grid; font-size: 1.35rem; font-weight: 900; height: 3rem; place-items: center; width: 3rem; }
-		.system-icon.success { background: rgba(101, 222, 119, 0.16); border: 1px solid rgba(101, 222, 119, 0.36); color: var(--color-success); }
 		.system-icon.info { background: rgba(80, 151, 255, 0.18); border: 1px solid rgba(80, 151, 255, 0.36); color: #7fb5ff; }
 		.system-icon.purple { background: rgba(151, 83, 229, 0.22); border: 1px solid rgba(151, 83, 229, 0.4); color: var(--color-accent-soft); }
 		.project-format-row { grid-template-columns: 3rem minmax(0, 1fr) auto; }
