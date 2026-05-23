@@ -2,55 +2,55 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/phases/17e-projects-library-redesign/PRD.md`.
-- [ ] Read `docs/phases/17e-projects-library-redesign/ADR.md`.
-- [ ] Read `docs/phases/17e-projects-library-redesign/COMPONENTS.md`.
-- [ ] Open `docs/desktop/mockups/02-projects-library.png`.
-- [ ] Compare current Projects page to mock.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/phases/17e-projects-library-redesign/PRD.md`.
+- [x] Read `docs/phases/17e-projects-library-redesign/ADR.md`.
+- [x] Read `docs/phases/17e-projects-library-redesign/COMPONENTS.md`.
+- [x] Open `docs/desktop/mockups/02-projects-library.png`.
+- [x] Compare current Projects page to mock.
 
 ## Model/helper
 
-- [ ] Add `projects-library-model.ts`.
-- [ ] Add tests.
-- [ ] Infer source type from project name/path safely.
-- [ ] Format last opened labels.
-- [ ] Derive honest library stats.
-- [ ] Filter projects by search/source type.
-- [ ] Sort projects by last opened/name.
-- [ ] Mark only current loaded project with real output status.
+- [x] Add `projects-library-model.ts`.
+- [x] Add tests.
+- [x] Infer source type from project name/path safely.
+- [x] Format last opened labels.
+- [x] Derive honest library stats.
+- [x] Filter projects by search/source type.
+- [x] Sort projects by last opened/name.
+- [x] Mark only current loaded project with real output status.
 
 ## UI
 
-- [ ] Implement mock-like Projects header.
-- [ ] Implement toolbar search/filter/sort.
-- [ ] Implement project cards/rows.
-- [ ] Add cover placeholder slot.
-- [ ] Replace fake Recent Activity with Library Stats/Overview.
-- [ ] Implement empty state.
-- [ ] Implement remove confirmation dialog.
-- [ ] Use trash/remove icon instead of ambiguous three dots where practical.
+- [x] Implement mock-like Projects header.
+- [x] Implement toolbar search/filter/sort.
+- [x] Implement project cards/rows.
+- [x] Add cover placeholder slot.
+- [x] Replace fake Recent Activity with Library Stats/Overview.
+- [x] Implement empty state.
+- [x] Implement remove confirmation dialog.
+- [x] Use trash/remove icon instead of ambiguous three dots where practical.
 
 ## Remove confirmation
 
-- [ ] Remove action opens confirmation.
-- [ ] Cancel keeps recent project.
-- [ ] Confirm removes from recent list.
-- [ ] Dialog states that `.chdg` file is not deleted from disk.
-- [ ] No direct remove without confirmation remains.
+- [x] Remove action opens confirmation.
+- [x] Cancel keeps recent project.
+- [x] Confirm removes from recent list.
+- [x] Dialog states that `.chdg` file is not deleted from disk.
+- [x] No direct remove without confirmation remains.
 
 ## Behavior
 
-- [ ] New Project works.
-- [ ] Open Project works.
-- [ ] Open recent works.
-- [ ] Remove from recent works only after confirmation.
-- [ ] View/search/filter/sort works.
-- [ ] Projects page remains local/offline.
-- [ ] Home remains unchanged.
+- [x] New Project works.
+- [x] Open Project works.
+- [x] Open recent works.
+- [x] Remove from recent works only after confirmation.
+- [x] View/search/filter/sort works.
+- [x] Projects page remains local/offline.
+- [x] Home remains unchanged.
 
 ## Validation
 
@@ -68,8 +68,8 @@ pnpm chdg --help
 ## Manual validation
 
 - [ ] Compare side-by-side with `02-projects-library.png`.
-- [ ] No fake activity shown.
-- [ ] Library stats use only real available data.
-- [ ] Cover placeholders look ready for future cover art.
-- [ ] Remove confirmation copy is clear.
-- [ ] Responsive layout works.
+- [x] No fake activity shown.
+- [x] Library stats use only real available data.
+- [x] Cover placeholders look ready for future cover art.
+- [x] Remove confirmation copy is clear.
+- [x] Responsive layout works.
