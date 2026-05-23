@@ -37,6 +37,7 @@ describe("inspectSource", () => {
 		expect(result.sourceKind).toBe("midi");
 		expect(result.tracks[0]).toMatchObject({
 			index: 53,
+			noteCount: 10,
 			role: "drums",
 			strength: "strong",
 		});
@@ -74,6 +75,7 @@ describe("inspectSource", () => {
 		expect(result.sourceKind).toBe("gpif");
 		expect(result.tracks[0]).toMatchObject({
 			index: 3,
+			noteCount: null,
 			role: "drums",
 			strength: "strong",
 		});

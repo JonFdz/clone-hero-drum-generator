@@ -66,7 +66,7 @@ export async function inspectSource(
 			index: track.index,
 			name: track.name,
 			channel: track.channel,
-			noteCount: 0,
+			noteCount: null,
 			strength: track.isDrumCandidate ? "strong" : "unknown",
 			role: track.isDrumCandidate ? "drums" : "unknown",
 			reasons: track.drumCandidateReasons,

@@ -3,6 +3,7 @@ import { Component } from "@angular/core";
 import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { formatTrackNoteCount } from "../../services/track-note-count";
 
 @Component({
 	selector: "chdg-inspect-source-page",
@@ -51,7 +52,7 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
             <div class="card-list">
               <div class="mini-card" *ngFor="let track of drumCandidates()">
                 <div class="split-row"><strong>#{{ track.index }} {{ track.name || "Untitled track" }}</strong><span class="pill">{{ track.strength }}</span></div>
-                <p>{{ track.noteCount }} note(s) · {{ track.role }}</p>
+                <p>{{ noteCountLabel(track.noteCount) }} · {{ track.role }}</p>
               </div>
             </div>
           </section>
@@ -65,7 +66,7 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
               <tr *ngFor="let track of inspection.tracks">
                 <td>{{ track.index }}</td>
                 <td>{{ track.name || "Untitled" }}</td>
-                <td>{{ track.noteCount }}</td>
+                <td>{{ noteCountLabel(track.noteCount) }}</td>
                 <td>{{ track.strength }}</td>
                 <td>{{ track.role }}</td>
                 <td>{{ state().selectedTracks.includes(track.index) ? "yes" : "no" }}</td>
@@ -114,6 +115,10 @@ export class InspectSourcePageComponent {
 				error instanceof Error ? error.message : "Inspect failed.",
 			);
 		}
+	}
+
+	noteCountLabel(noteCount: number | null | undefined): string {
+		return formatTrackNoteCount(noteCount);
 	}
 
 	async goToTracks(): Promise<void> {

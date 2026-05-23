@@ -2,43 +2,43 @@
 
 ## Before implementation
 
-- [ ] Read `AGENTS.md`.
-- [ ] Read `docs/desktop/README.md`.
-- [ ] Read `docs/desktop/decisions.md`.
-- [ ] Read `docs/desktop/mockup-corrections.md`.
-- [ ] Read `docs/desktop/feature-inventory.md`.
-- [ ] Read `docs/desktop/bug-and-ui-backlog.md`.
-- [ ] Read `docs/phases/17a-desktop-bug-bash/PRD.md`.
-- [ ] Read `docs/phases/17a-desktop-bug-bash/ADR.md`.
-- [ ] Read this checklist.
-- [ ] Review Inspect Source UI code.
-- [ ] Review GPIF inspection code.
-- [ ] Review MIDI inspection code.
-- [ ] Review desktop bridge DTOs related to inspection.
-- [ ] Review tests around inspection/track candidates.
+- [x] Read `AGENTS.md`.
+- [x] Read `docs/desktop/README.md`.
+- [x] Read `docs/desktop/decisions.md`.
+- [x] Read `docs/desktop/mockup-corrections.md`.
+- [x] Read `docs/desktop/feature-inventory.md`.
+- [x] Read `docs/desktop/bug-and-ui-backlog.md`.
+- [x] Read `docs/phases/17a-desktop-bug-bash/PRD.md`.
+- [x] Read `docs/phases/17a-desktop-bug-bash/ADR.md`.
+- [x] Read this checklist.
+- [x] Review Inspect Source UI code.
+- [x] Review GPIF inspection code.
+- [x] Review MIDI inspection code.
+- [x] Review desktop bridge DTOs related to inspection.
+- [x] Review tests around inspection/track candidates.
 
 ## BUG-01 Inspect Source false zero counts
 
 - [ ] Reproduce with GPIF source.
 - [ ] Confirm Mapping/Normalize detects source candidates.
-- [ ] Identify where `0 notes` is assigned/rendered.
-- [ ] Determine whether GPIF count is actually available at inspection time.
+- [x] Identify where `0 notes` is assigned/rendered.
+- [x] Determine whether GPIF count is actually available at inspection time.
 - [ ] If count is available, pass/render real count.
-- [ ] If count is unavailable, represent it as unknown/unavailable, not `0`.
-- [ ] Update detected tracks table.
-- [ ] Update drum candidates card.
-- [ ] Ensure both use same count semantics.
-- [ ] Preserve MIDI note counts.
+- [x] If count is unavailable, represent it as unknown/unavailable, not `0`.
+- [x] Update detected tracks table.
+- [x] Update drum candidates card.
+- [x] Ensure both use same count semantics.
+- [x] Preserve MIDI note counts.
 - [ ] Preserve selected track state.
 - [ ] Preserve source warnings/issues.
 
 ## Tests
 
-- [ ] Add/update GPIF inspect count test.
-- [ ] Add/update MIDI inspect count regression test.
-- [ ] Add UI/model formatting test for unknown/unavailable count if practical.
-- [ ] Add regression test proving unknown count is not rendered as `0 notes`.
-- [ ] Preserve existing tests.
+- [x] Add/update GPIF inspect count test.
+- [x] Add/update MIDI inspect count regression test.
+- [x] Add UI/model formatting test for unknown/unavailable count if practical.
+- [x] Add regression test proving unknown count is not rendered as `0 notes`.
+- [x] Preserve existing tests.
 
 ## Validation
 
