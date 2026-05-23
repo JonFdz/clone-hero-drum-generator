@@ -12,15 +12,14 @@ import { formatTime } from "../../../services/desktop-preview-model";
 				<p>{{ subtitle }}</p>
 				<strong>{{ format(currentTime) }} <span>/ {{ format(duration) }}</span></strong>
 			</div>
-			<div class="transport-controls">
-				<button class="round secondary" type="button" aria-label="Seek backward" (click)="seekBy(-5)">|◀</button>
-				<button class="round primary" type="button" [attr.aria-label]="isPlaying ? 'Pause' : 'Play'" (click)="togglePlay()">
-					{{ isPlaying ? "❚❚" : "▶" }}
-				</button>
-				<button class="round secondary" type="button" aria-label="Seek forward" (click)="seekBy(5)">▶|</button>
-			</div>
-			<div class="transport-side">
-				<span class="source">Audio source: {{ audioSourceLabel }}</span>
+			<div class="transport-playback">
+				<div class="transport-controls">
+					<button class="round secondary" type="button" aria-label="Seek backward" (click)="seekBy(-5)">|◀</button>
+					<button class="round primary" type="button" [attr.aria-label]="isPlaying ? 'Pause' : 'Play'" (click)="togglePlay()">
+						{{ isPlaying ? "❚❚" : "▶" }}
+					</button>
+					<button class="round secondary" type="button" aria-label="Seek forward" (click)="seekBy(5)">▶|</button>
+				</div>
 				<div class="seek-control" [class.disabled]="duration <= 0">
 					<div class="seek-track" aria-hidden="true">
 						<div class="seek-progress" [style.width.%]="seekProgressPercent()"></div>
@@ -50,7 +49,7 @@ import { formatTime } from "../../../services/desktop-preview-model";
 				border-radius: 1rem;
 				display: grid;
 				gap: 1.25rem;
-				grid-template-columns: auto minmax(12rem, 1fr) auto minmax(16rem, 0.8fr);
+				grid-template-columns: auto minmax(12rem, 0.75fr) minmax(20rem, 1.25fr);
 				min-width: 0;
 				padding: 0.9rem 1rem;
 			}
@@ -59,11 +58,10 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			p { margin: 0 0 0.4rem; }
 			strong { color: #a855f7; font-size: 1.05rem; }
 			strong span { color: #b6bfce; font-weight: 600; }
+			.transport-playback { display: grid; gap: 0.8rem; min-width: 0; }
 			.transport-controls { align-items: center; display: flex; flex-wrap: nowrap; gap: 1rem; justify-content: center; min-width: max-content; }
 			.round { aspect-ratio: 1; border-radius: 999px; flex: 0 0 auto; height: 3.2rem; min-height: 3.2rem; min-width: 3.2rem; padding: 0; width: 3.2rem; }
 			.round.primary { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.28), 0 0 28px rgba(139, 92, 246, 0.34); font-size: 1.25rem; height: 4.6rem; min-height: 4.6rem; min-width: 4.6rem; width: 4.6rem; }
-			.transport-side { display: grid; gap: 0.6rem; min-width: 0; }
-			.source { color: #aab4c5; font-size: 0.85rem; }
 			.seek-control { height: 1.25rem; min-width: 0; position: relative; }
 			.seek-track { background: rgba(255, 255, 255, 0.22); border-radius: 999px; height: 0.35rem; left: 0; overflow: visible; position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 			.seek-progress { background: #93c5fd; border-radius: inherit; height: 100%; }
@@ -71,8 +69,7 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			.seek-input { cursor: pointer; inset: 0; margin: 0; opacity: 0; position: absolute; width: 100%; }
 			.seek-control.disabled { opacity: 0.5; }
 			.seek-control.disabled .seek-input { cursor: not-allowed; }
-			@media (max-width: 1350px) { .transport-card { grid-template-columns: auto minmax(0, 1fr) minmax(14rem, 0.9fr); } .transport-controls { grid-column: 1 / -1; grid-row: 2; } }
-			@media (max-width: 820px) { .transport-card { grid-template-columns: auto minmax(0, 1fr); } .transport-side { grid-column: 1 / -1; } }
+			@media (max-width: 1350px) { .transport-card { grid-template-columns: auto minmax(0, 1fr); } .transport-playback { grid-column: 1 / -1; } }
 			@media (max-width: 560px) { .transport-card { grid-template-columns: 1fr; } .artwork { height: 5rem; width: 5rem; } }
 		`,
 	],
@@ -82,7 +79,6 @@ export class PreviewTransportCardComponent {
 	@Input() subtitle = "Unknown artist • Expert Pro Drums";
 	@Input() currentTime = 0;
 	@Input() duration = 0;
-	@Input() audioSourceLabel = "unknown";
 	@Input() isPlaying = false;
 
 	@Output() play = new EventEmitter<void>();

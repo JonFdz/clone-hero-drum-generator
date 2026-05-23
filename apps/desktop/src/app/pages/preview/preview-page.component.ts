@@ -58,7 +58,6 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 							[subtitle]="preview.previewSubtitle()"
 							[currentTime]="preview.currentTime()"
 							[duration]="preview.duration()"
-							[audioSourceLabel]="preview.audioSourceLabel()"
 							[isPlaying]="isPlaying()"
 							(play)="play()"
 							(pause)="pause()"

@@ -16,7 +16,16 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 				<small>{{ directionText() }}</small>
 			</div>
 
-			<div class="panel-group">
+			<label class="panel-group direct-offset">Direct Offset (ms)
+				<input type="number" [class.invalid]="!offsetInputValid" [value]="offsetInputMs" (input)="onInput($event)" />
+			</label>
+
+			<div class="offset-actions">
+				<button type="button" class="button primary apply" [disabled]="!canApplyOffset" (click)="apply.emit()">✓ Apply Offset</button>
+				<button type="button" class="button ghost reset" (click)="resetPreview.emit()">↻ Reset Preview</button>
+			</div>
+
+			<div class="panel-group nudge-section">
 				<h3>Nudge Offset</h3>
 				<div class="nudge-grid">
 					<button type="button" class="button ghost" (click)="nudge.emit(-100)">-100 ms</button>
@@ -28,15 +37,7 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 				</div>
 			</div>
 
-			<label class="panel-group">Direct Offset (ms)
-				<input type="number" [class.invalid]="!offsetInputValid" [value]="offsetInputMs" (input)="onInput($event)" />
-			</label>
-
-			<div class="offset-actions">
-				<button type="button" class="button link" (click)="resetToZero.emit()">↻ Reset to 0 ms</button>
-				<button type="button" class="button primary apply" [disabled]="!canApplyOffset" (click)="apply.emit()">✓ Apply Offset</button>
-				<button type="button" class="button ghost reset" (click)="resetPreview.emit()">↻ Reset Preview</button>
-			</div>
+			<button type="button" class="button link reset-zero" (click)="resetToZero.emit()">↻ Reset to 0 ms</button>
 
 			<p class="status" *ngIf="offsetStatus">{{ offsetStatus }}</p>
 			<p class="saved">Saved offset: {{ signedOffset(savedOffsetMs) }} ms · Delta: {{ signedOffset(offsetDeltaMs) }} ms</p>
@@ -64,21 +65,25 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 			.status { color: #cbd5e1; font-size: 0.9rem; }
 			.saved { font-size: 0.82rem; }
 			@media (max-width: 1500px) {
-				.offset-panel { align-items: center; gap: 0.85rem 1rem; grid-template-columns: auto minmax(0, 1fr) minmax(13rem, 0.45fr) auto; padding: 0.9rem 1rem; }
+				.offset-panel { align-items: end; gap: 0.75rem 1rem; grid-template-areas: "readout direct actions" "nudges nudges resetzero" "status saved saved"; grid-template-columns: minmax(10rem, auto) minmax(12rem, 1fr) minmax(18rem, auto); padding: 0.9rem 1rem; }
 				.offset-panel > h2, .offset-panel > p { display: none; }
-				.offset-readout { border-block: 0; padding: 0; }
+				.offset-readout { border-block: 0; grid-area: readout; padding: 0; }
 				.offset-readout span { font-size: 0.8rem; }
 				.offset-readout strong { font-size: 1.55rem; white-space: nowrap; }
 				.offset-readout small { display: none; }
+				.direct-offset { grid-area: direct; }
+				.nudge-section { grid-area: nudges; }
+				.reset-zero { grid-area: resetzero; justify-content: center; min-height: 2.55rem; }
 				.panel-group { border-top: 0; padding-top: 0; }
 				.panel-group h3 { display: none; }
 				.nudge-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 				.nudge-grid .button { min-height: 2.55rem; }
-				.offset-actions { align-items: center; grid-template-columns: repeat(3, minmax(8rem, auto)); }
+				.offset-actions { align-items: end; grid-area: actions; grid-template-columns: repeat(2, minmax(8rem, auto)); }
 				.offset-actions .button { min-height: 2.75rem; }
-				.status, .saved { grid-column: 1 / -1; }
+				.status { grid-area: status; }
+				.saved { grid-area: saved; text-align: right; }
 			}
-			@media (max-width: 980px) { .offset-panel { grid-template-columns: 1fr; } .nudge-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr 1fr; } .button.link { justify-content: center; } }
+			@media (max-width: 980px) { .offset-panel { align-items: stretch; grid-template-areas: "readout" "direct" "nudges" "actions" "resetzero" "status" "saved"; grid-template-columns: 1fr; } .nudge-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr 1fr; } .button.link { justify-content: center; } .saved { text-align: left; } }
 			@media (max-width: 760px) { .nudge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr; } }
 		`,
 	],
