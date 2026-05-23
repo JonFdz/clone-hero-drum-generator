@@ -7,12 +7,15 @@ import { DesktopGenerateStateService } from "./desktop-generate-state.service";
 import { DesktopProjectStateService } from "./desktop-project-state.service";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
-	buildWaveformBars,
 	deriveHighwayLimitations,
 	deriveHighwayNotes,
 	deriveTimelineNotes,
 	formatTime,
 } from "./desktop-preview-model";
+import {
+	buildWaveformOverview,
+	type WaveformOverview,
+} from "./desktop-waveform-overview";
 import {
 	canApplyOffset,
 	isOffsetDirty,
@@ -35,6 +38,11 @@ export class DesktopPreviewService {
 	readonly offsetInputMs = signal("0");
 	readonly offsetStatus = signal<string | null>(null);
 	readonly offsetInputValid = signal(true);
+	readonly waveformOverview = signal<WaveformOverview | null>(null);
+	readonly waveformStatus = signal<"idle" | "loading" | "ready" | "error" | "empty">(
+		"idle",
+	);
+	readonly waveformError = signal<string | null>(null);
 
 	readonly savedOffsetMs = computed(
 		() => this.generateState.state().offsetMs ?? 0,
@@ -52,7 +60,12 @@ export class DesktopPreviewService {
 			savedOffsetMs: this.savedOffsetMs(),
 		}),
 	);
-	readonly waveformBars = computed(() => buildWaveformBars(this.duration()));
+	readonly audioSourceLabel = computed(() => {
+		const sourceKind = this.sourceKind();
+		if (sourceKind === "generated") return "generated song.ogg";
+		if (sourceKind === "selected-audio") return "project audio";
+		return "unknown";
+	});
 	readonly highwayHitLinePercent = HIGHWAY_HIT_LINE_PERCENT;
 	readonly timelineNotes = computed(() =>
 		deriveTimelineNotes(
@@ -102,11 +115,15 @@ export class DesktopPreviewService {
 		if (!audio.ok) {
 			this.audioSrc.set(null);
 			this.sourceKind.set(null);
+			this.waveformOverview.set(null);
+			this.waveformStatus.set("empty");
+			this.waveformError.set(null);
 			this.error.set(audio.error.message);
 			return;
 		}
 		this.audioSrc.set(audio.data.src);
 		this.sourceKind.set(audio.data.sourceKind);
+		await this.loadWaveform(audio.data.src);
 
 		const chart = await this.bridge.getChartPreviewData({
 			outputDir: state.outputDir,
@@ -236,5 +253,46 @@ export class DesktopPreviewService {
 		this.previewOffsetMs.set(offsetMs);
 		this.offsetInputMs.set(String(offsetMs));
 		this.offsetInputValid.set(true);
+	}
+
+	private async loadWaveform(audioSrc: string): Promise<void> {
+		this.waveformStatus.set("loading");
+		this.waveformError.set(null);
+		this.waveformOverview.set(null);
+		try {
+			const response = await fetch(audioSrc);
+			if (!response.ok) {
+				throw new Error(`Waveform request failed (${response.status}).`);
+			}
+			const data = await response.arrayBuffer();
+			const audioContext = new AudioContext();
+			try {
+				const audioBuffer = await audioContext.decodeAudioData(data);
+				const channels: Float32Array[] = [];
+				for (let index = 0; index < audioBuffer.numberOfChannels; index += 1) {
+					channels.push(audioBuffer.getChannelData(index));
+				}
+				const overview = buildWaveformOverview({
+					channels,
+					durationSeconds: audioBuffer.duration,
+					sampleRate: audioBuffer.sampleRate,
+					bucketCount: 900,
+				});
+				this.waveformOverview.set(overview);
+				if (!Number.isFinite(this.duration()) || this.duration() <= 0) {
+					this.duration.set(overview.durationSeconds);
+				}
+				this.waveformStatus.set(overview.buckets.length > 0 ? "ready" : "empty");
+			} finally {
+				await audioContext.close();
+			}
+		} catch (error) {
+			this.waveformStatus.set("error");
+			this.waveformError.set(
+				error instanceof Error
+					? error.message
+					: "Could not decode waveform preview.",
+			);
+		}
 	}
 }
