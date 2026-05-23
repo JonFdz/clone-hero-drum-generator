@@ -161,11 +161,12 @@ describe("home dashboard helpers", () => {
 		).toEqual([recent(1), recent(2), recent(3)]);
 	});
 
-	it("folds project health into compact readiness badges", () => {
+	it("formats recent projects for the mock recent-project rows", () => {
 		const model = deriveHomeDashboardModel({
 			project: project({
+				projectFilePath: "/tmp/project-1.chdg",
 				outputStatus: "generated",
-				recentProjects: [recent(1)],
+				recentProjects: [recent(1), recent(2)],
 			}),
 			generate: generate({
 				sourcePath: "demo.mid",
@@ -176,47 +177,15 @@ describe("home dashboard helpers", () => {
 			isDirty: false,
 		});
 
-		expect(model.readinessBadges.map((badge) => badge.label)).toEqual([
-			"Project saved",
-			"Generated",
-			"Paths ready",
-			"1 recent",
-		]);
+		expect(model.recentProjects[0]).toMatchObject({
+			statusLabel: "Generated",
+			statusTone: "success",
+		});
+		expect(model.recentProjects[1]).toMatchObject({
+			statusLabel: "Needs Generate",
+			statusTone: "warning",
+		});
 		expect(model.nextAction.id).toBe("preview");
-	});
-
-	it("keeps secondary hero actions compact and deduplicated", () => {
-		const model = deriveHomeDashboardModel({
-			project: project({ outputStatus: "generated" }),
-			generate: generate({
-				sourcePath: "demo.mid",
-				audioPath: "demo.ogg",
-				outputDir: "/tmp/out",
-			}),
-			hasProject: true,
-			isDirty: false,
-		});
-
-		expect(model.secondaryActions.map((action) => action.label)).toEqual([
-			"Validate",
-			"Generate Again",
-			"New Project",
-			"Open Project",
-		]);
-	});
-
-	it("does not duplicate the no-project primary action", () => {
-		const model = deriveHomeDashboardModel({
-			project: project({ projectName: "Untitled" }),
-			generate: generate(),
-			hasProject: false,
-			isDirty: false,
-		});
-
-		expect(model.nextAction.label).toBe("New Project");
-		expect(model.secondaryActions.map((action) => action.label)).toEqual([
-			"Open Project",
-		]);
 	});
 
 	it("keeps output labels stable", () => {

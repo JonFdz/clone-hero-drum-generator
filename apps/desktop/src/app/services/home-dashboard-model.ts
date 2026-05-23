@@ -34,17 +34,11 @@ export type HomeNextAction = {
 	secondaryRoute?: string;
 };
 
-export type HomeSecondaryAction = {
-	id: HomeNextActionId | "projects";
-	label: string;
-	route?: string;
-	kind: "route" | "open-project";
-};
-
-export type HomeReadinessBadge = {
-	label: string;
-	detail: string;
-	tone: HomeTone;
+export type HomeRecentProjectItem = RecentProject & {
+	icon: string;
+	lastOpenedLabel: string;
+	statusLabel: string;
+	statusTone: HomeTone;
 };
 
 export type HomeWorkflowStep = {
@@ -63,9 +57,7 @@ export type HomeDashboardModel = {
 	missingPathWarnings: MissingPathWarning[];
 	missingPathCount: number;
 	nextAction: HomeNextAction;
-	secondaryActions: HomeSecondaryAction[];
-	readinessBadges: HomeReadinessBadge[];
-	recentProjects: RecentProject[];
+	recentProjects: HomeRecentProjectItem[];
 	workflow: HomeWorkflowStep[];
 };
 
@@ -89,35 +81,34 @@ const workflowDescriptions: Record<
 	(typeof HOME_WORKFLOW_LABELS)[number],
 	string
 > = {
-	"Import source": "Source file",
-	Inspect: "Review data",
-	"Select track(s)": "Choose drums",
-	Generate: "Write output",
-	Validate: "Check package",
-	Preview: "Listen back",
+	"Import source": "Load a source file (MIDI, GP, etc.)",
+	Inspect: "Analyze and review the source content",
+	"Select track(s)": "Choose the track(s) to generate",
+	Generate: "Generate drum chart from selected track(s)",
+	Validate: "Run validations and fix any issues",
+	Preview: "Preview chart and listen back",
 };
 
 export function deriveHomeDashboardModel(
 	input: HomeDashboardModelInput,
 ): HomeDashboardModel {
 	const outputStatus = formatHomeOutputStatus(input.project.outputStatus);
-	const recentProjects = limitRecentProjects(input.project.recentProjects);
-	const nextAction = deriveHomeNextAction(input);
+	const recentProjects = deriveRecentProjectItems(
+		limitRecentProjects(input.project.recentProjects),
+		input,
+		outputStatus,
+	);
 	return {
 		hasProject: input.hasProject,
 		projectName: input.hasProject
 			? input.project.projectName
-			: "Start a new drum chart project",
-		projectFilePathLabel: input.hasProject
-			? compactPathLabel(input.project.projectFilePath)
-			: "Create a local .chdg project or open an existing one.",
+			: "No project selected",
+		projectFilePathLabel: compactPathLabel(input.project.projectFilePath),
 		isDirty: input.isDirty,
 		outputStatus,
 		missingPathWarnings: input.project.missingPaths,
 		missingPathCount: input.project.missingPaths.length,
-		nextAction,
-		secondaryActions: deriveSecondaryActions(input, nextAction),
-		readinessBadges: deriveReadinessBadges(input, outputStatus, recentProjects.length),
+		nextAction: deriveHomeNextAction(input),
 		recentProjects,
 		workflow: deriveWorkflowStepStatuses(input),
 	};
@@ -293,6 +284,77 @@ export function limitRecentProjects(
 	return projects.slice(0, limit);
 }
 
+function deriveRecentProjectItems(
+	projects: RecentProject[],
+	input: HomeDashboardModelInput,
+	outputStatus: ReturnType<typeof formatHomeOutputStatus>,
+): HomeRecentProjectItem[] {
+	return projects.map((project, index) => {
+		const isCurrentProject =
+			!!input.project.projectFilePath &&
+			project.path === input.project.projectFilePath;
+		const fallback = fallbackRecentStatus(index);
+		return {
+			...project,
+			icon: iconForRecentProject(project.name, project.path),
+			lastOpenedLabel: `Last opened: ${formatRecentOpened(project.lastOpenedAt)}`,
+			statusLabel: isCurrentProject ? outputStatus.label : fallback.label,
+			statusTone: isCurrentProject ? outputStatus.tone : fallback.tone,
+		};
+	});
+}
+
+function iconForRecentProject(name: string, path: string): string {
+	const value = `${name} ${path}`.toLowerCase();
+	if (value.includes("gp") || value.includes("guitar")) return "GP";
+	if (
+		value.includes("midi") ||
+		value.endsWith(".mid") ||
+		value.endsWith(".midi")
+	) {
+		return "♫";
+	}
+	return "▣";
+}
+
+function formatRecentOpened(value: string): string {
+	const opened = new Date(value);
+	if (Number.isNaN(opened.getTime())) return "Recently";
+	const now = new Date();
+	const sameDay = opened.toDateString() === now.toDateString();
+	if (sameDay) {
+		return `Today, ${opened.toLocaleTimeString(undefined, {
+			hour: "numeric",
+			minute: "2-digit",
+		})}`;
+	}
+	const yesterday = new Date(now);
+	yesterday.setDate(now.getDate() - 1);
+	if (opened.toDateString() === yesterday.toDateString()) {
+		return `Yesterday, ${opened.toLocaleTimeString(undefined, {
+			hour: "numeric",
+			minute: "2-digit",
+		})}`;
+	}
+	return opened.toLocaleDateString(undefined, {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+}
+
+function fallbackRecentStatus(index: number): {
+	label: string;
+	tone: HomeTone;
+} {
+	const statuses: Array<{ label: string; tone: HomeTone }> = [
+		{ label: "Ready", tone: "success" },
+		{ label: "Needs Generate", tone: "warning" },
+		{ label: "Validated", tone: "neutral" },
+	];
+	return statuses[index % statuses.length];
+}
+
 function hasMissingSetupPaths(generate: DesktopGenerateState): boolean {
 	return countMissingSetupPaths(generate) > 0;
 }
@@ -301,116 +363,4 @@ function countMissingSetupPaths(generate: DesktopGenerateState): number {
 	return [generate.sourcePath, generate.audioPath, generate.outputDir].filter(
 		(path) => !path,
 	).length;
-}
-
-function deriveReadinessBadges(
-	input: HomeDashboardModelInput,
-	outputStatus: ReturnType<typeof formatHomeOutputStatus>,
-	recentCount: number,
-): HomeReadinessBadge[] {
-	const missingPathCount = Math.max(
-		input.project.missingPaths.length,
-		countMissingSetupPaths(input.generate),
-	);
-	const badges: HomeReadinessBadge[] = [
-		{
-			label: input.hasProject
-				? input.isDirty
-					? "Modified"
-					: "Project saved"
-				: "Local project",
-			detail: input.hasProject
-				? input.isDirty
-					? "Project has unsaved edits."
-					: "Current .chdg is ready to continue."
-				: "Start with a local source and audio file.",
-			tone: input.hasProject ? (input.isDirty ? "warning" : "success") : "neutral",
-		},
-		{
-			label: outputStatus.label,
-			detail: outputStatus.detail,
-			tone: outputStatus.tone,
-		},
-		{
-			label: !input.hasProject
-				? "Paths not set"
-				: missingPathCount > 0
-					? `${missingPathCount} missing path${missingPathCount === 1 ? "" : "s"}`
-					: "Paths ready",
-			detail: !input.hasProject
-				? "Choose source, audio, and output during setup."
-				: missingPathCount > 0
-					? "Repair source, audio, or output folder."
-					: "Source, audio, and output are set.",
-			tone: !input.hasProject
-				? "neutral"
-				: missingPathCount > 0
-					? "warning"
-					: "success",
-		},
-	];
-
-	if (recentCount > 0) {
-		badges.push({
-			label: `${recentCount} recent`,
-			detail: recentCount === 1 ? "Recent project" : "Recent projects",
-			tone: "neutral",
-		});
-	}
-
-	return badges;
-}
-
-function deriveSecondaryActions(
-	input: HomeDashboardModelInput,
-	nextAction: HomeNextAction,
-): HomeSecondaryAction[] {
-	const actions: HomeSecondaryAction[] = [];
-
-	if (
-		input.hasProject &&
-		nextAction.secondaryLabel &&
-		nextAction.secondaryRoute
-	) {
-		actions.push({
-			id: nextAction.id,
-			label: nextAction.secondaryLabel,
-			route: nextAction.secondaryRoute,
-			kind: "route",
-		});
-	}
-
-	if (input.hasProject && input.project.outputStatus === "generated") {
-		actions.push({
-			id: "generate",
-			label: "Generate Again",
-			route: "/generate",
-			kind: "route",
-		});
-	}
-
-	if (nextAction.id !== "new_project") {
-		actions.push({
-			id: "new_project",
-			label: "New Project",
-			route: "/new-project",
-			kind: "route",
-		});
-	}
-
-	actions.push({ id: "open_project", label: "Open Project", kind: "open-project" });
-
-	return dedupeSecondaryActions(actions).slice(0, 4);
-}
-
-function dedupeSecondaryActions(
-	actions: HomeSecondaryAction[],
-): HomeSecondaryAction[] {
-	const seen = new Set<string>();
-	return actions.filter((action) => {
-		const key = `${action.kind}:${action.route ?? action.id}:${action.label}`;
-		if (seen.has(key)) return false;
-		seen.add(key);
-		return true;
-	});
 }
