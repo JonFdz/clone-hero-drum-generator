@@ -32,9 +32,11 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 				<input type="number" [class.invalid]="!offsetInputValid" [value]="offsetInputMs" (input)="onInput($event)" />
 			</label>
 
-			<button type="button" class="button link" (click)="resetToZero.emit()">↻ Reset to 0 ms</button>
-			<button type="button" class="button primary apply" [disabled]="!canApplyOffset" (click)="apply.emit()">✓ Apply Offset</button>
-			<button type="button" class="button ghost reset" (click)="resetPreview.emit()">↻ Reset Preview</button>
+			<div class="offset-actions">
+				<button type="button" class="button link" (click)="resetToZero.emit()">↻ Reset to 0 ms</button>
+				<button type="button" class="button primary apply" [disabled]="!canApplyOffset" (click)="apply.emit()">✓ Apply Offset</button>
+				<button type="button" class="button ghost reset" (click)="resetPreview.emit()">↻ Reset Preview</button>
+			</div>
 
 			<p class="status" *ngIf="offsetStatus">{{ offsetStatus }}</p>
 			<p class="saved">Saved offset: {{ signedOffset(savedOffsetMs) }} ms · Delta: {{ signedOffset(offsetDeltaMs) }} ms</p>
@@ -42,7 +44,8 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 	`,
 	styles: [
 		`
-			.offset-panel { background: linear-gradient(180deg, rgba(12, 20, 38, 0.96), rgba(8, 13, 27, 0.92)); border: 1px solid rgba(120, 142, 176, 0.2); border-radius: 1rem; display: grid; gap: 1.15rem; padding: 1.4rem; }
+			:host { display: block; min-width: 0; width: 100%; }
+			.offset-panel { background: linear-gradient(180deg, rgba(12, 20, 38, 0.96), rgba(8, 13, 27, 0.92)); border: 1px solid rgba(120, 142, 176, 0.2); border-radius: 1rem; display: grid; gap: 1.15rem; min-width: 0; padding: 1.4rem; width: 100%; }
 			h2 { margin: 0; }
 			p { margin: 0; }
 			.offset-readout { border-block: 1px solid rgba(197, 209, 225, 0.12); display: grid; gap: 0.45rem; padding: 1.1rem 0; }
@@ -52,12 +55,16 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 			h3 { font-size: 1rem; margin: 0 0 0.85rem; }
 			.nudge-grid { display: grid; gap: 0.65rem; grid-template-columns: repeat(3, 1fr); }
 			.nudge-grid .button { min-height: 3rem; padding-inline: 0.5rem; }
+			input { min-width: 0; width: 100%; }
 			input.invalid { border-color: #ff6b7a; }
+			.offset-actions { display: grid; gap: 0.75rem; }
 			.button.link { background: transparent; border: 0; color: #4aa3ff; justify-content: flex-start; padding-inline: 0; }
 			.apply { min-height: 3.4rem; }
 			.reset { opacity: 0.78; }
 			.status { color: #cbd5e1; font-size: 0.9rem; }
 			.saved { font-size: 0.82rem; }
+			@media (max-width: 1500px) { .nudge-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } .offset-actions { align-items: center; grid-template-columns: minmax(0, 1fr) minmax(10rem, auto) minmax(10rem, auto); } }
+			@media (max-width: 760px) { .nudge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr; } .button.link { justify-content: center; } }
 		`,
 	],
 })

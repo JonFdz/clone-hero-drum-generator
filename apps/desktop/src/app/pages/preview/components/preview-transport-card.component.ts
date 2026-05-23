@@ -22,16 +22,23 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			<div class="transport-side">
 				<span class="pill">{{ previewStatus }}</span>
 				<span class="source">Audio source: {{ audioSourceLabel }}</span>
-				<input
-					type="range"
-					min="0"
-					[max]="duration > 0 ? duration : 0"
-					step="0.001"
-					[value]="safeCurrentTime()"
-					[disabled]="duration <= 0"
-					(input)="onSeek($event)"
-					aria-label="Preview seek"
-				/>
+				<div class="seek-control" [class.disabled]="duration <= 0">
+					<div class="seek-track" aria-hidden="true">
+						<div class="seek-progress" [style.width.%]="seekProgressPercent()"></div>
+						<div class="seek-thumb" [style.left.%]="seekProgressPercent()" [style.transform]="seekThumbTransform()"></div>
+					</div>
+					<input
+						class="seek-input"
+						type="range"
+						min="0"
+						[max]="duration > 0 ? duration : 0"
+						step="0.001"
+						[value]="safeCurrentTime()"
+						[disabled]="duration <= 0"
+						(input)="onSeek($event)"
+						aria-label="Preview seek"
+					/>
+				</div>
 			</div>
 		</section>
 	`,
@@ -55,9 +62,15 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			.transport-controls { align-items: center; display: flex; gap: 1rem; justify-content: center; }
 			.round { border-radius: 999px; min-height: 3.2rem; min-width: 3.2rem; }
 			.round.primary { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.28), 0 0 28px rgba(139, 92, 246, 0.34); font-size: 1.25rem; min-height: 4.8rem; min-width: 4.8rem; }
-			.transport-side { display: grid; gap: 0.6rem; }
+			.transport-side { display: grid; gap: 0.6rem; min-width: 0; }
 			.source { color: #aab4c5; font-size: 0.85rem; }
-			input[type="range"] { min-width: 0; width: 100%; }
+			.seek-control { height: 1.25rem; min-width: 0; position: relative; }
+			.seek-track { background: rgba(255, 255, 255, 0.22); border-radius: 999px; height: 0.35rem; left: 0; overflow: visible; position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+			.seek-progress { background: #93c5fd; border-radius: inherit; height: 100%; }
+			.seek-thumb { background: #93c5fd; border-radius: 999px; box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.18); height: 1rem; position: absolute; top: 50%; width: 1rem; }
+			.seek-input { cursor: pointer; inset: 0; margin: 0; opacity: 0; position: absolute; width: 100%; }
+			.seek-control.disabled { opacity: 0.5; }
+			.seek-control.disabled .seek-input { cursor: not-allowed; }
 			@media (max-width: 1080px) { .transport-card { grid-template-columns: auto 1fr; } .transport-controls, .transport-side { grid-column: 1 / -1; } }
 		`,
 	],
@@ -86,6 +99,18 @@ export class PreviewTransportCardComponent {
 
 	safeCurrentTime(): number {
 		return this.clampToDuration(this.currentTime);
+	}
+
+	seekProgressPercent(): number {
+		if (!Number.isFinite(this.duration) || this.duration <= 0) return 0;
+		return (this.safeCurrentTime() / this.duration) * 100;
+	}
+
+	seekThumbTransform(): string {
+		const percent = this.seekProgressPercent();
+		if (percent <= 0) return "translate(0, -50%)";
+		if (percent >= 100) return "translate(-100%, -50%)";
+		return "translate(-50%, -50%)";
 	}
 
 	onSeek(event: Event): void {

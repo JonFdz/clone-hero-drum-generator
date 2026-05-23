@@ -112,9 +112,10 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 			.status-pill { align-items: center; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 999px; color: #22f06f; display: inline-flex; font-weight: 800; gap: 0.45rem; padding: 0.8rem 1rem; white-space: nowrap; }
 			.status-pill.warning { background: rgba(246, 180, 80, 0.12); border-color: rgba(246, 180, 80, 0.3); color: #f6b450; }
 			audio { display: none; }
-			.preview-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); }
+			.preview-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); min-width: 0; }
 			.preview-main { display: grid; gap: 1rem; min-width: 0; }
-			@media (max-width: 1180px) { .preview-layout { grid-template-columns: 1fr; } }
+			chdg-preview-offset-panel { min-width: 0; }
+			@media (max-width: 1500px) { .preview-layout { grid-template-columns: 1fr; } }
 			@media (max-width: 760px) { .preview-header { display: grid; } }
 		`,
 	],
