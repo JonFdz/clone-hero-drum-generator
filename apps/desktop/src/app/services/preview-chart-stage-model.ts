@@ -198,6 +198,17 @@ export function projectSecondsToPercent(
 	return ((clampedSeconds - viewport.startSeconds) / range) * 100;
 }
 
+export function projectPercentToSeconds(
+	percent: number,
+	viewport: Pick<PreviewViewport, "startSeconds" | "endSeconds">,
+): number {
+	const range = viewport.endSeconds - viewport.startSeconds;
+	if (!Number.isFinite(percent) || !Number.isFinite(range) || range <= 0) {
+		return viewport.startSeconds;
+	}
+	return viewport.startSeconds + clamp(percent, 0, 1) * range;
+}
+
 export function filterVisiblePreviewNotes(
 	notes: readonly PreviewNote[],
 	viewport: Pick<PreviewViewport, "startSeconds" | "endSeconds">,

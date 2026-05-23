@@ -20,7 +20,6 @@ import { formatTime } from "../../../services/desktop-preview-model";
 				<button class="round secondary" type="button" aria-label="Seek forward" (click)="seekBy(5)">▶|</button>
 			</div>
 			<div class="transport-side">
-				<span class="pill">{{ previewStatus }}</span>
 				<span class="source">Audio source: {{ audioSourceLabel }}</span>
 				<div class="seek-control" [class.disabled]="duration <= 0">
 					<div class="seek-track" aria-hidden="true">
@@ -50,18 +49,19 @@ import { formatTime } from "../../../services/desktop-preview-model";
 				border: 1px solid rgba(120, 142, 176, 0.18);
 				border-radius: 1rem;
 				display: grid;
-				gap: 1.5rem;
-				grid-template-columns: auto minmax(12rem, 1fr) auto minmax(14rem, 0.8fr);
-				padding: 1rem;
+				gap: 1.25rem;
+				grid-template-columns: auto minmax(12rem, 1fr) auto minmax(16rem, 0.8fr);
+				min-width: 0;
+				padding: 0.9rem 1rem;
 			}
 			.artwork { align-items: center; background: linear-gradient(135deg, #7c2dff, #111827 60%, #f97316); border-radius: 0.75rem; color: #f8fafc; display: flex; font-size: 1.5rem; font-weight: 1000; height: 6rem; justify-content: center; width: 6rem; }
 			h2 { margin: 0 0 0.35rem; }
 			p { margin: 0 0 0.4rem; }
 			strong { color: #a855f7; font-size: 1.05rem; }
 			strong span { color: #b6bfce; font-weight: 600; }
-			.transport-controls { align-items: center; display: flex; gap: 1rem; justify-content: center; }
-			.round { border-radius: 999px; min-height: 3.2rem; min-width: 3.2rem; }
-			.round.primary { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.28), 0 0 28px rgba(139, 92, 246, 0.34); font-size: 1.25rem; min-height: 4.8rem; min-width: 4.8rem; }
+			.transport-controls { align-items: center; display: flex; flex-wrap: nowrap; gap: 1rem; justify-content: center; min-width: max-content; }
+			.round { aspect-ratio: 1; border-radius: 999px; flex: 0 0 auto; height: 3.2rem; min-height: 3.2rem; min-width: 3.2rem; padding: 0; width: 3.2rem; }
+			.round.primary { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.28), 0 0 28px rgba(139, 92, 246, 0.34); font-size: 1.25rem; height: 4.6rem; min-height: 4.6rem; min-width: 4.6rem; width: 4.6rem; }
 			.transport-side { display: grid; gap: 0.6rem; min-width: 0; }
 			.source { color: #aab4c5; font-size: 0.85rem; }
 			.seek-control { height: 1.25rem; min-width: 0; position: relative; }
@@ -71,7 +71,9 @@ import { formatTime } from "../../../services/desktop-preview-model";
 			.seek-input { cursor: pointer; inset: 0; margin: 0; opacity: 0; position: absolute; width: 100%; }
 			.seek-control.disabled { opacity: 0.5; }
 			.seek-control.disabled .seek-input { cursor: not-allowed; }
-			@media (max-width: 1080px) { .transport-card { grid-template-columns: auto 1fr; } .transport-controls, .transport-side { grid-column: 1 / -1; } }
+			@media (max-width: 1350px) { .transport-card { grid-template-columns: auto minmax(0, 1fr) minmax(14rem, 0.9fr); } .transport-controls { grid-column: 1 / -1; grid-row: 2; } }
+			@media (max-width: 820px) { .transport-card { grid-template-columns: auto minmax(0, 1fr); } .transport-side { grid-column: 1 / -1; } }
+			@media (max-width: 560px) { .transport-card { grid-template-columns: 1fr; } .artwork { height: 5rem; width: 5rem; } }
 		`,
 	],
 })
@@ -81,7 +83,6 @@ export class PreviewTransportCardComponent {
 	@Input() currentTime = 0;
 	@Input() duration = 0;
 	@Input() audioSourceLabel = "unknown";
-	@Input() previewStatus = "Preview ready";
 	@Input() isPlaying = false;
 
 	@Output() play = new EventEmitter<void>();

@@ -10,6 +10,7 @@ import {
 	filterVisiblePreviewNotes,
 	pieceToPreviewGlyph,
 	pieceToPreviewLane,
+	projectPercentToSeconds,
 	projectSecondsToPercent,
 	type PreviewNote,
 } from "./preview-chart-stage-model";
@@ -102,6 +103,15 @@ describe("preview-chart-stage-model", () => {
 		expect(
 			projectSecondsToPercent(14, { startSeconds: 2, endSeconds: 2 }),
 		).toBe(0);
+	});
+
+	it("projects chart x percent back to seconds", () => {
+		const viewport = { startSeconds: 9.5, endSeconds: 13 };
+		expect(projectPercentToSeconds(0, viewport)).toBe(9.5);
+		expect(projectPercentToSeconds(0.5, viewport)).toBe(11.25);
+		expect(projectPercentToSeconds(1, viewport)).toBe(13);
+		expect(projectPercentToSeconds(-1, viewport)).toBe(9.5);
+		expect(projectPercentToSeconds(2, viewport)).toBe(13);
 	});
 
 	it("filters visible notes with viewport padding", () => {

@@ -25,8 +25,8 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 		<header class="page-header preview-header">
 			<div>
 				<p class="eyebrow">Preview</p>
-				<h1>Review chart sync and fine-tune offset before export.</h1>
-				<p>Integrated 2D chart review with real waveform context and existing offset controls.</p>
+				<h1>Preview & Offset</h1>
+				<p>Review generated notes against the audio waveform before export.</p>
 			</div>
 			<span class="status-pill" [class.warning]="preview.waveformStatus() === 'error'">
 				● {{ preview.previewStatus() }}
@@ -59,7 +59,6 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 							[currentTime]="preview.currentTime()"
 							[duration]="preview.duration()"
 							[audioSourceLabel]="preview.audioSourceLabel()"
-							[previewStatus]="preview.previewStatus()"
 							[isPlaying]="isPlaying()"
 							(play)="play()"
 							(pause)="pause()"
@@ -77,6 +76,7 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 							[noteCount]="preview.previewNoteCount()"
 							[waveformStatus]="preview.waveformStatus()"
 							[waveformError]="preview.waveformError()"
+							(seek)="seek($event)"
 						/>
 					</div>
 
@@ -107,9 +107,11 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 	`,
 	styles: [
 		`
-			.preview-header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
-			.preview-header h1 { max-width: 48rem; }
-			.status-pill { align-items: center; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 999px; color: #22f06f; display: inline-flex; font-weight: 800; gap: 0.45rem; padding: 0.8rem 1rem; white-space: nowrap; }
+			.preview-header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1rem; }
+			.preview-header .eyebrow { margin-bottom: 0.35rem; }
+			.preview-header h1 { font-size: clamp(1.45rem, 2vw, 2rem); margin-bottom: 0.35rem; max-width: 28rem; }
+			.preview-header p { font-size: 0.95rem; margin-bottom: 0; }
+			.status-pill { align-items: center; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 999px; color: #22f06f; display: inline-flex; font-weight: 800; gap: 0.45rem; padding: 0.65rem 0.9rem; white-space: nowrap; }
 			.status-pill.warning { background: rgba(246, 180, 80, 0.12); border-color: rgba(246, 180, 80, 0.3); color: #f6b450; }
 			audio { display: none; }
 			.preview-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); min-width: 0; }

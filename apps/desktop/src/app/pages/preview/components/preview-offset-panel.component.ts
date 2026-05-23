@@ -63,8 +63,23 @@ import { Component, EventEmitter, Input, Output } from "@angular/core";
 			.reset { opacity: 0.78; }
 			.status { color: #cbd5e1; font-size: 0.9rem; }
 			.saved { font-size: 0.82rem; }
-			@media (max-width: 1500px) { .nudge-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } .offset-actions { align-items: center; grid-template-columns: minmax(0, 1fr) minmax(10rem, auto) minmax(10rem, auto); } }
-			@media (max-width: 760px) { .nudge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr; } .button.link { justify-content: center; } }
+			@media (max-width: 1500px) {
+				.offset-panel { align-items: center; gap: 0.85rem 1rem; grid-template-columns: auto minmax(0, 1fr) minmax(13rem, 0.45fr) auto; padding: 0.9rem 1rem; }
+				.offset-panel > h2, .offset-panel > p { display: none; }
+				.offset-readout { border-block: 0; padding: 0; }
+				.offset-readout span { font-size: 0.8rem; }
+				.offset-readout strong { font-size: 1.55rem; white-space: nowrap; }
+				.offset-readout small { display: none; }
+				.panel-group { border-top: 0; padding-top: 0; }
+				.panel-group h3 { display: none; }
+				.nudge-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+				.nudge-grid .button { min-height: 2.55rem; }
+				.offset-actions { align-items: center; grid-template-columns: repeat(3, minmax(8rem, auto)); }
+				.offset-actions .button { min-height: 2.75rem; }
+				.status, .saved { grid-column: 1 / -1; }
+			}
+			@media (max-width: 980px) { .offset-panel { grid-template-columns: 1fr; } .nudge-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr 1fr; } .button.link { justify-content: center; } }
+			@media (max-width: 760px) { .nudge-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .offset-actions { grid-template-columns: 1fr; } }
 		`,
 	],
 })

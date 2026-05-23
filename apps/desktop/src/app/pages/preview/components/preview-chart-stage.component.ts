@@ -1,5 +1,12 @@
 import { CommonModule } from "@angular/common";
-import { Component, Input } from "@angular/core";
+import {
+	Component,
+	type ElementRef,
+	EventEmitter,
+	Input,
+	Output,
+	ViewChild,
+} from "@angular/core";
 import type { NormalizationPreview } from "@chdg/project/browser";
 import type { ChartPreviewData } from "../../../services/desktop-bridge.service";
 import { formatTime } from "../../../services/desktop-preview-model";
@@ -9,6 +16,7 @@ import {
 	adaptChartPreviewDataToPreviewNotes,
 	computePreviewViewport,
 	filterVisiblePreviewNotes,
+	projectPercentToSeconds,
 	projectSecondsToPercent,
 	type PreviewLane,
 	type PreviewNote,
@@ -24,10 +32,10 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 		<section class="chart-stage-card">
 			<div class="stage-copy">
 				<h2>Chart Preview</h2>
-				<p>Left-to-right Expert Pro Drums review with one waveform background behind all lanes.</p>
+				<p>Click or drag the chart to scrub timing.</p>
 			</div>
 			<div class="stage-shell">
-				<svg viewBox="0 0 1240 555" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview chart highway">
+				<svg #chartSvg viewBox="0 0 1240 555" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview chart highway">
 					<defs>
 						<linearGradient id="stageFade" x1="0" x2="1" y1="0" y2="0">
 							<stop offset="0" stop-color="#020817" stop-opacity="0" />
@@ -105,6 +113,20 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 					<line [attr.x1]="playheadX()" [attr.x2]="playheadX()" [attr.y1]="chartY - 8" [attr.y2]="chartY + chartHeight" class="playhead-line" />
 					<circle [attr.cx]="playheadX()" [attr.cy]="chartY - 8" r="7" class="playhead-dot" />
 					<text [attr.x]="playheadX()" y="24" text-anchor="middle" class="playhead-label">{{ formatTick(currentTime) }}</text>
+
+					<rect
+						[attr.x]="chartX"
+						[attr.y]="chartY"
+						[attr.width]="chartWidth"
+						[attr.height]="chartHeight"
+						class="seek-hit-area"
+						fill="transparent"
+						pointer-events="all"
+						(pointerdown)="onStagePointerDown($event)"
+						(pointermove)="onStagePointerMove($event)"
+						(pointerup)="onStagePointerUp($event)"
+						(pointercancel)="onStagePointerUp($event)"
+					/>
 				</svg>
 				<div class="waveform-message" *ngIf="waveformStatus === 'loading'">Loading waveform preview…</div>
 				<div class="waveform-message warning" *ngIf="waveformStatus === 'error'">Waveform decode failed; notes and audio controls remain available.</div>
@@ -121,12 +143,12 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 	`,
 	styles: [
 		`
-			.chart-stage-card { background: linear-gradient(180deg, rgba(12, 20, 38, 0.96), rgba(8, 13, 27, 0.92)); border: 1px solid rgba(120, 142, 176, 0.2); border-radius: 1rem; display: grid; gap: 1rem; padding: 1rem; }
-			.stage-copy { align-items: end; display: flex; justify-content: space-between; gap: 1rem; }
-			.stage-copy h2 { margin: 0; }
-			.stage-copy p { margin: 0; text-align: right; }
-			.stage-shell { min-height: 32rem; position: relative; }
-			svg { display: block; height: auto; min-height: 32rem; width: 100%; }
+			.chart-stage-card { background: linear-gradient(180deg, rgba(12, 20, 38, 0.96), rgba(8, 13, 27, 0.92)); border: 1px solid rgba(120, 142, 176, 0.2); border-radius: 1rem; display: grid; gap: 0.65rem; padding: 0.85rem 1rem 1rem; }
+			.stage-copy { align-items: center; display: flex; justify-content: space-between; gap: 1rem; }
+			.stage-copy h2 { font-size: 1rem; margin: 0; }
+			.stage-copy p { font-size: 0.82rem; margin: 0; text-align: right; }
+			.stage-shell { aspect-ratio: 16 / 7; min-height: 22rem; position: relative; }
+			svg { display: block; height: 100%; min-height: 22rem; width: 100%; }
 			.svg-bg { fill: #020817; stroke: rgba(120, 142, 176, 0.18); stroke-width: 1; }
 			.chart-bg { fill: rgba(4, 10, 24, 0.76); }
 			.grid-line { stroke: rgba(220, 227, 241, 0.07); stroke-width: 1; }
@@ -142,6 +164,7 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 			.playhead-line { stroke: #8b5cf6; stroke-width: 2; }
 			.playhead-dot { fill: #8b5cf6; }
 			.playhead-label { fill: #a855f7; font-size: 16px; font-weight: 900; }
+			.seek-hit-area { cursor: ew-resize; }
 			.waveform-message, .empty-notes { background: rgba(4, 10, 24, 0.72); border: 1px solid rgba(197, 209, 225, 0.12); border-radius: 999px; color: #cbd5e1; left: 50%; padding: 0.5rem 0.8rem; position: absolute; top: 1rem; transform: translateX(-50%); }
 			.waveform-message.warning { color: #fbbf24; }
 			.empty-notes { top: 50%; }
@@ -150,6 +173,7 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 	],
 })
 export class PreviewChartStageComponent {
+	@ViewChild("chartSvg") private readonly chartSvg?: ElementRef<SVGSVGElement>;
 	@Input() waveformOverview: WaveformOverview | null = null;
 	@Input() chartData: ChartPreviewData | null = null;
 	@Input() normalizationPreview: NormalizationPreview | undefined;
@@ -161,6 +185,7 @@ export class PreviewChartStageComponent {
 	@Input() waveformStatus: "idle" | "loading" | "ready" | "error" | "empty" =
 		"idle";
 	@Input() waveformError: string | null = null;
+	@Output() seek = new EventEmitter<number>();
 
 	readonly chartX = 170;
 	readonly chartY = 58;
@@ -168,6 +193,7 @@ export class PreviewChartStageComponent {
 	readonly chartHeight = 455;
 	readonly rowHeight = 56;
 	readonly lanes = PREVIEW_LANES;
+	private scrubbingPointerId: number | null = null;
 
 	viewport(): PreviewViewport {
 		return computePreviewViewport(this.currentTime, this.duration);
@@ -267,11 +293,45 @@ export class PreviewChartStageComponent {
 		return formatTime(seconds);
 	}
 
+	onStagePointerDown(event: PointerEvent): void {
+		this.scrubbingPointerId = event.pointerId;
+		(event.currentTarget as SVGRectElement).setPointerCapture(event.pointerId);
+		this.seek.emit(this.clientXToChartSeconds(event));
+	}
+
+	onStagePointerMove(event: PointerEvent): void {
+		if (this.scrubbingPointerId !== event.pointerId) return;
+		this.seek.emit(this.clientXToChartSeconds(event));
+	}
+
+	onStagePointerUp(event: PointerEvent): void {
+		if (this.scrubbingPointerId === event.pointerId) {
+			this.scrubbingPointerId = null;
+		}
+		const target = event.currentTarget as SVGRectElement;
+		if (target.hasPointerCapture(event.pointerId)) {
+			target.releasePointerCapture(event.pointerId);
+		}
+	}
+
 	trackNote(_index: number, note: PreviewNote): string {
 		return note.id;
 	}
 
 	trackLane(_index: number, lane: PreviewLane): string {
 		return lane.id;
+	}
+
+	private clientXToChartSeconds(event: PointerEvent): number {
+		const svg = this.chartSvg?.nativeElement;
+		if (!svg) return this.currentTime;
+		const point = svg.createSVGPoint();
+		point.x = event.clientX;
+		point.y = event.clientY;
+		const screenCtm = svg.getScreenCTM();
+		if (!screenCtm) return this.currentTime;
+		const svgPoint = point.matrixTransform(screenCtm.inverse());
+		const percent = (svgPoint.x - this.chartX) / this.chartWidth;
+		return projectPercentToSeconds(percent, this.viewport());
 	}
 }
