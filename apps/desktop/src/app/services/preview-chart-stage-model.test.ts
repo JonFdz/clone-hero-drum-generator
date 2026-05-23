@@ -174,6 +174,30 @@ describe("preview-chart-stage-model", () => {
 		expect(notes[1]?.seconds).toBe(8);
 		expect(notes[1]?.shape).toBe("diamond");
 	});
+
+	it("produces visible chart-stage notes around the current viewport", () => {
+		const viewport = computePreviewViewport(12, 30);
+		const notes = adaptChartPreviewDataToPreviewNotes(
+			{
+				resolution: 192,
+				offsetSeconds: 0,
+				hasAccurateTiming: true,
+				limitations: [],
+				noteEvents: [
+					{ tick: 1, lane: 0, seconds: 9.6 },
+					{ tick: 2, lane: 1, seconds: 10 },
+					{ tick: 3, lane: 2, seconds: 16 },
+					{ tick: 4, lane: 3, seconds: 18.4 },
+				],
+			},
+			undefined,
+			30,
+		);
+		expect(filterVisiblePreviewNotes(notes, viewport).map((note) => note.piece)).toEqual([
+			"snare",
+			"tom_high",
+		]);
+	});
 });
 
 function makeNote(id: string, seconds: number): PreviewNote {
