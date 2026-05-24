@@ -27,6 +27,7 @@ import {
 	buildProjectFileFromState,
 	getDefaultProjectFilePath,
 	getDefaultOutputDir,
+	resolveUniqueProjectTarget,
 } from "./projectFileService.js";
 import {
 	readSettings,
@@ -378,10 +379,13 @@ app.whenReady().then(() => {
 			input: unknown,
 		): Promise<JsonEnvelope<ProjectStatePayload>> => {
 			return toEnvelope(async () => {
-				const name = assertCreateProjectName(input);
+				const requestedName = assertCreateProjectName(input);
 				const settings = await readSettings();
-				const projectFolder = path.join(settings.projectLocation, name);
-				const filePath = path.join(projectFolder, `${name}.chdg`);
+				const target = await resolveUniqueProjectTarget(
+					settings.projectLocation,
+					requestedName,
+				);
+				const { name, filePath } = target;
 				const outputDir = getDefaultOutputDir(filePath);
 				addAllowedProjectFile(allowedProjectFiles, filePath);
 				const project = buildProjectFileFromState(name, app.getVersion(), {

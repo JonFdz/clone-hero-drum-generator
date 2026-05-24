@@ -144,6 +144,35 @@ export function buildProjectFileFromState(
 	};
 }
 
+export type UniqueProjectTarget = {
+	name: string;
+	projectFolder: string;
+	filePath: string;
+};
+
+export async function resolveUniqueProjectTarget(
+	baseLocation: string,
+	requestedName: string,
+): Promise<UniqueProjectTarget> {
+	const safeName = sanitizeProjectName(requestedName);
+	for (let index = 0; index < 100; index += 1) {
+		const name = index === 0 ? safeName : `${safeName} ${index + 1}`;
+		const projectFolder = path.join(baseLocation, name);
+		const filePath = path.join(projectFolder, `${name}.chdg`);
+		try {
+			await access(filePath);
+		} catch {
+			return { name, projectFolder, filePath };
+		}
+	}
+	throw new Error("Could not create a unique project file name.");
+}
+
+function sanitizeProjectName(name: string): string {
+	const trimmed = name.trim();
+	return trimmed.length > 0 ? trimmed : "Untitled";
+}
+
 export function getDefaultProjectFolder(projectName: string): string {
 	const base = app.getPath("documents");
 	return path.join(base, "CHDG Projects", projectName);

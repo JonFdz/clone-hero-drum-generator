@@ -4,6 +4,7 @@ import { Router } from "@angular/router";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { createDefaultProjectName } from "../../services/project-name-model";
 import {
 	deriveProjectsLibraryModel,
 	type ProjectsLibraryItem,
@@ -157,7 +158,7 @@ export class ProjectsPageComponent {
 	}
 
 	async newProject(): Promise<void> {
-		const defaultName = `Untitled ${new Date().toISOString().slice(0, 10)}`;
+		const defaultName = createDefaultProjectName();
 		const payload = await this.projectState.createProject(defaultName);
 		if (payload) {
 			this.loadProjectState(payload);

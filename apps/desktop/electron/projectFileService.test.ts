@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
@@ -17,6 +17,7 @@ import {
 	buildProjectFileFromState,
 	getDefaultProjectFilePath,
 	getDefaultOutputDir,
+	resolveUniqueProjectTarget,
 } from "./projectFileService.js";
 
 describe("projectFileService", () => {
@@ -151,6 +152,22 @@ describe("projectFileService", () => {
 			if (result.ok) {
 				expect(result.missingPaths).toContain("outputDir");
 			}
+		});
+	});
+
+	describe("resolveUniqueProjectTarget", () => {
+		it("adds a unique suffix when the requested project file exists", async () => {
+			const requestedName = "Untitled 2026-05-24 13-32-10";
+			const existingFolder = join(tempDir, requestedName);
+			const existingFile = join(existingFolder, `${requestedName}.chdg`);
+			mkdirSync(existingFolder, { recursive: true });
+			writeFileSync(existingFile, "original", { encoding: "utf8", flag: "wx" });
+
+			const target = await resolveUniqueProjectTarget(tempDir, requestedName);
+
+			expect(target.name).toBe("Untitled 2026-05-24 13-32-10 2");
+			expect(target.filePath).toContain("Untitled 2026-05-24 13-32-10 2.chdg");
+			expect(readFileSync(existingFile, "utf8")).toBe("original");
 		});
 	});
 

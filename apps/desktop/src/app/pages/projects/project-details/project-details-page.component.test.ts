@@ -14,10 +14,14 @@ const source = () =>
 describe("ProjectDetailsPageComponent source", () => {
 	it("loads the returned createProject payload instead of resetting state", () => {
 		const text = source();
+		expect(text).toContain("const name = createDefaultProjectName()");
 		expect(text).toContain(
 			"const payload = await this.projectState.createProject(name)",
 		);
 		expect(text).toContain("this.generateState.loadProjectState(payload)");
+		expect(text).not.toContain(
+			"this.projectNameInput.trim() || \"Untitled\"",
+		);
 		expect(text).not.toContain(
 			"this.generateState.reset();\n\t\t\tthis.projectNameInput = name",
 		);

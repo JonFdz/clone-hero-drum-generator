@@ -5,6 +5,7 @@ import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../../services/desktop-project-state.service";
+import { createDefaultProjectName } from "../../../services/project-name-model";
 
 @Component({
 	selector: "chdg-project-details-page",
@@ -286,11 +287,12 @@ export class ProjectDetailsPageComponent {
 	}
 
 	async createProject(): Promise<void> {
-		const name = this.projectNameInput.trim() || "Untitled";
+		const name = createDefaultProjectName();
 		const payload = await this.projectState.createProject(name);
 		if (payload) {
 			this.generateState.loadProjectState(payload);
 			this.projectNameInput = payload.projectName;
+			await this.router.navigateByUrl("/projects/details?mode=new");
 		}
 	}
 

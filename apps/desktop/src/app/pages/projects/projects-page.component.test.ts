@@ -43,10 +43,12 @@ describe("ProjectsPageComponent source", () => {
 
 	it("loads the createProject payload for New Project", () => {
 		const text = source();
+		expect(text).toContain("const defaultName = createDefaultProjectName()");
 		expect(text).toContain(
 			"const payload = await this.projectState.createProject(defaultName)",
 		);
 		expect(text).toContain("this.loadProjectState(payload)");
+		expect(text).not.toContain("new Date().toISOString().slice(0, 10)");
 		expect(text).not.toContain(
 			'this.generateState.reset();\n\t\t\tawait this.router.navigateByUrl("/projects/details?mode=new")',
 		);
