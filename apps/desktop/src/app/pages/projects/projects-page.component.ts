@@ -1,102 +1,157 @@
 import { CommonModule } from "@angular/common";
-import { Component, inject } from "@angular/core";
-import { Router, RouterModule } from "@angular/router";
+import { Component, computed, inject, signal } from "@angular/core";
+import { Router } from "@angular/router";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import {
+	deriveProjectsLibraryModel,
+	type ProjectsLibraryItem,
+	type ProjectsSortMode,
+	type ProjectsSourceFilter,
+} from "../../services/projects-library-model";
+import { ProjectsEmptyStateComponent } from "./components/projects-empty-state.component";
+import { ProjectsLibraryHeaderComponent } from "./components/projects-library-header.component";
+import { ProjectsLibraryStatsComponent } from "./components/projects-library-stats.component";
+import { ProjectsProjectGridComponent } from "./components/projects-project-grid.component";
+import { ProjectsRemoveConfirmDialogComponent } from "./components/projects-remove-confirm-dialog.component";
+import { ProjectsToolbarComponent } from "./components/projects-toolbar.component";
 
 @Component({
-  selector: "chdg-projects-page",
-  standalone: true,
-  imports: [CommonModule, RouterModule],
-  template: `
-    <header class="page-header">
-      <p class="eyebrow">Projects</p>
-      <h1>Project library</h1>
-      <p>Open a recent project or browse for a .chdg file.</p>
-    </header>
+	selector: "chdg-projects-page",
+	standalone: true,
+	imports: [
+		CommonModule,
+		ProjectsEmptyStateComponent,
+		ProjectsLibraryHeaderComponent,
+		ProjectsLibraryStatsComponent,
+		ProjectsProjectGridComponent,
+		ProjectsRemoveConfirmDialogComponent,
+		ProjectsToolbarComponent,
+	],
+	template: `
+		<div class="projects-library-page">
+			<chdg-projects-library-header [projectCount]="model().totalCount" (openProject)="openProject()" />
 
-    <section class="card">
-      <h2>Recent Projects</h2>
-      @if (recentProjects.length === 0) {
-        <p>No recent projects. Create a new project to get started.</p>
-      } @else {
-        <div class="card-list">
-          @for (project of recentProjects; track project.path) {
-            <div class="mini-card project-card" (click)="openRecent(project.path)">
-              <div class="split-row">
-                <strong>{{ project.name }}</strong>
-                <button class="button ghost small" type="button" (click)="removeRecent($event, project.path)">Remove</button>
-              </div>
-              <p class="path-text">{{ project.path }}</p>
-            </div>
-          }
-        </div>
-      }
-      <div class="action-row">
-        <a class="button primary" routerLink="/new-project">New Project</a>
-        <button class="button secondary" type="button" (click)="openProject()">Open Project</button>
-      </div>
-    </section>
-  `,
-  styles: [`
-    .project-card { cursor: pointer; }
-    .project-card:hover { background: rgba(151, 83, 229, 0.12); }
-    .path-text { color: var(--color-muted); font-size: 0.85rem; word-break: break-all; }
-  `]
+			<chdg-projects-toolbar
+				[query]="query()"
+				[sourceFilter]="sourceFilter()"
+				[sortMode]="sortMode()"
+				[resultCount]="model().resultCount"
+				(queryChange)="query.set($event)"
+				(sourceFilterChange)="sourceFilter.set($event)"
+				(sortModeChange)="sortMode.set($event)"
+			/>
+
+			<div class="library-layout">
+				<main class="library-main">
+					@if (model().projects.length > 0) {
+						<chdg-projects-project-grid [projects]="model().projects" (openProject)="openRecent($event)" (requestRemove)="askRemove($event)" />
+						<p class="local-note">All projects are stored locally on this device.</p>
+					} @else {
+						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" (openProject)="openProject()" (resetFilters)="resetFilters()" />
+					}
+				</main>
+
+				<chdg-projects-library-stats [stats]="model().stats" />
+			</div>
+		</div>
+
+		<chdg-projects-remove-confirm-dialog
+			[isOpen]="!!projectPendingRemoval()"
+			[projectName]="projectPendingRemoval()?.name ?? 'Project'"
+			[projectPath]="projectPendingRemoval()?.path ?? ''"
+			(cancel)="cancelRemove()"
+			(confirm)="confirmRemove()"
+		/>
+	`,
+	styles: [
+		`
+		.projects-library-page { display: grid; gap: 0; }
+		.library-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(20rem, 23rem); }
+		.library-main { min-width: 0; }
+		.local-note { color: var(--color-muted); font-size: 0.88rem; margin: 1.35rem 0 0; }
+		@media (max-width: 1240px) { .library-layout { grid-template-columns: 1fr; } }
+	`,
+	],
 })
 export class ProjectsPageComponent {
-  private readonly projectState = inject(DesktopProjectStateService);
-  private readonly bridge = inject(DesktopBridgeService);
-  private readonly generateState = inject(DesktopGenerateStateService);
-  private readonly router = inject(Router);
+	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly bridge = inject(DesktopBridgeService);
+	private readonly generateState = inject(DesktopGenerateStateService);
+	private readonly router = inject(Router);
 
-  get recentProjects() {
-    return this.projectState.state().recentProjects;
-  }
+	readonly query = signal("");
+	readonly sourceFilter = signal<ProjectsSourceFilter>("all");
+	readonly sortMode = signal<ProjectsSortMode>("last-opened");
+	readonly projectPendingRemoval = signal<ProjectsLibraryItem | null>(null);
 
-  async openRecent(filePath: string): Promise<void> {
-    const payload = await this.projectState.openProject(filePath);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	readonly model = computed(() =>
+		deriveProjectsLibraryModel({
+			recentProjects: this.projectState.state().recentProjects,
+			query: this.query(),
+			sourceFilter: this.sourceFilter(),
+			sortMode: this.sortMode(),
+			currentProjectFilePath: this.projectState.state().projectFilePath,
+			currentOutputStatus: this.projectState.state().outputStatus,
+		}),
+	);
 
-  async removeRecent(event: Event, filePath: string): Promise<void> {
-    event.stopPropagation();
-    await this.projectState.removeRecentProject(filePath);
-  }
+	async openRecent(filePath: string): Promise<void> {
+		const payload = await this.projectState.openProject(filePath);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.router.navigateByUrl("/new-project");
+		}
+	}
 
-  async openProject(): Promise<void> {
-    const picked = await this.bridge.openProjectFile();
-    if (!picked) return;
-    const payload = await this.projectState.openProject(picked.path);
-    if (payload) {
-      this.generateState.loadProjectState({
-        sourcePath: payload.sourcePath,
-        audioPath: payload.audioPath,
-        outputDir: payload.outputDir,
-        sourceKind: payload.sourceKind,
-        selectedTracks: payload.selectedTracks,
-        metadata: payload.metadata,
-        offsetMs: payload.offsetMs,
-        lastGeneratedAt: payload.lastGeneratedAt,
-        outputFiles: payload.outputFiles,
-        mappingOverrides: payload.mappingOverrides,
-      });
-      await this.router.navigateByUrl("/new-project");
-    }
-  }
+	askRemove(filePath: string): void {
+		const project = this.model().projects.find((item) => item.path === filePath);
+		if (project) this.projectPendingRemoval.set(project);
+	}
+
+	cancelRemove(): void {
+		this.projectPendingRemoval.set(null);
+	}
+
+	async confirmRemove(): Promise<void> {
+		const project = this.projectPendingRemoval();
+		if (!project) return;
+		this.projectPendingRemoval.set(null);
+		await this.projectState.removeRecentProject(project.path);
+	}
+
+	resetFilters(): void {
+		this.query.set("");
+		this.sourceFilter.set("all");
+		this.sortMode.set("last-opened");
+	}
+
+	async openProject(): Promise<void> {
+		const picked = await this.bridge.openProjectFile();
+		if (!picked) return;
+		const payload = await this.projectState.openProject(picked.path);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.router.navigateByUrl("/new-project");
+		}
+	}
+
+	private loadProjectState(
+		payload: Awaited<ReturnType<DesktopProjectStateService["openProject"]>>,
+	): void {
+		if (!payload) return;
+		this.generateState.loadProjectState({
+			sourcePath: payload.sourcePath,
+			audioPath: payload.audioPath,
+			outputDir: payload.outputDir,
+			sourceKind: payload.sourceKind,
+			selectedTracks: payload.selectedTracks,
+			metadata: payload.metadata,
+			offsetMs: payload.offsetMs,
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			mappingOverrides: payload.mappingOverrides,
+		});
+	}
 }
