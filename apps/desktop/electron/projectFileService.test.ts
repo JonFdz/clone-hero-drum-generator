@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
@@ -17,6 +17,7 @@ import {
 	buildProjectFileFromState,
 	getDefaultProjectFilePath,
 	getDefaultOutputDir,
+	resolveUniqueProjectTarget,
 } from "./projectFileService.js";
 
 describe("projectFileService", () => {
@@ -92,6 +93,51 @@ describe("projectFileService", () => {
 			}
 		});
 
+		it("saves and opens cover image path", async () => {
+			const filePath = join(tempDir, "cover.chdg");
+			const coverPath = join(tempDir, "cover.png");
+			writeFileSync(coverPath, "image", "utf8");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: { imagePath: coverPath },
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.cover?.imagePath).toBe(coverPath);
+				expect(result.missingPaths).toEqual([]);
+			}
+		});
+
+		it("reports missing cover without blocking project open", async () => {
+			const filePath = join(tempDir, "missing-cover.chdg");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: { imagePath: join(tempDir, "missing.png") },
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.missingPaths).toContain("coverImagePath");
+			}
+		});
+
+		it("omits cover when cover image path is cleared", () => {
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: undefined,
+			});
+			expect(project.cover).toBeUndefined();
+		});
+
 		it("detects missing paths", async () => {
 			const filePath = join(tempDir, "test.chdg");
 			const project = buildProjectFileFromState("Demo", "0.1.0", {
@@ -106,6 +152,22 @@ describe("projectFileService", () => {
 			if (result.ok) {
 				expect(result.missingPaths).toContain("outputDir");
 			}
+		});
+	});
+
+	describe("resolveUniqueProjectTarget", () => {
+		it("adds a unique suffix when the requested project file exists", async () => {
+			const requestedName = "Untitled 2026-05-24 13-32-10";
+			const existingFolder = join(tempDir, requestedName);
+			const existingFile = join(existingFolder, `${requestedName}.chdg`);
+			mkdirSync(existingFolder, { recursive: true });
+			writeFileSync(existingFile, "original", { encoding: "utf8", flag: "wx" });
+
+			const target = await resolveUniqueProjectTarget(tempDir, requestedName);
+
+			expect(target.name).toBe("Untitled 2026-05-24 13-32-10 2");
+			expect(target.filePath).toContain("Untitled 2026-05-24 13-32-10 2.chdg");
+			expect(readFileSync(existingFile, "utf8")).toBe("original");
 		});
 	});
 

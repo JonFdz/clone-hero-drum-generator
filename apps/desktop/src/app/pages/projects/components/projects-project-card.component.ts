@@ -25,9 +25,9 @@ import { ProjectsSourceBadgeComponent } from "./projects-source-badge.component"
 				</div>
 			</div>
 			<div class="card-actions">
-				<button type="button" (click)="openProject.emit(project.path)"><span aria-hidden="true">▰</span> Open</button>
-				<button type="button" disabled><span aria-hidden="true">✦</span> Generate</button>
-				<button type="button" disabled><span aria-hidden="true">▶</span> Preview</button>
+				<button type="button" (click)="selectProject.emit(project.path)"><span aria-hidden="true">✓</span> Select</button>
+				<button type="button" (click)="editProject.emit(project.path)"><span aria-hidden="true">✎</span> Edit</button>
+				<button type="button" class="danger-action" (click)="requestRemove.emit(project.path)"><span aria-hidden="true">−</span> Remove</button>
 			</div>
 		</article>
 	`,
@@ -51,7 +51,7 @@ import { ProjectsSourceBadgeComponent } from "./projects-source-badge.component"
 		.card-actions { border-top: 1px solid var(--color-border); display: grid; grid-template-columns: repeat(3, 1fr); }
 		.card-actions button { background: rgba(255, 255, 255, 0.018); border: 0; border-right: 1px solid var(--color-border); border-radius: 0; color: var(--color-text); font-size: 0.88rem; min-height: 3.05rem; padding: 0.65rem 0.5rem; text-decoration: none; }
 		.card-actions button:not(:disabled):hover { background: rgba(151, 83, 229, 0.16); color: var(--color-accent-soft); }
-		.card-actions button:disabled { opacity: 0.48; }
+		.card-actions .danger-action:hover { background: rgba(255, 107, 122, 0.12); color: var(--color-danger); }
 		.card-actions :last-child { border-right: 0; }
 		@media (max-width: 620px) { .card-main { grid-template-columns: 4.5rem minmax(0, 1fr); padding: 1rem; } .card-actions { grid-template-columns: 1fr; } .card-actions button { border-right: 0; border-top: 1px solid var(--color-border); } }
 	`,
@@ -59,6 +59,7 @@ import { ProjectsSourceBadgeComponent } from "./projects-source-badge.component"
 })
 export class ProjectsProjectCardComponent {
 	@Input({ required: true }) project!: ProjectsLibraryItem;
-	@Output() openProject = new EventEmitter<string>();
+	@Output() selectProject = new EventEmitter<string>();
+	@Output() editProject = new EventEmitter<string>();
 	@Output() requestRemove = new EventEmitter<string>();
 }

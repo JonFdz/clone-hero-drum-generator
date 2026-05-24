@@ -32,6 +32,7 @@ declare global {
 			pickSourceFile: () => Promise<PickedPath | null>;
 			pickAudioFile: () => Promise<PickedPath | null>;
 			pickOutputFolder: () => Promise<PickedPath | null>;
+			pickCoverImageFile: () => Promise<PickedPath | null>;
 			inspectSource: (
 				input: InspectSourceInput,
 			) => Promise<JsonEnvelope<SourceInspectionResult>>;
@@ -66,6 +67,12 @@ declare global {
 			removeRecentProject: (
 				projectPath: string,
 			) => Promise<JsonEnvelope<void>>;
+			deleteProjectFile: (
+				projectPath: string,
+			) => Promise<JsonEnvelope<void>>;
+			getCoverImagePreviewUrl: (
+				imagePath: string,
+			) => Promise<JsonEnvelope<{ src: string }>>;
 			readSettings: () => Promise<JsonEnvelope<DesktopSettings>>;
 			writeSettings: (
 				settings: DesktopSettings,

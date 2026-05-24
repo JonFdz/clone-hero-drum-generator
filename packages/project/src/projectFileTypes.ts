@@ -17,6 +17,9 @@ export type ChdgProjectFile = {
 		audioPath?: string;
 		outputDir?: string;
 	};
+	cover?: {
+		imagePath?: string;
+	};
 	source?: {
 		sourceKind?: "midi" | "gpif";
 		inspectionSummary?: unknown;

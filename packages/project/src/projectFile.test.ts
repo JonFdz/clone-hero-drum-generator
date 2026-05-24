@@ -63,6 +63,7 @@ describe("projectFile", () => {
 					genre: "Rock",
 					charter: "CHDG",
 				},
+				cover: { imagePath: "/tmp/cover.png" },
 				generation: {
 					status: "generated",
 					offsetMs: 900,
@@ -87,6 +88,7 @@ describe("projectFile", () => {
 				expect(result.project.appVersion).toBe("0.1.0");
 				expect(result.project.paths.sourcePath).toBe("/tmp/demo.mid");
 				expect(result.project.source?.sourceKind).toBe("midi");
+				expect(result.project.cover?.imagePath).toBe("/tmp/cover.png");
 				expect(result.project.metadata.name).toBe("Song");
 				expect(result.project.generation.offsetMs).toBe(900);
 				expect(result.project.generation.outputFiles?.chart).toBe(
@@ -102,6 +104,21 @@ describe("projectFile", () => {
 			if (result.ok) {
 				expect(result.project.mappingOverrides).toBeUndefined();
 			}
+		});
+
+		it("loads old project without cover", () => {
+			const result = validateProjectFile(baseProject({}));
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.cover).toBeUndefined();
+			}
+		});
+
+		it("rejects invalid cover image path", () => {
+			const result = validateProjectFile(baseProject({
+				cover: { imagePath: 123 },
+			}));
+			expectInvalid(result, "INVALID_COVER_IMAGE_PATH");
 		});
 
 		it("rejects non-object input", () => {

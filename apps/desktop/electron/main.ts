@@ -27,6 +27,7 @@ import {
 	buildProjectFileFromState,
 	getDefaultProjectFilePath,
 	getDefaultOutputDir,
+	resolveUniqueProjectTarget,
 } from "./projectFileService.js";
 import {
 	readSettings,
@@ -35,6 +36,10 @@ import {
 	addRecentProject,
 	removeRecentProject,
 } from "./settingsService.js";
+import {
+	deleteProjectFilePath,
+	resolveDeletableProjectFilePath,
+} from "./projectFileDeletion.js";
 import {
 	readMappingProfiles,
 	writeMappingProfiles,
@@ -64,6 +69,7 @@ const preloadScript = path.join(__dirname, "preload.cjs");
 const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
+const allowedCoverImageFiles = new Set<string>();
 const allowedOutputFolders = new Set<string>();
 const allowedProjectFiles = new Set<string>();
 
@@ -80,6 +86,7 @@ type DesktopHealthStatus = {
 type PickedPath = {
 	path: string;
 	name: string;
+	fileUrl?: string;
 };
 
 type DesktopGeneratePackageInput = GeneratePackageInput & {
@@ -93,6 +100,7 @@ type ProjectStatePayload = {
 	sourcePath?: string;
 	audioPath?: string;
 	outputDir?: string;
+	cover?: { imagePath?: string };
 	sourceKind?: "midi" | "gpif";
 	selectedTracks: number[];
 	metadata: {
@@ -220,6 +228,27 @@ app.whenReady().then(() => {
 	);
 
 	ipcMain.handle(
+		"dialog:pick-cover-image-file",
+		async (): Promise<PickedPath | null> => {
+			const result = await dialog.showOpenDialog({
+				title: "Select cover image",
+				properties: ["openFile"],
+				filters: [
+					{ name: "Images", extensions: ["png", "jpg", "jpeg", "webp"] },
+				],
+			});
+
+			if (result.canceled || result.filePaths.length === 0) {
+				return null;
+			}
+
+			const picked = toPickedPath(result.filePaths[0]);
+			addAllowedPath(allowedCoverImageFiles, picked.path);
+			return { ...picked, fileUrl: pathToFileURL(picked.path).toString() };
+		},
+	);
+
+	ipcMain.handle(
 		"chdg:inspect-source",
 		async (
 			_event,
@@ -303,11 +332,19 @@ app.whenReady().then(() => {
 	// Project persistence handlers
 	ipcMain.handle(
 		"dialog:save-project-file",
-		async (_event, projectName: unknown, currentPath?: unknown): Promise<PickedPath | null> => {
-			const name = typeof projectName === "string" && projectName.trim().length > 0 ? projectName.trim() : "Untitled";
-			const defaultPath = typeof currentPath === "string" && currentPath.trim().length > 0
-				? currentPath
-				: getDefaultProjectFilePath(name);
+		async (
+			_event,
+			projectName: unknown,
+			currentPath?: unknown,
+		): Promise<PickedPath | null> => {
+			const name =
+				typeof projectName === "string" && projectName.trim().length > 0
+					? projectName.trim()
+					: "Untitled";
+			const defaultPath =
+				typeof currentPath === "string" && currentPath.trim().length > 0
+					? currentPath
+					: getDefaultProjectFilePath(name);
 			const result = await dialog.showSaveDialog({
 				title: "Save Project",
 				defaultPath,
@@ -337,12 +374,18 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:create-project",
-		async (_event, input: unknown): Promise<JsonEnvelope<ProjectStatePayload>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<ProjectStatePayload>> => {
 			return toEnvelope(async () => {
-				const name = assertCreateProjectName(input);
+				const requestedName = assertCreateProjectName(input);
 				const settings = await readSettings();
-				const projectFolder = path.join(settings.projectLocation, name);
-				const filePath = path.join(projectFolder, `${name}.chdg`);
+				const target = await resolveUniqueProjectTarget(
+					settings.projectLocation,
+					requestedName,
+				);
+				const { name, filePath } = target;
 				const outputDir = getDefaultOutputDir(filePath);
 				addAllowedProjectFile(allowedProjectFiles, filePath);
 				const project = buildProjectFileFromState(name, app.getVersion(), {
@@ -355,7 +398,11 @@ app.whenReady().then(() => {
 				if (!writeResult.ok) {
 					throw new DesktopIpcError(writeResult.code, writeResult.message);
 				}
-				await addRecentProject({ path: filePath, name, lastOpenedAt: new Date().toISOString() });
+				await addRecentProject({
+					path: filePath,
+					name,
+					lastOpenedAt: new Date().toISOString(),
+				});
 				addAllowedPath(allowedOutputFolders, outputDir);
 				return {
 					projectName: name,
@@ -372,7 +419,10 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:save-project",
-		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<SaveProjectResult>> => {
 			return toEnvelope(async () => {
 				const payload = assertProjectStatePayload(input);
 				const defaultPath = getDefaultProjectFilePath(payload.projectName);
@@ -386,12 +436,26 @@ app.whenReady().then(() => {
 					"PROJECT_SAVE_PATH_NOT_SELECTED",
 					"Project save path was not selected or created by a trusted desktop flow.",
 				);
-				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
+				const coverImagePath = payload.cover?.imagePath;
+				if (coverImagePath) {
+					payload.cover = {
+						imagePath: assertAllowedCoverImagePath(coverImagePath),
+					};
+				}
+				const project = buildProjectFileFromState(
+					payload.projectName,
+					app.getVersion(),
+					payload,
+				);
 				const writeResult = await writeProjectFile(filePath, project);
 				if (!writeResult.ok) {
 					throw new DesktopIpcError(writeResult.code, writeResult.message);
 				}
-				await addRecentProject({ path: filePath, name: payload.projectName, lastOpenedAt: new Date().toISOString() });
+				await addRecentProject({
+					path: filePath,
+					name: payload.projectName,
+					lastOpenedAt: new Date().toISOString(),
+				});
 				return { filePath, project };
 			});
 		},
@@ -399,7 +463,10 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:save-project-as",
-		async (_event, input: unknown): Promise<JsonEnvelope<SaveProjectResult>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<SaveProjectResult>> => {
 			return toEnvelope(async () => {
 				const payload = assertProjectStatePayload(input);
 				const value = assertRecord(input, "Save As payload is required.");
@@ -413,12 +480,26 @@ app.whenReady().then(() => {
 					"PROJECT_SAVE_PATH_NOT_SELECTED",
 					"Select the project file path with the desktop save dialog before writing it.",
 				);
-				const project = buildProjectFileFromState(payload.projectName, app.getVersion(), payload);
+				const coverImagePath = payload.cover?.imagePath;
+				if (coverImagePath) {
+					payload.cover = {
+						imagePath: assertAllowedCoverImagePath(coverImagePath),
+					};
+				}
+				const project = buildProjectFileFromState(
+					payload.projectName,
+					app.getVersion(),
+					payload,
+				);
 				const writeResult = await writeProjectFile(filePath, project);
 				if (!writeResult.ok) {
 					throw new DesktopIpcError(writeResult.code, writeResult.message);
 				}
-				await addRecentProject({ path: filePath, name: payload.projectName, lastOpenedAt: new Date().toISOString() });
+				await addRecentProject({
+					path: filePath,
+					name: payload.projectName,
+					lastOpenedAt: new Date().toISOString(),
+				});
 				return { filePath, project };
 			});
 		},
@@ -426,9 +507,17 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:open-project",
-		async (_event, filePath: unknown): Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>> => {
+		async (
+			_event,
+			filePath: unknown,
+		): Promise<
+			JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>
+		> => {
 			return toEnvelope(async () => {
-				const candidatePath = assertNonEmptyString(filePath, "Project file path is required.");
+				const candidatePath = assertNonEmptyString(
+					filePath,
+					"Project file path is required.",
+				);
 				const targetPath = await resolveAllowedOpenProjectFile(
 					allowedProjectFiles,
 					candidatePath,
@@ -450,13 +539,21 @@ app.whenReady().then(() => {
 				if (project.paths.outputDir) {
 					addAllowedPath(allowedOutputFolders, project.paths.outputDir);
 				}
-				await addRecentProject({ path: targetPath, name: project.project.name, lastOpenedAt: new Date().toISOString() });
+				if (project.cover?.imagePath) {
+					addAllowedPath(allowedCoverImageFiles, project.cover.imagePath);
+				}
+				await addRecentProject({
+					path: targetPath,
+					name: project.project.name,
+					lastOpenedAt: new Date().toISOString(),
+				});
 				return {
 					projectName: project.project.name,
 					projectFilePath: targetPath,
 					sourcePath: project.paths.sourcePath,
 					audioPath: project.paths.audioPath,
 					outputDir: project.paths.outputDir,
+					cover: project.cover,
 					sourceKind: project.source?.sourceKind,
 					selectedTracks: project.selection.selectedTracks,
 					metadata: project.metadata,
@@ -471,48 +568,116 @@ app.whenReady().then(() => {
 		},
 	);
 
-	ipcMain.handle("chdg:read-recent-projects", async (): Promise<JsonEnvelope<RecentProject[]>> => {
-		return toEnvelope(() => readRecentProjects());
-	});
+	ipcMain.handle(
+		"chdg:read-recent-projects",
+		async (): Promise<JsonEnvelope<RecentProject[]>> => {
+			return toEnvelope(() => readRecentProjects());
+		},
+	);
 
 	ipcMain.handle(
 		"chdg:remove-recent-project",
 		async (_event, projectPath: unknown): Promise<JsonEnvelope<void>> => {
 			return toEnvelope(async () => {
-				const target = assertNonEmptyString(projectPath, "Project path is required.");
+				const target = assertNonEmptyString(
+					projectPath,
+					"Project path is required.",
+				);
 				await removeRecentProject(target);
 			});
 		},
 	);
 
-	ipcMain.handle("chdg:read-settings", async (): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
-		return toEnvelope(() => readSettings());
-	});
-	ipcMain.handle("chdg:read-mapping-profiles", async (): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
-		return toEnvelope(() => readMappingProfiles());
-	});
-	ipcMain.handle("chdg:save-mapping-profile", async (_event, input: unknown): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
-		return toEnvelope(async () => {
-			const profile = assertMappingProfile(input);
-			const current = await readMappingProfiles();
-			const next = current.filter((item) => item.id !== profile.id);
-			next.push(profile);
-			await writeMappingProfiles(next);
-			return next.sort((a, b) => a.name.localeCompare(b.name));
-		});
-	});
-	ipcMain.handle("chdg:delete-mapping-profile", async (_event, profileId: unknown): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
-		return toEnvelope(async () => {
-			const id = assertNonEmptyString(profileId, "Profile id is required.");
-			const next = (await readMappingProfiles()).filter((item) => item.id !== id);
-			await writeMappingProfiles(next);
-			return next.sort((a, b) => a.name.localeCompare(b.name));
-		});
-	});
+	ipcMain.handle(
+		"chdg:delete-project-file",
+		async (_event, projectPath: unknown): Promise<JsonEnvelope<void>> => {
+			return toEnvelope(async () => {
+				const target = assertNonEmptyString(
+					projectPath,
+					"Project path is required.",
+				);
+				const filePath = await resolveDeletableProjectFilePath(
+					target,
+					allowedProjectFiles,
+					readRecentProjects,
+				);
+				await deleteProjectFilePath(filePath);
+				await removeRecentProject(filePath);
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:read-settings",
+		async (): Promise<
+			JsonEnvelope<import("@chdg/project").DesktopSettings>
+		> => {
+			return toEnvelope(() => readSettings());
+		},
+	);
+	ipcMain.handle(
+		"chdg:read-mapping-profiles",
+		async (): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+			return toEnvelope(() => readMappingProfiles());
+		},
+	);
+	ipcMain.handle(
+		"chdg:save-mapping-profile",
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+			return toEnvelope(async () => {
+				const profile = assertMappingProfile(input);
+				const current = await readMappingProfiles();
+				const next = current.filter((item) => item.id !== profile.id);
+				next.push(profile);
+				await writeMappingProfiles(next);
+				return next.sort((a, b) => a.name.localeCompare(b.name));
+			});
+		},
+	);
+	ipcMain.handle(
+		"chdg:delete-mapping-profile",
+		async (
+			_event,
+			profileId: unknown,
+		): Promise<JsonEnvelope<MappingOverrideProfile[]>> => {
+			return toEnvelope(async () => {
+				const id = assertNonEmptyString(profileId, "Profile id is required.");
+				const next = (await readMappingProfiles()).filter(
+					(item) => item.id !== id,
+				);
+				await writeMappingProfiles(next);
+				return next.sort((a, b) => a.name.localeCompare(b.name));
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:get-cover-image-preview-url",
+		async (
+			_event,
+			imagePath: unknown,
+		): Promise<JsonEnvelope<{ src: string }>> => {
+			return toEnvelope(async () => {
+				const target = assertNonEmptyString(
+					imagePath,
+					"Cover image path is required.",
+				);
+				const safePath = assertAllowedCoverImagePath(target);
+				await access(safePath);
+				return { src: pathToFileURL(safePath).toString() };
+			});
+		},
+	);
 
 	ipcMain.handle(
 		"chdg:write-settings",
-		async (_event, settings: unknown): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
+		async (
+			_event,
+			settings: unknown,
+		): Promise<JsonEnvelope<import("@chdg/project").DesktopSettings>> => {
 			return toEnvelope(async () => {
 				const validated = assertSettingsPayload(settings);
 				await writeSettings(validated);
@@ -523,7 +688,12 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:test-ffmpeg",
-		async (_event, input: unknown): Promise<JsonEnvelope<import("./ffmpegDiagnostic.js").FfmpegDiagnostic>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<
+			JsonEnvelope<import("./ffmpegDiagnostic.js").FfmpegDiagnostic>
+		> => {
 			return toEnvelope(async () => {
 				const pathValue = typeof input === "string" ? input : undefined;
 				return testFfmpeg(pathValue);
@@ -533,13 +703,27 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:get-audio-preview-source",
-		async (_event, input: unknown): Promise<JsonEnvelope<{ src: string; sourceKind: "generated" | "selected-audio" }>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<
+			JsonEnvelope<{ src: string; sourceKind: "generated" | "selected-audio" }>
+		> => {
 			return toEnvelope(async () => {
 				const value = assertRecord(input, "Audio preview input is required.");
 				const candidate = pickAudioPreviewCandidate({
-					outputDir: optionalString(value["outputDir"], "outputDir must be text."),
-					generatedSongOggPath: optionalString(value["generatedSongOggPath"], "generatedSongOggPath must be text."),
-					selectedAudioPath: optionalString(value["selectedAudioPath"], "selectedAudioPath must be text."),
+					outputDir: optionalString(
+						value["outputDir"],
+						"outputDir must be text.",
+					),
+					generatedSongOggPath: optionalString(
+						value["generatedSongOggPath"],
+						"generatedSongOggPath must be text.",
+					),
+					selectedAudioPath: optionalString(
+						value["selectedAudioPath"],
+						"selectedAudioPath must be text.",
+					),
 				});
 
 				if (candidate.generatedPath) {
@@ -549,7 +733,10 @@ app.whenReady().then(() => {
 						assertAllowedOutputFolder(outputDir);
 						try {
 							await access(generatedPath);
-							return { src: pathToFileURL(generatedPath).toString(), sourceKind: "generated" as const };
+							return {
+								src: pathToFileURL(generatedPath).toString(),
+								sourceKind: "generated" as const,
+							};
 						} catch {
 							// try fallback below
 						}
@@ -559,7 +746,10 @@ app.whenReady().then(() => {
 				if (candidate.selectedAudioPath) {
 					const selected = assertAllowedAudioPath(candidate.selectedAudioPath);
 					await access(selected);
-					return { src: pathToFileURL(selected).toString(), sourceKind: "selected-audio" as const };
+					return {
+						src: pathToFileURL(selected).toString(),
+						sourceKind: "selected-audio" as const,
+					};
 				}
 
 				throw new DesktopIpcError(
@@ -572,19 +762,40 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:get-chart-preview-data",
-		async (_event, input: unknown): Promise<JsonEnvelope<import("./previewData.js").ChartPreviewData>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<import("./previewData.js").ChartPreviewData>> => {
 			return toEnvelope(async () => {
 				const value = assertRecord(input, "Chart preview input is required.");
-				const outputDir = optionalString(value["outputDir"], "outputDir must be text.");
-				const chartPathInput = optionalString(value["chartPath"], "chartPath must be text.");
+				const outputDir = optionalString(
+					value["outputDir"],
+					"outputDir must be text.",
+				);
+				const chartPathInput = optionalString(
+					value["chartPath"],
+					"chartPath must be text.",
+				);
 				let resolved: ReturnType<typeof resolveChartPreviewPath>;
 				try {
-					resolved = resolveChartPreviewPath({ outputDir, chartPath: chartPathInput });
+					resolved = resolveChartPreviewPath({
+						outputDir,
+						chartPath: chartPathInput,
+					});
 				} catch (error) {
-					if (error instanceof Error && error.message === "PREVIEW_CHART_NOT_AVAILABLE") {
-						throw new DesktopIpcError("PREVIEW_CHART_NOT_AVAILABLE", "Chart path is unavailable.");
+					if (
+						error instanceof Error &&
+						error.message === "PREVIEW_CHART_NOT_AVAILABLE"
+					) {
+						throw new DesktopIpcError(
+							"PREVIEW_CHART_NOT_AVAILABLE",
+							"Chart path is unavailable.",
+						);
 					}
-					throw new DesktopIpcError("PREVIEW_CHART_NOT_ALLOWED", "Only notes.chart can be used for chart preview.");
+					throw new DesktopIpcError(
+						"PREVIEW_CHART_NOT_ALLOWED",
+						"Only notes.chart can be used for chart preview.",
+					);
 				}
 				assertAllowedOutputFolder(resolved.chartDir);
 				await access(resolved.chartPath);
@@ -595,27 +806,48 @@ app.whenReady().then(() => {
 
 	ipcMain.handle(
 		"chdg:apply-chart-offset",
-		async (_event, input: unknown): Promise<JsonEnvelope<{ chartPath: string; offsetSeconds: number }>> => {
+		async (
+			_event,
+			input: unknown,
+		): Promise<JsonEnvelope<{ chartPath: string; offsetSeconds: number }>> => {
 			return toEnvelope(async () => {
 				const value = assertRecord(input, "Chart offset input is required.");
-				const outputDir = assertNonEmptyString(value["outputDir"], "outputDir is required.");
-				const chartPathInput = optionalString(value["chartPath"], "chartPath must be text.");
-				const offsetMs = optionalNumber(value["offsetMs"], "offsetMs must be numeric.");
+				const outputDir = assertNonEmptyString(
+					value["outputDir"],
+					"outputDir is required.",
+				);
+				const chartPathInput = optionalString(
+					value["chartPath"],
+					"chartPath must be text.",
+				);
+				const offsetMs = optionalNumber(
+					value["offsetMs"],
+					"offsetMs must be numeric.",
+				);
 				if (offsetMs === undefined) {
 					throw new DesktopIpcError("INVALID_INPUT", "offsetMs is required.");
 				}
 
 				let resolved: ReturnType<typeof resolveChartPreviewPath>;
 				try {
-					resolved = resolveChartPreviewPath({ outputDir, chartPath: chartPathInput });
+					resolved = resolveChartPreviewPath({
+						outputDir,
+						chartPath: chartPathInput,
+					});
 				} catch {
-					throw new DesktopIpcError("PREVIEW_CHART_NOT_ALLOWED", "Only notes.chart can be updated for chart offset.");
+					throw new DesktopIpcError(
+						"PREVIEW_CHART_NOT_ALLOWED",
+						"Only notes.chart can be updated for chart offset.",
+					);
 				}
 
 				assertAllowedOutputFolder(outputDir);
 				assertAllowedOutputFolder(resolved.chartDir);
 				await access(resolved.chartPath);
-				return applyChartOffsetFile({ chartPath: resolved.chartPath, offsetMs });
+				return applyChartOffsetFile({
+					chartPath: resolved.chartPath,
+					offsetMs,
+				});
 			});
 		},
 	);
@@ -654,6 +886,15 @@ function assertAllowedAudioPath(audioSource: string): string {
 		audioSource,
 		"AUDIO_FILE_NOT_SELECTED",
 		"Select the audio file with the desktop file picker before generating.",
+	);
+}
+
+function assertAllowedCoverImagePath(coverImagePath: string): string {
+	return assertAllowedPath(
+		allowedCoverImageFiles,
+		coverImagePath,
+		"COVER_IMAGE_NOT_SELECTED",
+		"Select the cover image with the desktop file picker before saving it.",
 	);
 }
 
@@ -849,33 +1090,72 @@ function optionalMappingOverrides(
 function assertProjectStatePayload(input: unknown): ProjectStatePayload {
 	const value = assertRecord(input, "Project state payload is required.");
 	return {
-		projectName: assertNonEmptyString(value["projectName"], "projectName is required."),
-		projectFilePath: optionalString(value["projectFilePath"], "projectFilePath must be a string."),
-		sourcePath: optionalString(value["sourcePath"], "sourcePath must be a string."),
-		audioPath: optionalString(value["audioPath"], "audioPath must be a string."),
-		outputDir: optionalString(value["outputDir"], "outputDir must be a string."),
+		projectName: assertNonEmptyString(
+			value["projectName"],
+			"projectName is required.",
+		),
+		projectFilePath: optionalString(
+			value["projectFilePath"],
+			"projectFilePath must be a string.",
+		),
+		sourcePath: optionalString(
+			value["sourcePath"],
+			"sourcePath must be a string.",
+		),
+		audioPath: optionalString(
+			value["audioPath"],
+			"audioPath must be a string.",
+		),
+		outputDir: optionalString(
+			value["outputDir"],
+			"outputDir must be a string.",
+		),
+		cover: optionalCover(value["cover"]),
 		sourceKind: optionalSourceKind(value["sourceKind"]),
 		selectedTracks: optionalSelectedTracks(value["selectedTracks"]),
 		metadata: assertMetadata(value["metadata"]),
 		offsetMs: optionalNumber(value["offsetMs"], "offsetMs must be numeric."),
 		generationStatus: assertGenerationStatus(value["generationStatus"]),
-		lastGeneratedAt: optionalString(value["lastGeneratedAt"], "lastGeneratedAt must be a string."),
+		lastGeneratedAt: optionalString(
+			value["lastGeneratedAt"],
+			"lastGeneratedAt must be a string.",
+		),
 		outputFiles: optionalOutputFiles(value["outputFiles"]),
 		mappingOverrides: validateMappingOverrides(value["mappingOverrides"]),
 	};
 }
 
-function assertSettingsPayload(input: unknown): import("@chdg/project").DesktopSettings {
+function assertSettingsPayload(
+	input: unknown,
+): import("@chdg/project").DesktopSettings {
 	const value = assertRecord(input, "Settings payload is required.");
 	return {
 		schemaVersion: 1,
 		theme: "dark",
-		accentColor: optionalString(value["accentColor"], "accentColor must be a string."),
-		projectLocation: assertNonEmptyString(value["projectLocation"], "projectLocation is required."),
-		defaultOutputFolder: optionalString(value["defaultOutputFolder"], "defaultOutputFolder must be a string."),
-		defaultCharter: optionalString(value["defaultCharter"], "defaultCharter must be a string."),
-		defaultOffsetMs: optionalNumber(value["defaultOffsetMs"], "defaultOffsetMs must be numeric."),
-		ffmpegPath: optionalString(value["ffmpegPath"], "ffmpegPath must be a string."),
+		accentColor: optionalString(
+			value["accentColor"],
+			"accentColor must be a string.",
+		),
+		projectLocation: assertNonEmptyString(
+			value["projectLocation"],
+			"projectLocation is required.",
+		),
+		defaultOutputFolder: optionalString(
+			value["defaultOutputFolder"],
+			"defaultOutputFolder must be a string.",
+		),
+		defaultCharter: optionalString(
+			value["defaultCharter"],
+			"defaultCharter must be a string.",
+		),
+		defaultOffsetMs: optionalNumber(
+			value["defaultOffsetMs"],
+			"defaultOffsetMs must be numeric.",
+		),
+		ffmpegPath: optionalString(
+			value["ffmpegPath"],
+			"ffmpegPath must be a string.",
+		),
 	};
 }
 
@@ -883,20 +1163,47 @@ function assertMappingProfile(input: unknown): MappingOverrideProfile {
 	const value = assertRecord(input, "Mapping profile payload is required.");
 	const id = assertNonEmptyString(value["id"], "Profile id is required.");
 	const name = assertNonEmptyString(value["name"], "Profile name is required.");
-	const createdAt = assertNonEmptyString(value["createdAt"], "Profile createdAt is required.");
-	const updatedAt = assertNonEmptyString(value["updatedAt"], "Profile updatedAt is required.");
+	const createdAt = assertNonEmptyString(
+		value["createdAt"],
+		"Profile createdAt is required.",
+	);
+	const updatedAt = assertNonEmptyString(
+		value["updatedAt"],
+		"Profile updatedAt is required.",
+	);
 	const sourceKind = value["sourceKind"];
-	if (sourceKind !== undefined && sourceKind !== "midi" && sourceKind !== "gpif") {
-		throw new DesktopIpcError("INVALID_PROFILE_SOURCE_KIND", "Profile sourceKind must be midi or gpif.");
+	if (
+		sourceKind !== undefined &&
+		sourceKind !== "midi" &&
+		sourceKind !== "gpif"
+	) {
+		throw new DesktopIpcError(
+			"INVALID_PROFILE_SOURCE_KIND",
+			"Profile sourceKind must be midi or gpif.",
+		);
 	}
 	return {
 		id,
 		name,
-		description: typeof value["description"] === "string" ? value["description"] : undefined,
+		description:
+			typeof value["description"] === "string"
+				? value["description"]
+				: undefined,
 		sourceKind,
 		overrides: validateMappingOverrides(value["overrides"]),
 		createdAt,
 		updatedAt,
+	};
+}
+
+function optionalCover(input: unknown): { imagePath?: string } | undefined {
+	if (input === undefined || input === null) return undefined;
+	const value = assertRecord(input, "cover must be an object.");
+	return {
+		imagePath: optionalString(
+			value["imagePath"],
+			"cover.imagePath must be a string.",
+		),
 	};
 }
 
@@ -920,12 +1227,20 @@ function assertMetadata(input: unknown): ProjectStatePayload["metadata"] {
 }
 
 function assertGenerationStatus(input: unknown): ChdgOutputStatus {
-	const valid: ChdgOutputStatus[] = ["not-generated", "generated", "needs-regenerate", "failed"];
-	if (valid.includes(input as ChdgOutputStatus)) return input as ChdgOutputStatus;
+	const valid: ChdgOutputStatus[] = [
+		"not-generated",
+		"generated",
+		"needs-regenerate",
+		"failed",
+	];
+	if (valid.includes(input as ChdgOutputStatus))
+		return input as ChdgOutputStatus;
 	return "not-generated";
 }
 
-function optionalOutputFiles(input: unknown): { chart?: string; songIni?: string; songOgg?: string } | undefined {
+function optionalOutputFiles(
+	input: unknown,
+): { chart?: string; songIni?: string; songOgg?: string } | undefined {
 	if (typeof input !== "object" || input === null) return undefined;
 	const value = input as Record<string, unknown>;
 	return {

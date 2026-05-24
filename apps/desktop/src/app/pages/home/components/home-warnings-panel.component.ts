@@ -19,7 +19,7 @@ import type { HomeDashboardModel } from "../../../services/home-dashboard-model"
 							</li>
 						}
 					</ul>
-					<p>Use Continue Setup to choose the missing source, audio, or output folder again.</p>
+					<p>Use Continue Setup to choose the missing source, audio, output folder, or optional cover again.</p>
 				}
 				@if (model.outputStatus.tone === "danger") {
 					<h2>Generation failed</h2>
@@ -50,6 +50,8 @@ export class HomeWarningsPanelComponent {
 				return "Audio file";
 			case "outputDir":
 				return "Output folder";
+			case "coverImagePath":
+				return "Cover image";
 		}
 	}
 }

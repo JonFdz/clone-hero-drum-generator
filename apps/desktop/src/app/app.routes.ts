@@ -3,7 +3,7 @@ import { GeneratePageComponent } from "./pages/generate/generate-page.component"
 import { HomePageComponent } from "./pages/home/home-page.component";
 import { InspectSourcePageComponent } from "./pages/inspect-source/inspect-source-page.component";
 import { MappingPageComponent } from "./pages/mapping/mapping-page.component";
-import { NewProjectPageComponent } from "./pages/new-project/new-project-page.component";
+import { ProjectDetailsPageComponent } from "./pages/projects/project-details/project-details-page.component";
 import { PreviewPageComponent } from "./pages/preview/preview-page.component";
 import { ProjectsPageComponent } from "./pages/projects/projects-page.component";
 import { SettingsPageComponent } from "./pages/settings/settings-page.component";
@@ -14,7 +14,8 @@ export const routes: Routes = [
   { path: "", pathMatch: "full", redirectTo: "home" },
   { path: "home", component: HomePageComponent },
   { path: "projects", component: ProjectsPageComponent },
-  { path: "new-project", component: NewProjectPageComponent },
+  { path: "projects/details", component: ProjectDetailsPageComponent },
+  { path: "new-project", redirectTo: "projects/details" },
   { path: "inspect-source", component: InspectSourcePageComponent },
   { path: "track-selection", component: TrackSelectionPageComponent },
   { path: "generate", component: GeneratePageComponent },

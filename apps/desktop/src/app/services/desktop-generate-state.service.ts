@@ -42,6 +42,7 @@ export type DesktopGenerateState = {
 	sourceKind?: SourceKind;
 	audioPath?: string;
 	outputDir?: string;
+	cover?: { imagePath?: string };
 	metadata: DesktopMetadata;
 	offsetMs?: number;
 	inspection?: SourceInspectionResult;
@@ -122,6 +123,11 @@ export class DesktopGenerateStateService {
 	setOutputDir(outputDir: string): void {
 		this.patch({ outputDir });
 		this.projectState.markNeedsRegenerate();
+	}
+
+	setCoverImagePath(imagePath: string | undefined): void {
+		this.patch({ cover: imagePath ? { imagePath } : undefined });
+		this.projectState.markDirty();
 	}
 
 	setMetadata(metadata: DesktopMetadata): void {
@@ -321,6 +327,7 @@ export class DesktopGenerateStateService {
 		sourcePath?: string;
 		audioPath?: string;
 		outputDir?: string;
+		cover?: { imagePath?: string };
 		sourceKind?: SourceKind;
 		selectedTracks: number[];
 		metadata: DesktopMetadata;
@@ -340,6 +347,7 @@ export class DesktopGenerateStateService {
 			sourcePath: payload.sourcePath,
 			audioPath: payload.audioPath,
 			outputDir: payload.outputDir,
+			cover: payload.cover,
 			sourceKind,
 			selectedTracks: payload.selectedTracks,
 			metadata: payload.metadata,
@@ -366,6 +374,7 @@ export class DesktopGenerateStateService {
 			sourcePath: state.sourcePath,
 			audioPath: state.audioPath,
 			outputDir: state.outputDir,
+			cover: state.cover,
 			sourceKind: state.sourceKind,
 			selectedTracks: state.selectedTracks,
 			metadata: state.metadata,
