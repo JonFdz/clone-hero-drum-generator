@@ -31,7 +31,6 @@ export class AppComponent implements OnInit {
 	readonly navItems: NavItem[] = [
 		{ label: "Home", path: "/home", icon: "⌂" },
 		{ label: "Projects", path: "/projects", icon: "□" },
-		{ label: "New Project", path: "/new-project", icon: "+" },
 		{ label: "Inspect Source", path: "/inspect-source", icon: "⌕" },
 		{ label: "Track Selection", path: "/track-selection", icon: "♬" },
 		{ label: "Generate", path: "/generate", icon: "✦" },
@@ -90,6 +89,7 @@ export class AppComponent implements OnInit {
 				sourcePath: payload.sourcePath,
 				audioPath: payload.audioPath,
 				outputDir: payload.outputDir,
+				cover: payload.cover,
 				sourceKind: payload.sourceKind,
 				selectedTracks: payload.selectedTracks,
 				metadata: payload.metadata,
@@ -98,7 +98,7 @@ export class AppComponent implements OnInit {
 				outputFiles: payload.outputFiles,
 				mappingOverrides: payload.mappingOverrides,
 			});
-			await this.router.navigateByUrl("/new-project");
+			await this.router.navigateByUrl("/projects/details");
 		}
 	}
 }

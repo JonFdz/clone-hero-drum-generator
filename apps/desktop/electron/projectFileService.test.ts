@@ -92,6 +92,51 @@ describe("projectFileService", () => {
 			}
 		});
 
+		it("saves and opens cover image path", async () => {
+			const filePath = join(tempDir, "cover.chdg");
+			const coverPath = join(tempDir, "cover.png");
+			writeFileSync(coverPath, "image", "utf8");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: { imagePath: coverPath },
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.cover?.imagePath).toBe(coverPath);
+				expect(result.missingPaths).toEqual([]);
+			}
+		});
+
+		it("reports missing cover without blocking project open", async () => {
+			const filePath = join(tempDir, "missing-cover.chdg");
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: { imagePath: join(tempDir, "missing.png") },
+			});
+			await writeProjectFile(filePath, project);
+			const result = await readProjectFile(filePath);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.missingPaths).toContain("coverImagePath");
+			}
+		});
+
+		it("omits cover when cover image path is cleared", () => {
+			const project = buildProjectFileFromState("Demo", "0.1.0", {
+				selectedTracks: [],
+				metadata: {},
+				generationStatus: "not-generated",
+				cover: undefined,
+			});
+			expect(project.cover).toBeUndefined();
+		});
+
 		it("detects missing paths", async () => {
 			const filePath = join(tempDir, "test.chdg");
 			const project = buildProjectFileFromState("Demo", "0.1.0", {

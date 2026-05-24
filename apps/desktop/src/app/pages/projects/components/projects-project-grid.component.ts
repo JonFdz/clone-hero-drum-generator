@@ -9,7 +9,7 @@ import { ProjectsProjectCardComponent } from "./projects-project-card.component"
 	template: `
 		<section class="project-grid" aria-label="Project cards">
 			@for (project of projects; track project.path) {
-				<chdg-projects-project-card [project]="project" (openProject)="openProject.emit($event)" (requestRemove)="requestRemove.emit($event)" />
+				<chdg-projects-project-card [project]="project" (selectProject)="selectProject.emit($event)" (editProject)="editProject.emit($event)" (requestRemove)="requestRemove.emit($event)" />
 			}
 		</section>
 	`,
@@ -22,6 +22,7 @@ import { ProjectsProjectCardComponent } from "./projects-project-card.component"
 })
 export class ProjectsProjectGridComponent {
 	@Input() projects: ProjectsLibraryItem[] = [];
-	@Output() openProject = new EventEmitter<string>();
+	@Output() selectProject = new EventEmitter<string>();
+	@Output() editProject = new EventEmitter<string>();
 	@Output() requestRemove = new EventEmitter<string>();
 }

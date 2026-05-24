@@ -31,7 +31,7 @@ import { ProjectsToolbarComponent } from "./components/projects-toolbar.componen
 	],
 	template: `
 		<div class="projects-library-page">
-			<chdg-projects-library-header [projectCount]="model().totalCount" (openProject)="openProject()" />
+			<chdg-projects-library-header [projectCount]="model().totalCount" (openProject)="openProject()" (newProject)="newProject()" />
 
 			<chdg-projects-toolbar
 				[query]="query()"
@@ -46,10 +46,10 @@ import { ProjectsToolbarComponent } from "./components/projects-toolbar.componen
 			<div class="library-layout">
 				<main class="library-main">
 					@if (model().projects.length > 0) {
-						<chdg-projects-project-grid [projects]="model().projects" (openProject)="openRecent($event)" (requestRemove)="askRemove($event)" />
+						<chdg-projects-project-grid [projects]="model().projects" (selectProject)="selectRecent($event)" (editProject)="editRecent($event)" (requestRemove)="askRemove($event)" />
 						<p class="local-note">All projects are stored locally on this device.</p>
 					} @else {
-						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" (openProject)="openProject()" (resetFilters)="resetFilters()" />
+						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" (openProject)="openProject()" (newProject)="newProject()" (resetFilters)="resetFilters()" />
 					}
 				</main>
 
@@ -62,7 +62,8 @@ import { ProjectsToolbarComponent } from "./components/projects-toolbar.componen
 			[projectName]="projectPendingRemoval()?.name ?? 'Project'"
 			[projectPath]="projectPendingRemoval()?.path ?? ''"
 			(cancel)="cancelRemove()"
-			(confirm)="confirmRemove()"
+			(removeFromRecents)="confirmRemoveFromRecents()"
+			(removeAndDelete)="confirmRemoveAndDelete()"
 		/>
 	`,
 	styles: [
@@ -97,11 +98,18 @@ export class ProjectsPageComponent {
 		}),
 	);
 
-	async openRecent(filePath: string): Promise<void> {
+	async selectRecent(filePath: string): Promise<void> {
 		const payload = await this.projectState.openProject(filePath);
 		if (payload) {
 			this.loadProjectState(payload);
-			await this.router.navigateByUrl("/new-project");
+		}
+	}
+
+	async editRecent(filePath: string): Promise<void> {
+		const payload = await this.projectState.openProject(filePath);
+		if (payload) {
+			this.loadProjectState(payload);
+			await this.router.navigateByUrl("/projects/details");
 		}
 	}
 
@@ -114,11 +122,22 @@ export class ProjectsPageComponent {
 		this.projectPendingRemoval.set(null);
 	}
 
-	async confirmRemove(): Promise<void> {
+	async confirmRemoveFromRecents(): Promise<void> {
 		const project = this.projectPendingRemoval();
 		if (!project) return;
 		this.projectPendingRemoval.set(null);
 		await this.projectState.removeRecentProject(project.path);
+	}
+
+	async confirmRemoveAndDelete(): Promise<void> {
+		const project = this.projectPendingRemoval();
+		if (!project) return;
+		this.projectPendingRemoval.set(null);
+		const deletedCurrent = this.projectState.state().projectFilePath === project.path;
+		const ok = await this.projectState.deleteProjectFile(project.path);
+		if (ok && deletedCurrent) {
+			this.generateState.reset();
+		}
 	}
 
 	resetFilters(): void {
@@ -133,7 +152,16 @@ export class ProjectsPageComponent {
 		const payload = await this.projectState.openProject(picked.path);
 		if (payload) {
 			this.loadProjectState(payload);
-			await this.router.navigateByUrl("/new-project");
+			await this.router.navigateByUrl("/projects/details");
+		}
+	}
+
+	async newProject(): Promise<void> {
+		const defaultName = `Untitled ${new Date().toISOString().slice(0, 10)}`;
+		const ok = await this.projectState.createProject(defaultName);
+		if (ok) {
+			this.generateState.reset();
+			await this.router.navigateByUrl("/projects/details?mode=new");
 		}
 	}
 
@@ -145,6 +173,7 @@ export class ProjectsPageComponent {
 			sourcePath: payload.sourcePath,
 			audioPath: payload.audioPath,
 			outputDir: payload.outputDir,
+			cover: payload.cover,
 			sourceKind: payload.sourceKind,
 			selectedTracks: payload.selectedTracks,
 			metadata: payload.metadata,

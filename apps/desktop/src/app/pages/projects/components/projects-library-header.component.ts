@@ -14,7 +14,7 @@ import { RouterModule } from "@angular/router";
 			<div class="header-actions">
 				<span class="project-count" aria-label="Total recent projects">{{ projectCount }} projects</span>
 				<button class="button ghost" type="button" (click)="openProject.emit()">▰ Open Project</button>
-				<a class="button primary" routerLink="/new-project">＋ New Project</a>
+				<button class="button primary" type="button" (click)="newProject.emit()">＋ New Project</button>
 			</div>
 		</header>
 	`,
@@ -32,4 +32,5 @@ import { RouterModule } from "@angular/router";
 export class ProjectsLibraryHeaderComponent {
 	@Input() projectCount = 0;
 	@Output() openProject = new EventEmitter<void>();
+	@Output() newProject = new EventEmitter<void>();
 }

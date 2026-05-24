@@ -14,7 +14,7 @@ import { RouterModule } from "@angular/router";
 				@if (hasProjects) {
 					<button class="button ghost" type="button" (click)="resetFilters.emit()">Clear Search / Reset Filters</button>
 				} @else {
-					<a class="button primary" routerLink="/new-project">New Project</a>
+					<button class="button primary" type="button" (click)="newProject.emit()">New Project</button>
 					<button class="button secondary" type="button" (click)="openProject.emit()">Open Project</button>
 				}
 			</div>
@@ -33,5 +33,6 @@ import { RouterModule } from "@angular/router";
 export class ProjectsEmptyStateComponent {
 	@Input() hasProjects = false;
 	@Output() openProject = new EventEmitter<void>();
+	@Output() newProject = new EventEmitter<void>();
 	@Output() resetFilters = new EventEmitter<void>();
 }

@@ -73,6 +73,7 @@ export type ProjectStatePayload = {
 	sourcePath?: string;
 	audioPath?: string;
 	outputDir?: string;
+	cover?: { imagePath?: string };
 	sourceKind?: "midi" | "gpif";
 	selectedTracks: number[];
 	metadata: {
@@ -143,6 +144,10 @@ export class DesktopBridgeService {
 		return this.requireBridge().pickOutputFolder();
 	}
 
+	async pickCoverImageFile(): Promise<PickedPath | null> {
+		return this.requireBridge().pickCoverImageFile();
+	}
+
 	async inspectSource(
 		input: InspectSourceInput,
 	): Promise<JsonEnvelope<SourceInspectionResult>> {
@@ -211,6 +216,12 @@ export class DesktopBridgeService {
 		projectPath: string,
 	): Promise<JsonEnvelope<void>> {
 		return this.requireBridge().removeRecentProject(projectPath);
+	}
+
+	async deleteProjectFile(
+		projectPath: string,
+	): Promise<JsonEnvelope<void>> {
+		return this.requireBridge().deleteProjectFile(projectPath);
 	}
 
 	async readSettings(): Promise<JsonEnvelope<DesktopSettings>> {

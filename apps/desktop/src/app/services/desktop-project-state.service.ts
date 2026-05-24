@@ -1,17 +1,17 @@
-import { Injectable, computed, signal } from "@angular/core";
+import { Injectable, computed, inject, signal } from "@angular/core";
 import type {
 	ChdgOutputStatus,
 	DesktopSettings,
 	RecentProject,
 } from "@chdg/project/browser";
-import { DesktopBridgeService } from "./desktop-bridge.service";
-import type {
-	FfmpegDiagnostic,
-	ProjectStatePayload,
+import {
+	DesktopBridgeService,
+	type FfmpegDiagnostic,
+	type ProjectStatePayload,
 } from "./desktop-bridge.service";
 
 export type MissingPathWarning = {
-	kind: "sourcePath" | "audioPath" | "outputDir";
+	kind: "sourcePath" | "audioPath" | "outputDir" | "coverImagePath";
 	path?: string;
 	message: string;
 };
@@ -42,6 +42,7 @@ const initialState: DesktopProjectState = {
 
 @Injectable({ providedIn: "root" })
 export class DesktopProjectStateService {
+	private readonly bridge = inject(DesktopBridgeService);
 	readonly state = signal<DesktopProjectState>(initialState);
 
 	readonly hasProject = computed(
@@ -143,11 +144,9 @@ export class DesktopProjectStateService {
 			this.applyProjectState(payload);
 			this.patch({
 				dirty: false,
-				missingPaths: missingPaths.map((kind) => ({
-					kind: kind as MissingPathWarning["kind"],
-					path: payload[kind as keyof typeof payload] as string | undefined,
-					message: `Missing ${kind}: ${payload[kind as keyof typeof payload] as string | undefined}`,
-				})),
+				missingPaths: missingPaths.map((kind) =>
+					missingPathWarning(kind as MissingPathWarning["kind"], payload),
+				),
 			});
 			await this.loadRecentProjects();
 			return payload;
@@ -163,6 +162,24 @@ export class DesktopProjectStateService {
 			await this.loadRecentProjects();
 		} catch {
 			// Ignore
+		}
+	}
+
+	async deleteProjectFile(projectPath: string): Promise<boolean> {
+		try {
+			const envelope = await this.bridge.deleteProjectFile(projectPath);
+			if (!envelope.ok) {
+				console.error("Delete project failed:", envelope.error.message);
+				return false;
+			}
+			await this.loadRecentProjects();
+			if (this.state().projectFilePath === projectPath) {
+				this.resetActiveProject();
+			}
+			return true;
+		} catch (error) {
+			console.error("Delete project error:", error);
+			return false;
 		}
 	}
 
@@ -237,6 +254,15 @@ export class DesktopProjectStateService {
 		this.patch({ projectFilePath: filePath });
 	}
 
+	resetActiveProject(): void {
+		this.state.set({
+			...initialState,
+			recentProjects: this.state().recentProjects,
+			settings: this.state().settings,
+			ffmpegDiagnostic: this.state().ffmpegDiagnostic,
+		});
+	}
+
 	private applyProjectState(payload: ProjectStatePayload): void {
 		this.patch({
 			projectName: payload.projectName,
@@ -249,5 +275,23 @@ export class DesktopProjectStateService {
 		this.state.update((state) => ({ ...state, ...patch }));
 	}
 
-	constructor(private readonly bridge: DesktopBridgeService) {}
+	constructor() {}
+}
+
+function missingPathWarning(
+	kind: MissingPathWarning["kind"],
+	payload: ProjectStatePayload,
+): MissingPathWarning {
+	if (kind === "coverImagePath") {
+		return {
+			kind,
+			path: payload.cover?.imagePath,
+			message: `Missing cover image: ${payload.cover?.imagePath ?? "unknown"}`,
+		};
+	}
+	return {
+		kind,
+		path: payload[kind],
+		message: `Missing ${kind}: ${payload[kind] ?? "unknown"}`,
+	};
 }

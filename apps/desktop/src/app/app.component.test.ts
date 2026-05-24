@@ -19,4 +19,13 @@ describe("AppComponent source", () => {
 		expect(source).not.toContain("const saved = await this.projectState.saveProjectAs");
 		expect(source).not.toContain("if (saved)");
 	});
+
+	it("does not expose New Project as a top-level navigation item", () => {
+		const source = readFileSync(
+			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
+			"utf8",
+		);
+		expect(source).not.toContain('label: "New Project"');
+		expect(source).toContain('path: "/projects"');
+	});
 });

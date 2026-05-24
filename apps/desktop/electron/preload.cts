@@ -6,6 +6,7 @@ const api = {
 	pickSourceFile: () => ipcRenderer.invoke("dialog:pick-source-file"),
 	pickAudioFile: () => ipcRenderer.invoke("dialog:pick-audio-file"),
 	pickOutputFolder: () => ipcRenderer.invoke("dialog:pick-output-folder"),
+	pickCoverImageFile: () => ipcRenderer.invoke("dialog:pick-cover-image-file"),
 	inspectSource: (input: unknown) =>
 		ipcRenderer.invoke("chdg:inspect-source", input),
 	normalizeSelection: (input: unknown) =>
@@ -29,6 +30,8 @@ const api = {
 	readRecentProjects: () => ipcRenderer.invoke("chdg:read-recent-projects"),
 	removeRecentProject: (projectPath: string) =>
 		ipcRenderer.invoke("chdg:remove-recent-project", projectPath),
+	deleteProjectFile: (projectPath: string) =>
+		ipcRenderer.invoke("chdg:delete-project-file", projectPath),
 	readSettings: () => ipcRenderer.invoke("chdg:read-settings"),
 	writeSettings: (settings: unknown) =>
 		ipcRenderer.invoke("chdg:write-settings", settings),

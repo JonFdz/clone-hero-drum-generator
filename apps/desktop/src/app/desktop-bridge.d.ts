@@ -32,6 +32,7 @@ declare global {
 			pickSourceFile: () => Promise<PickedPath | null>;
 			pickAudioFile: () => Promise<PickedPath | null>;
 			pickOutputFolder: () => Promise<PickedPath | null>;
+			pickCoverImageFile: () => Promise<PickedPath | null>;
 			inspectSource: (
 				input: InspectSourceInput,
 			) => Promise<JsonEnvelope<SourceInspectionResult>>;
@@ -64,6 +65,9 @@ declare global {
 			) => Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>>;
 			readRecentProjects: () => Promise<JsonEnvelope<RecentProject[]>>;
 			removeRecentProject: (
+				projectPath: string,
+			) => Promise<JsonEnvelope<void>>;
+			deleteProjectFile: (
 				projectPath: string,
 			) => Promise<JsonEnvelope<void>>;
 			readSettings: () => Promise<JsonEnvelope<DesktopSettings>>;

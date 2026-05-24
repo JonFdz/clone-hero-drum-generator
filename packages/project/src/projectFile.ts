@@ -55,6 +55,7 @@ export function validateProjectFile(
 		);
 		const project = validateProjectSection(obj["project"]);
 		const paths = validatePaths(obj["paths"]);
+		const cover = validateCover(obj["cover"]);
 		const source = validateSource(obj["source"]);
 		const selection = validateSelection(obj["selection"]);
 		const metadata = validateMetadata(obj["metadata"]);
@@ -75,6 +76,9 @@ export function validateProjectFile(
 
 		if (appVersion !== undefined) {
 			safeProject.appVersion = appVersion;
+		}
+		if (cover !== undefined) {
+			safeProject.cover = cover;
 		}
 		if (source !== undefined) {
 			safeProject.source = source;
@@ -196,6 +200,24 @@ function validatePaths(input: unknown): ChdgProjectFile["paths"] {
 			"outputDir",
 			"INVALID_PROJECT_PATH",
 			"paths.outputDir must be a string.",
+		),
+	};
+}
+
+
+function validateCover(input: unknown): ChdgProjectFile["cover"] | undefined {
+	if (input === undefined) return undefined;
+	const cover = assertRecord(
+		input,
+		"INVALID_COVER_SECTION",
+		"cover must be an object when provided.",
+	);
+	return {
+		imagePath: optionalStringField(
+			cover,
+			"imagePath",
+			"INVALID_COVER_IMAGE_PATH",
+			"cover.imagePath must be a string.",
 		),
 	};
 }
