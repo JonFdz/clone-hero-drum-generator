@@ -32,6 +32,8 @@ const api = {
 		ipcRenderer.invoke("chdg:remove-recent-project", projectPath),
 	deleteProjectFile: (projectPath: string) =>
 		ipcRenderer.invoke("chdg:delete-project-file", projectPath),
+	getCoverImagePreviewUrl: (imagePath: string) =>
+		ipcRenderer.invoke("chdg:get-cover-image-preview-url", imagePath),
 	readSettings: () => ipcRenderer.invoke("chdg:read-settings"),
 	writeSettings: (settings: unknown) =>
 		ipcRenderer.invoke("chdg:write-settings", settings),

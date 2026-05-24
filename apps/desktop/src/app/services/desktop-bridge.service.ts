@@ -35,6 +35,7 @@ export type DesktopHealthStatus = {
 export type PickedPath = {
 	path: string;
 	name: string;
+	fileUrl?: string;
 };
 
 export type OpenOutputFolderResult = {
@@ -222,6 +223,12 @@ export class DesktopBridgeService {
 		projectPath: string,
 	): Promise<JsonEnvelope<void>> {
 		return this.requireBridge().deleteProjectFile(projectPath);
+	}
+
+	async getCoverImagePreviewUrl(
+		imagePath: string,
+	): Promise<JsonEnvelope<{ src: string }>> {
+		return this.requireBridge().getCoverImagePreviewUrl(imagePath);
 	}
 
 	async readSettings(): Promise<JsonEnvelope<DesktopSettings>> {

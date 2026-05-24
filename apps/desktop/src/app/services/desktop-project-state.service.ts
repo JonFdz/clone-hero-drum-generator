@@ -75,19 +75,20 @@ export class DesktopProjectStateService {
 		}
 	}
 
-	async createProject(name: string): Promise<boolean> {
+	async createProject(name: string): Promise<ProjectStatePayload | null> {
 		try {
 			const envelope = await this.bridge.createProject({ projectName: name });
 			if (!envelope.ok) {
 				console.error("Create project failed:", envelope.error.message);
-				return false;
+				return null;
 			}
 			this.applyProjectState(envelope.data);
 			this.patch({ dirty: false });
-			return true;
+			await this.loadRecentProjects();
+			return envelope.data;
 		} catch (error) {
 			console.error("Create project error:", error);
-			return false;
+			return null;
 		}
 	}
 

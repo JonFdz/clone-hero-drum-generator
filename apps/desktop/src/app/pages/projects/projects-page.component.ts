@@ -158,9 +158,9 @@ export class ProjectsPageComponent {
 
 	async newProject(): Promise<void> {
 		const defaultName = `Untitled ${new Date().toISOString().slice(0, 10)}`;
-		const ok = await this.projectState.createProject(defaultName);
-		if (ok) {
-			this.generateState.reset();
+		const payload = await this.projectState.createProject(defaultName);
+		if (payload) {
+			this.loadProjectState(payload);
 			await this.router.navigateByUrl("/projects/details?mode=new");
 		}
 	}

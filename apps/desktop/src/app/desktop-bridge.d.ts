@@ -70,6 +70,9 @@ declare global {
 			deleteProjectFile: (
 				projectPath: string,
 			) => Promise<JsonEnvelope<void>>;
+			getCoverImagePreviewUrl: (
+				imagePath: string,
+			) => Promise<JsonEnvelope<{ src: string }>>;
 			readSettings: () => Promise<JsonEnvelope<DesktopSettings>>;
 			writeSettings: (
 				settings: DesktopSettings,

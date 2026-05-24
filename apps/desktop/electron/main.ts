@@ -85,6 +85,7 @@ type DesktopHealthStatus = {
 type PickedPath = {
 	path: string;
 	name: string;
+	fileUrl?: string;
 };
 
 type DesktopGeneratePackageInput = GeneratePackageInput & {
@@ -242,7 +243,7 @@ app.whenReady().then(() => {
 
 			const picked = toPickedPath(result.filePaths[0]);
 			addAllowedPath(allowedCoverImageFiles, picked.path);
-			return picked;
+			return { ...picked, fileUrl: pathToFileURL(picked.path).toString() };
 		},
 	);
 
@@ -645,6 +646,24 @@ app.whenReady().then(() => {
 				);
 				await writeMappingProfiles(next);
 				return next.sort((a, b) => a.name.localeCompare(b.name));
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:get-cover-image-preview-url",
+		async (
+			_event,
+			imagePath: unknown,
+		): Promise<JsonEnvelope<{ src: string }>> => {
+			return toEnvelope(async () => {
+				const target = assertNonEmptyString(
+					imagePath,
+					"Cover image path is required.",
+				);
+				const safePath = assertAllowedCoverImagePath(target);
+				await access(safePath);
+				return { src: pathToFileURL(safePath).toString() };
 			});
 		},
 	);
