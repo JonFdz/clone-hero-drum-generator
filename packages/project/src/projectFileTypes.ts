@@ -1,8 +1,27 @@
+import type { NormalizationPreview, SourceInspectionResult } from "./types.js";
+
 export type ChdgOutputStatus =
 	| "not-generated"
 	| "generated"
 	| "needs-regenerate"
 	| "failed";
+
+export type ChdgSourceFingerprint = {
+	path: string;
+	sizeBytes?: number;
+	mtimeMs?: number;
+};
+
+export type ChdgProjectAnalysisCache = {
+	schemaVersion: 1;
+	sourceFingerprint: ChdgSourceFingerprint;
+	mappingFingerprint: string;
+	selectedTracks: number[];
+	inspectedAt: string;
+	normalizedAt?: string;
+	inspection: SourceInspectionResult;
+	normalizationPreview?: NormalizationPreview;
+};
 
 export type ChdgProjectFile = {
 	schemaVersion: number;
@@ -48,4 +67,5 @@ export type ChdgProjectFile = {
 	};
 	settings?: Record<string, unknown>;
 	mappingOverrides?: Record<string, unknown>;
+	analysis?: ChdgProjectAnalysisCache;
 };

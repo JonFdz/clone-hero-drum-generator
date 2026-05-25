@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
 import type {
+	ChdgProjectAnalysisCache,
 	GeneratePackageInput,
 	GeneratePackageResult,
 	JsonEnvelope,
@@ -46,6 +47,7 @@ export type DesktopGenerateState = {
 	metadata: DesktopMetadata;
 	offsetMs?: number;
 	inspection?: SourceInspectionResult;
+	analysisCache?: ChdgProjectAnalysisCache;
 	selectedTracks: number[];
 	normalizationPreview?: NormalizationPreview;
 	normalizationPreviewStale?: boolean;
@@ -82,7 +84,11 @@ export class DesktopGenerateStateService {
 	readonly state = signal<DesktopGenerateState>(initialState);
 	private readonly projectState: DesktopProjectStateService;
 
-	constructor(projectState: DesktopProjectStateService = inject(DesktopProjectStateService)) {
+	constructor(
+		projectState: DesktopProjectStateService = inject(
+			DesktopProjectStateService,
+		),
+	) {
 		this.projectState = projectState;
 	}
 
@@ -97,8 +103,9 @@ export class DesktopGenerateStateService {
 			sourcePath,
 			sourceKind,
 			inspection: undefined,
-	normalizationPreview: undefined,
-	normalizationPreviewStale: undefined,
+			analysisCache: undefined,
+			normalizationPreview: undefined,
+			normalizationPreviewStale: undefined,
 			generationResult: undefined,
 			selectedTracks: [],
 			issues: [],
@@ -170,11 +177,25 @@ export class DesktopGenerateStateService {
 			return;
 		}
 
-		const candidates = chooseDefaultTracks(envelope.data.tracks);
+		this.applyInspectionWithSelection(
+			envelope,
+			chooseDefaultTracks(envelope.data.tracks),
+		);
+	}
+
+	applyInspectionWithSelection(
+		envelope: JsonEnvelope<SourceInspectionResult>,
+		selectedTracks: number[],
+	): void {
+		if (!envelope.ok) {
+			this.applyError(envelope.error.message, envelope.issues);
+			return;
+		}
+
 		this.patch({
 			inspection: envelope.data,
 			sourceKind: envelope.data.sourceKind,
-			selectedTracks: candidates,
+			selectedTracks: [...selectedTracks].sort((a, b) => a - b),
 			issues: envelope.issues,
 			status: "ready-to-select-tracks",
 			logs: appendLog(
@@ -183,6 +204,39 @@ export class DesktopGenerateStateService {
 			),
 			errorMessage: undefined,
 		});
+	}
+
+	applyCachedInspection(inspection: SourceInspectionResult): void {
+		this.patch({
+			inspection,
+			sourceKind: inspection.sourceKind,
+			issues: inspection.issues,
+			status: "ready-to-select-tracks",
+			errorMessage: undefined,
+		});
+	}
+
+	applySourceReviewCache(cache: ChdgProjectAnalysisCache): void {
+		this.patch({
+			analysisCache: cache,
+			inspection: cache.inspection,
+			sourceKind: cache.inspection.sourceKind,
+			selectedTracks: [...cache.selectedTracks],
+			normalizationPreview: cache.normalizationPreview,
+			normalizationPreviewStale: false,
+			issues: [
+				...(cache.inspection.issues ?? []),
+				...(cache.normalizationPreview?.issues ?? []),
+			],
+			status: cache.normalizationPreview
+				? "ready-to-generate"
+				: "ready-to-select-tracks",
+			errorMessage: undefined,
+		});
+	}
+
+	setAnalysisCache(analysisCache: ChdgProjectAnalysisCache | undefined): void {
+		this.patch({ analysisCache });
 	}
 
 	toggleTrack(trackIndex: number): void {
@@ -333,6 +387,7 @@ export class DesktopGenerateStateService {
 		metadata: DesktopMetadata;
 		offsetMs?: number;
 		mappingOverrides?: ProjectMappingOverrides;
+		analysis?: ChdgProjectAnalysisCache;
 		generationResult?: GeneratePackageResult;
 		lastGeneratedAt?: string;
 		outputFiles?: {
@@ -341,7 +396,11 @@ export class DesktopGenerateStateService {
 			songOgg?: string;
 		};
 	}): void {
-		const sourceKind = payload.sourceKind ?? (payload.sourcePath ? detectDesktopSourceKind(payload.sourcePath) : undefined);
+		const sourceKind =
+			payload.sourceKind ??
+			(payload.sourcePath
+				? detectDesktopSourceKind(payload.sourcePath)
+				: undefined);
 		this.state.set({
 			...initialState,
 			sourcePath: payload.sourcePath,
@@ -356,6 +415,9 @@ export class DesktopGenerateStateService {
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
 			mappingOverrides: payload.mappingOverrides ?? {},
+			analysisCache: payload.analysis,
+			inspection: payload.analysis?.inspection,
+			normalizationPreview: payload.analysis?.normalizationPreview,
 			normalizationPreviewStale: false,
 			status:
 				payload.generationResult || payload.outputFiles
@@ -366,7 +428,10 @@ export class DesktopGenerateStateService {
 		});
 	}
 
-	buildProjectStatePayload(projectName: string, projectFilePath?: string): import("./desktop-bridge.service").ProjectStatePayload {
+	buildProjectStatePayload(
+		projectName: string,
+		projectFilePath?: string,
+	): import("./desktop-bridge.service").ProjectStatePayload {
 		const state = this.state();
 		return {
 			projectName,
@@ -386,9 +451,10 @@ export class DesktopGenerateStateService {
 						chart: state.generationResult.files.chart,
 						songIni: state.generationResult.files.songIni,
 						songOgg: state.generationResult.files.songOgg,
-				  }
+					}
 				: state.outputFiles,
 			mappingOverrides: state.mappingOverrides,
+			analysis: state.analysisCache,
 		};
 	}
 

@@ -1,10 +1,10 @@
 import { CommonModule } from "@angular/common";
 import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { Router, RouterModule } from "@angular/router";
-import { DesktopBridgeService } from "../../services/desktop-bridge.service";
-import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { type Router, RouterModule } from "@angular/router";
+import type { DesktopBridgeService } from "../../services/desktop-bridge.service";
+import type { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import type { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 
 @Component({
 	selector: "chdg-new-project-page",
@@ -91,8 +91,8 @@ import { DesktopProjectStateService } from "../../services/desktop-project-state
         }
 
         <div class="action-row">
-          <button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="inspectSource()">Inspect Source</button>
-          <a class="button ghost" routerLink="/track-selection">Track Selection</a>
+          <button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="reviewSource()">Review Source</button>
+          <a class="button ghost" routerLink="/source-review">Source Review</a>
         </div>
       </section>
 
@@ -134,7 +134,10 @@ export class NewProjectPageComponent {
 			this.metadata.charter = settings.defaultCharter;
 			this.generateState.setMetadata(this.metadata);
 		}
-		if (settings.defaultOffsetMs !== undefined && this.state().offsetMs === undefined) {
+		if (
+			settings.defaultOffsetMs !== undefined &&
+			this.state().offsetMs === undefined
+		) {
 			this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
 		}
 	}
@@ -145,7 +148,9 @@ export class NewProjectPageComponent {
 
 	async createProject(): Promise<void> {
 		if (!this.projectNameInput.trim()) return;
-		const ok = await this.projectState.createProject(this.projectNameInput.trim());
+		const ok = await this.projectState.createProject(
+			this.projectNameInput.trim(),
+		);
 		if (ok) {
 			this.generateState.reset();
 			// Apply defaults from settings
@@ -172,8 +177,14 @@ export class NewProjectPageComponent {
 		const currentPath = this.projectState.state().projectFilePath;
 		const picked = await this.bridge.saveProjectFile(name, currentPath);
 		if (!picked) return;
-		const payload = this.generateState.buildProjectStatePayload(name, picked.path);
-		await this.projectState.saveProjectAs({ ...payload, filePath: picked.path });
+		const payload = this.generateState.buildProjectStatePayload(
+			name,
+			picked.path,
+		);
+		await this.projectState.saveProjectAs({
+			...payload,
+			filePath: picked.path,
+		});
 	}
 
 	async pickSource(): Promise<void> {
@@ -205,26 +216,12 @@ export class NewProjectPageComponent {
 		this.generateState.setOffsetMsInput(value === null ? "" : String(value));
 	}
 
-	async inspectSource(): Promise<void> {
-		const sourcePath = this.state().sourcePath;
-		if (!sourcePath) {
+	async reviewSource(): Promise<void> {
+		if (!this.state().sourcePath) {
 			this.generateState.applyError("Source file is required.");
 			return;
 		}
-
-		this.generateState.startInspecting();
-		try {
-			const envelope = await this.bridge.inspectSource({
-				sourcePath,
-				drumsOnly: true,
-			});
-			this.generateState.applyInspection(envelope);
-			if (envelope.ok) await this.router.navigateByUrl("/inspect-source");
-		} catch (error) {
-			this.generateState.applyError(
-				error instanceof Error ? error.message : "Inspect failed.",
-			);
-		}
+		await this.router.navigateByUrl("/source-review");
 	}
 
 	private async runPicker(action: () => Promise<void>): Promise<void> {

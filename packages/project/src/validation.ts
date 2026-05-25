@@ -138,10 +138,10 @@ function fixActionForCategory(
 		case "source":
 		case "audio":
 		case "output":
-			return { label: "Review project inputs", route: "/new-project" };
+			return { label: "Review project inputs", route: "/projects/details" };
 		case "tracks":
 		case "chart":
-			return { label: "Review track selection", route: "/track-selection" };
+			return { label: "Review source", route: "/source-review" };
 		case "ffmpeg":
 			return { label: "Review FFmpeg settings", route: "/settings" };
 		default:

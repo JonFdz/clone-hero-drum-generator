@@ -1,6 +1,16 @@
 import { validateMappingOverrides } from "./mappingOverrides.js";
-import type { ChdgOutputStatus, ChdgProjectFile } from "./projectFileTypes.js";
-export type { ChdgOutputStatus, ChdgProjectFile } from "./projectFileTypes.js";
+import type {
+	ChdgOutputStatus,
+	ChdgProjectAnalysisCache,
+	ChdgProjectFile,
+	ChdgSourceFingerprint,
+} from "./projectFileTypes.js";
+export type {
+	ChdgOutputStatus,
+	ChdgProjectAnalysisCache,
+	ChdgProjectFile,
+	ChdgSourceFingerprint,
+} from "./projectFileTypes.js";
 
 export type ChdgProjectFileValidationResult =
 	| {
@@ -64,6 +74,7 @@ export function validateProjectFile(
 		const mappingOverrides = validateMappingOverridesField(
 			obj["mappingOverrides"],
 		);
+		const analysis = validateAnalysisCache(obj["analysis"]);
 
 		const safeProject: ChdgProjectFile = {
 			schemaVersion: 1,
@@ -88,6 +99,9 @@ export function validateProjectFile(
 		}
 		if (Object.keys(mappingOverrides).length > 0) {
 			safeProject.mappingOverrides = mappingOverrides;
+		}
+		if (analysis !== undefined) {
+			safeProject.analysis = analysis;
 		}
 
 		return {
@@ -115,6 +129,79 @@ function validateMappingOverridesField(
 ): Record<string, unknown> {
 	if (input === undefined) return {};
 	return validateMappingOverrides(input) as Record<string, unknown>;
+}
+
+export function validateAnalysisCache(
+	input: unknown,
+): ChdgProjectAnalysisCache | undefined {
+	if (input === undefined) return undefined;
+	if (!isRecord(input)) return undefined;
+	if (input["schemaVersion"] !== 1) return undefined;
+	const sourceFingerprint = validateSourceFingerprint(
+		input["sourceFingerprint"],
+	);
+	if (!sourceFingerprint) return undefined;
+	const mappingFingerprint = input["mappingFingerprint"];
+	if (typeof mappingFingerprint !== "string") return undefined;
+	const selectedTracks = validateOptionalTrackArray(input["selectedTracks"]);
+	if (!selectedTracks) return undefined;
+	const inspectedAt = input["inspectedAt"];
+	if (typeof inspectedAt !== "string") return undefined;
+	const inspection = input["inspection"];
+	if (!isRecord(inspection)) return undefined;
+	const normalizedAt = input["normalizedAt"];
+	if (normalizedAt !== undefined && typeof normalizedAt !== "string") {
+		return undefined;
+	}
+	const normalizationPreview = input["normalizationPreview"];
+	if (normalizationPreview !== undefined && !isRecord(normalizationPreview)) {
+		return undefined;
+	}
+
+	return {
+		schemaVersion: 1,
+		sourceFingerprint,
+		mappingFingerprint,
+		selectedTracks,
+		inspectedAt,
+		...(normalizedAt !== undefined ? { normalizedAt } : {}),
+		inspection: inspection as ChdgProjectAnalysisCache["inspection"],
+		...(normalizationPreview !== undefined
+			? {
+					normalizationPreview:
+						normalizationPreview as ChdgProjectAnalysisCache["normalizationPreview"],
+				}
+			: {}),
+	};
+}
+
+function validateSourceFingerprint(
+	input: unknown,
+): ChdgSourceFingerprint | undefined {
+	if (!isRecord(input)) return undefined;
+	const sourcePath = input["path"];
+	if (typeof sourcePath !== "string" || sourcePath.trim().length === 0) {
+		return undefined;
+	}
+	const sizeBytes = input["sizeBytes"];
+	if (
+		sizeBytes !== undefined &&
+		(typeof sizeBytes !== "number" || !Number.isFinite(sizeBytes))
+	) {
+		return undefined;
+	}
+	const mtimeMs = input["mtimeMs"];
+	if (
+		mtimeMs !== undefined &&
+		(typeof mtimeMs !== "number" || !Number.isFinite(mtimeMs))
+	) {
+		return undefined;
+	}
+	return {
+		path: sourcePath,
+		...(sizeBytes !== undefined ? { sizeBytes } : {}),
+		...(mtimeMs !== undefined ? { mtimeMs } : {}),
+	};
 }
 
 export function createProjectFile(
@@ -204,7 +291,6 @@ function validatePaths(input: unknown): ChdgProjectFile["paths"] {
 	};
 }
 
-
 function validateCover(input: unknown): ChdgProjectFile["cover"] | undefined {
 	if (input === undefined) return undefined;
 	const cover = assertRecord(
@@ -222,9 +308,7 @@ function validateCover(input: unknown): ChdgProjectFile["cover"] | undefined {
 	};
 }
 
-function validateSource(
-	input: unknown,
-): ChdgProjectFile["source"] | undefined {
+function validateSource(input: unknown): ChdgProjectFile["source"] | undefined {
 	if (input === undefined) return undefined;
 	const source = assertRecord(
 		input,
@@ -254,9 +338,7 @@ function validateSource(
 	return result;
 }
 
-function validateSelection(
-	input: unknown,
-): ChdgProjectFile["selection"] {
+function validateSelection(input: unknown): ChdgProjectFile["selection"] {
 	const selection = assertRecord(
 		input,
 		"INVALID_SELECTION_SECTION",
@@ -283,9 +365,7 @@ function validateSelection(
 	};
 }
 
-function validateMetadata(
-	input: unknown,
-): ChdgProjectFile["metadata"] {
+function validateMetadata(input: unknown): ChdgProjectFile["metadata"] {
 	const metadata = assertRecord(
 		input,
 		"INVALID_METADATA_SECTION",
@@ -332,9 +412,7 @@ function validateMetadata(
 	};
 }
 
-function validateGeneration(
-	input: unknown,
-): ChdgProjectFile["generation"] {
+function validateGeneration(input: unknown): ChdgProjectFile["generation"] {
 	const generation = assertRecord(
 		input,
 		"INVALID_GENERATION_SECTION",
@@ -421,9 +499,7 @@ function validateOutputFiles(
 	};
 }
 
-function validateSettings(
-	input: unknown,
-): Record<string, unknown> | undefined {
+function validateSettings(input: unknown): Record<string, unknown> | undefined {
 	if (input === undefined) return undefined;
 	return assertRecord(
 		input,
@@ -441,6 +517,26 @@ function assertRecord(
 		throw new ProjectFileValidationError(code, message);
 	}
 	return input as Record<string, unknown>;
+}
+
+function isRecord(input: unknown): input is Record<string, unknown> {
+	return typeof input === "object" && input !== null && !Array.isArray(input);
+}
+
+function validateOptionalTrackArray(input: unknown): number[] | undefined {
+	if (
+		!Array.isArray(input) ||
+		input.some(
+			(track) =>
+				typeof track !== "number" ||
+				!Number.isFinite(track) ||
+				!Number.isInteger(track) ||
+				track < 0,
+		)
+	) {
+		return undefined;
+	}
+	return [...input];
 }
 
 function requiredStringField(

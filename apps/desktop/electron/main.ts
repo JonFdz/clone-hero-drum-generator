@@ -1,11 +1,13 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { access } from "node:fs/promises";
+import { access, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	generatePackage,
 	inspectSource,
 	normalizeSelection,
+	type ChdgProjectAnalysisCache,
+	type ChdgSourceFingerprint,
 	type GeneratePackageInput,
 	type JsonEnvelope,
 	type NormalizeSelectionInput,
@@ -120,6 +122,7 @@ type ProjectStatePayload = {
 		songOgg?: string;
 	};
 	mappingOverrides?: ProjectMappingOverrides;
+	analysis?: ChdgProjectAnalysisCache;
 };
 
 type SaveProjectResult = {
@@ -272,6 +275,26 @@ app.whenReady().then(() => {
 				const normalizeInput = assertNormalizeInput(input);
 				const sourcePath = assertAllowedSourcePath(normalizeInput.sourcePath);
 				return normalizeSelection({ ...normalizeInput, sourcePath });
+			});
+		},
+	);
+
+	ipcMain.handle(
+		"chdg:get-source-fingerprint",
+		async (
+			_event,
+			sourcePathInput: unknown,
+		): Promise<JsonEnvelope<ChdgSourceFingerprint>> => {
+			return toEnvelope(async () => {
+				const sourcePath = assertAllowedSourcePath(
+					assertNonEmptyString(sourcePathInput, "Source path is required."),
+				);
+				const stats = await stat(sourcePath);
+				return {
+					path: sourcePath,
+					sizeBytes: stats.size,
+					mtimeMs: stats.mtimeMs,
+				};
 			});
 		},
 	);
@@ -562,6 +585,7 @@ app.whenReady().then(() => {
 					lastGeneratedAt: project.generation.lastGeneratedAt,
 					outputFiles: project.generation.outputFiles,
 					mappingOverrides: validateMappingOverrides(project.mappingOverrides),
+					analysis: project.analysis,
 					missingPaths,
 				};
 			});
@@ -1122,7 +1146,16 @@ function assertProjectStatePayload(input: unknown): ProjectStatePayload {
 		),
 		outputFiles: optionalOutputFiles(value["outputFiles"]),
 		mappingOverrides: validateMappingOverrides(value["mappingOverrides"]),
+		analysis: optionalAnalysisCache(value["analysis"]),
 	};
+}
+
+function optionalAnalysisCache(
+	value: unknown,
+): ChdgProjectAnalysisCache | undefined {
+	if (value === undefined || value === null) return undefined;
+	if (typeof value !== "object" || Array.isArray(value)) return undefined;
+	return value as ChdgProjectAnalysisCache;
 }
 
 function assertSettingsPayload(

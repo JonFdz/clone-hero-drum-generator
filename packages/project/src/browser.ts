@@ -16,7 +16,12 @@ export type {
 	InspectSourceInput,
 	NormalizeSelectionInput,
 } from "./operationTypes.js";
-export type { ChdgProjectFile, ChdgOutputStatus } from "./projectFileTypes.js";
+export type {
+	ChdgProjectAnalysisCache,
+	ChdgProjectFile,
+	ChdgOutputStatus,
+	ChdgSourceFingerprint,
+} from "./projectFileTypes.js";
 export type {
 	ValidationCategory,
 	ValidationFixAction,
