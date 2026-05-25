@@ -156,26 +156,16 @@ export function buildDesktopValidationItems(
 	}
 
 	if (generate.offsetMs !== undefined && !Number.isFinite(generate.offsetMs)) {
-		items.push(
-			errorItem(
-				"offset.invalid",
-				"offset",
-				"Invalid chart offset",
-				"Offset must be a finite number of milliseconds.",
-				"/projects/details",
-			),
-		);
-	} else if (generate.offsetMs !== undefined) {
-		items.push(
-			warningItem(
-				"offset.present",
-				"offset",
-				"Chart offset set",
-				`${generate.offsetMs} ms; note ticks are not moved.`,
-				"/projects/details",
-			),
-		);
-	}
+	items.push(
+		errorItem(
+			"offset.invalid",
+			"offset",
+			"Invalid chart offset",
+			"Offset must be a finite number of milliseconds.",
+			"/projects/details",
+		),
+	);
+}
 
 	if (generate.errorMessage?.toLowerCase().includes("offset")) {
 		items.push(

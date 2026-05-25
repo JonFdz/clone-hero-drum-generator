@@ -152,7 +152,7 @@ describe("desktop validation model", () => {
 		);
 	});
 
-	it("treats a non-zero chart offset as a non-blocking warning", () => {
+	it("treats a finite chart offset as valid without warning", () => {
 		const summary = buildDesktopValidationSummary(
 			generateState({
 				sourcePath: "song.mid",
@@ -166,13 +166,44 @@ describe("desktop validation model", () => {
 		);
 
 		expect(summary.canGenerate).toBe(true);
-		expect(summary.items).toContainEqual(
+		expect(summary.items).not.toContainEqual(
 			expect.objectContaining({
 				id: "offset.present",
-				category: "offset",
-				severity: "warning",
-				blocking: false,
 			}),
+		);
+		expect(summary.items).not.toContainEqual(
+			expect.objectContaining({
+				id: "offset.invalid",
+			}),
+		);
+	});
+
+	it("does not emit an offset warning when offset is unset or zero", () => {
+		const baseState = {
+			sourcePath: "song.mid",
+			audioPath: "song.ogg",
+			outputDir: "/tmp/out",
+			selectedTracks: [3],
+			metadata: { artist: "Artist", charter: "Charter" },
+		};
+
+		const unsetSummary = buildDesktopValidationSummary(
+			generateState(baseState),
+			projectState(),
+		);
+		const zeroSummary = buildDesktopValidationSummary(
+			generateState({ ...baseState, offsetMs: 0 }),
+			projectState(),
+		);
+
+		expect(unsetSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.present" }),
+		);
+		expect(zeroSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.present" }),
+		);
+		expect(zeroSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.invalid" }),
 		);
 	});
 

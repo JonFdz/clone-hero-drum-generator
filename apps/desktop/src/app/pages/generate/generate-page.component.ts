@@ -491,7 +491,7 @@ export class GeneratePageComponent implements OnInit {
 				icon: "◴",
 				label: "Offset",
 				value: `${offset} ms`,
-				status: offset !== 0 ? "warning" : "ok",
+				status: "ok",
 				route: "/projects/details",
 			},
 		];
