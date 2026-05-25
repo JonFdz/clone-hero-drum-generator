@@ -51,11 +51,14 @@ type DisplayIssue = ProjectIssue & {
 	imports: [CommonModule, FormsModule, RouterModule],
 	template: `
 		<header class="source-review-header">
-			<div>
+			<div class="source-review-title">
 				<h1>Source Review</h1>
-				<p>Review detected drum tracks, normalized preview, and mapping before generation.</p>
+				<p>Review selected drum tracks, normalized preview, and mapping before generation.</p>
 			</div>
-			<span class="review-status" [class.attention]="status() === 'attention'" [class.failed]="status() === 'failed'">{{ statusLabel() }}</span>
+			<span class="review-status" [class.attention]="status() === 'attention'" [class.failed]="status() === 'failed'">
+				<span class="status-glyph" aria-hidden="true"></span>
+				{{ statusLabel() }}
+			</span>
 		</header>
 
 		@if (!state().sourcePath) {
@@ -66,19 +69,31 @@ type DisplayIssue = ProjectIssue & {
 			</section>
 		} @else {
 			<section class="card selected-source-card">
-				<div class="file-icon">{{ state().sourceKind === 'gpif' ? 'GP' : 'MID' }}</div>
+				<div class="file-icon" [class.gp]="state().sourceKind === 'gpif'" [class.midi]="state().sourceKind === 'midi'">
+					<span>{{ state().sourceKind === 'gpif' ? 'GP' : 'MIDI' }}</span>
+				</div>
 				<div class="selected-source-copy">
 					<p class="eyebrow">Selected Source</p>
-					<h2>{{ fileName(state().sourcePath) }}</h2>
-					<p>{{ state().sourcePath }}</p>
+					<div class="source-name-row">
+						<h2>{{ fileName(state().sourcePath) }}</h2>
+						<span class="source-kind-chip">{{ sourceKindLabel() }}</span>
+					</div>
+					<p class="source-path">{{ state().sourcePath }}</p>
 				</div>
-				<dl>
-					<dt>Source Kind</dt><dd>{{ sourceKindLabel() }}</dd>
-					<dt>Last Analyzed</dt><dd>{{ analyzedAt() }}</dd>
+				<dl class="source-meta">
+					<div><dt>Source Kind</dt><dd>{{ sourceKindLabel() }}</dd></div>
+					<div><dt>Last Analyzed</dt><dd>{{ analyzedAt() }}</dd></div>
 				</dl>
-				<div class="source-actions">
-					<button class="button secondary small" type="button" (click)="refreshAnalysis()">Refresh Analysis</button>
-					<button class="button secondary small" type="button" (click)="jsonOpen = !jsonOpen">View JSON</button>
+				<div class="source-card-side">
+					<span class="source-card-status" [class.attention]="status() === 'attention'" [class.failed]="status() === 'failed'">
+						<span aria-hidden="true">{{ status() === 'failed' ? '!' : status() === 'attention' ? '△' : '✓' }}</span>
+						{{ statusLabel() }}
+					</span>
+					<div class="source-actions">
+						<button class="button secondary small" type="button" (click)="refreshAnalysis()"><span aria-hidden="true">↻</span> Refresh Analysis</button>
+						<button class="button secondary small" type="button" (click)="jsonOpen = !jsonOpen"><span aria-hidden="true">JSON</span> View JSON</button>
+						<button class="button icon-button small" type="button" aria-label="More source actions">⋮</button>
+					</div>
 				</div>
 			</section>
 
@@ -90,107 +105,153 @@ type DisplayIssue = ProjectIssue & {
 			}
 
 			<div class="summary-grid">
-				<section class="card">
+				<section class="card summary-card">
 					<h2>Source Summary</h2>
-					<dl class="summary-list compact">
-						<dt>Source Type</dt><dd>{{ sourceKindLabel() }}</dd>
-						<dt>Resolution (PPQ)</dt><dd>{{ state().inspection?.resolution ?? 'n/a' }}</dd>
-						<dt>Tempo Count</dt><dd>{{ state().inspection?.tempos?.length ?? 'n/a' }}</dd>
-						<dt>Time Signatures</dt><dd>{{ state().inspection?.timeSignatures?.length ?? 'n/a' }}</dd>
-						<dt>Sections</dt><dd>{{ sectionsLabel() }}</dd>
-						<dt>Total Tracks</dt><dd>{{ state().inspection?.tracks?.length ?? 'n/a' }}</dd>
+					<dl class="summary-list compact icon-list">
+						<div><dt><span aria-hidden="true">▧</span>Source Type</dt><dd>{{ sourceKindLabel() }}</dd></div>
+						<div><dt><span aria-hidden="true">♬</span>Resolution (PPQ)</dt><dd>{{ state().inspection?.resolution ?? 'n/a' }}</dd></div>
+						<div><dt><span aria-hidden="true">⌁</span>Tempo Count</dt><dd>{{ state().inspection?.tempos?.length ?? 'n/a' }}</dd></div>
+						<div><dt><span aria-hidden="true">♯</span>Time Signatures</dt><dd>{{ state().inspection?.timeSignatures?.length ?? 'n/a' }}</dd></div>
+						<div><dt><span aria-hidden="true">◴</span>Sections</dt><dd>{{ sectionsLabel() }}</dd></div>
+						<div><dt><span aria-hidden="true">☷</span>Total Tracks</dt><dd>{{ state().inspection?.tracks?.length ?? 'n/a' }}</dd></div>
 					</dl>
 				</section>
 
-				<section class="card">
-					<h2>Combined Summary</h2>
+				<section class="card summary-card">
+					<h2>Combined Summary <span class="help-dot" aria-hidden="true">?</span></h2>
 					@if (state().normalizationPreview; as preview) {
-						<dl class="summary-list compact">
-							<dt>Selected Tracks</dt><dd>{{ state().selectedTracks.length }}</dd>
-							<dt>Combined Hits</dt><dd>{{ formatNumber(preview.hitCount) }}</dd>
-							<dt>Duplicates Removed</dt><dd>{{ duplicateLabel() }}</dd>
-							<dt>Unknowns</dt><dd>{{ unknownCount() }}</dd>
-							<dt>Warnings</dt><dd>{{ warningCount() }} issues</dd>
+						<dl class="summary-list compact icon-list">
+							<div><dt><span aria-hidden="true">☌</span>Selected Tracks</dt><dd>{{ state().selectedTracks.length }}</dd></div>
+							<div><dt><span aria-hidden="true">✣</span>Combined Hits</dt><dd>{{ formatNumber(preview.hitCount) }}</dd></div>
+							<div><dt><span aria-hidden="true">▤</span>Duplicates Removed</dt><dd>{{ duplicateLabel() }}</dd></div>
+							<div><dt><span aria-hidden="true">?</span>Unknowns</dt><dd>{{ unknownCount() }}</dd></div>
+							<div><dt class="warning-label"><span aria-hidden="true">△</span>Warnings</dt><dd>{{ warningCount() }} issues</dd></div>
 						</dl>
 					} @else {
 						<p>{{ state().status === 'normalizing' ? 'Building normalized preview…' : 'Waiting for normalized preview…' }}</p>
 					}
 				</section>
 
-				<section class="card piece-summary-card">
-					<h2>Piece Summary Preview</h2>
+				<section class="card summary-card piece-summary-card">
+					<h2>Piece Summary Preview <span class="help-dot" aria-hidden="true">?</span></h2>
 					<div class="piece-summary">
 						@for (piece of pieceEntries(); track piece.label) {
-							<div class="piece-item"><span class="piece-icon" aria-hidden="true">{{ piece.icon }}</span><strong>{{ piece.label }}</strong><span>{{ formatNumber(piece.count) }}</span></div>
+							<div class="piece-item" [ngClass]="piece.kind">
+								<span class="piece-icon" aria-hidden="true"><i></i></span>
+								<strong>{{ piece.label }}</strong>
+								<span>{{ formatNumber(piece.count) }}</span>
+							</div>
 						}
 					</div>
 				</section>
 			</div>
 
-			<section class="card table-card">
-				<div class="split-row"><div><h2>Track Candidates</h2><p>Select one or more complementary drum tracks.</p></div><span>{{ selectedTrackCountLabel() }}</span></div>
-				<table>
-					<thead><tr><th><span class="sr-only">Selected</span></th><th>Track</th><th>Name</th><th>Notes</th><th>Confidence</th><th>Status</th></tr></thead>
-					<tbody>
-						@for (track of trackRows(); track track.index) {
-							<tr [class.selected-row]="isSelected(track.index)">
-								<td><input type="checkbox" [checked]="isSelected(track.index)" (change)="toggleTrack(track.index)" /></td>
-								<td>{{ track.index }}</td>
-								<td>{{ track.name || 'Untitled' }}</td>
-								<td>{{ noteCountLabel(track.noteCount) }}</td>
-								<td><span class="pill" [class.success]="track.strength === 'strong'" [class.warning]="track.strength === 'weak'">{{ confidenceLabel(track.strength) }}</span></td>
-								<td>{{ trackStatus(track.index, track.strength) }}</td>
-							</tr>
-						}
-					</tbody>
-				</table>
-			</section>
-
-			<section class="card accordion-card" [class.open]="mappingOpen()">
-				<div class="accordion-header">
-					<div><h2>Mapping Review</h2><p>{{ mappingSummary() }}</p></div>
-					<button class="button secondary small" type="button" (click)="toggleMappingReview()">{{ mappingActionLabel() }}</button>
-				</div>
-				@if (mappingOpen()) {
-					<table class="mapping-table">
-						<thead><tr><th>Source Kind</th><th>Source Value</th><th>Detected Meaning</th><th>Current Mapping</th><th>Override</th><th>Status</th></tr></thead>
+			<section class="card table-card track-card">
+				<div class="split-row table-header"><div><h2>Track Candidates</h2><p>Select one or more complementary drum tracks.</p></div><span class="selected-count">{{ selectedTrackCountLabel() }}</span></div>
+				<div class="table-frame">
+					<table>
+						<thead><tr><th><span class="sr-only">Selected</span></th><th>Track</th><th>Name</th><th>Notes</th><th>Confidence</th><th>Status</th></tr></thead>
 						<tbody>
-							@for (row of mappingRows(); track row.key) {
-								<tr>
-									<td>{{ row.sourceKind.toUpperCase() }}</td>
-									<td>{{ mappingSourceValue(row) }}</td>
-									<td>{{ row.automaticPiece ?? 'Unknown' }}</td>
-									<td>{{ row.automaticPiece ?? 'Unmapped' }}</td>
-									<td><select [ngModel]="overrideLabel(row.key)" (ngModelChange)="setOverride(row, $event)"><option value="">Keep Current</option><option value="ignore">Ignore</option>@for (piece of pieces; track piece) { <option [value]="piece">Map to {{ pieceLabel(piece) }}</option> }</select></td>
-									<td>{{ row.status }}</td>
+							@for (track of trackRows(); track track.index) {
+								<tr [class.selected-row]="isSelected(track.index)">
+									<td><input type="checkbox" [checked]="isSelected(track.index)" (change)="toggleTrack(track.index)" /></td>
+									<td>{{ track.index }}</td>
+									<td>{{ track.name || 'Untitled' }}</td>
+									<td>{{ noteCountLabel(track.noteCount) }}</td>
+									<td><span class="pill confidence-pill" [class.strong]="track.strength === 'strong'" [class.weak]="track.strength === 'weak'" [class.na]="track.strength === 'unknown'">{{ confidenceLabel(track.strength) }}</span></td>
+									<td><span class="status-badge" [class.auto]="isSelected(track.index)" [class.low]="track.strength === 'weak'">{{ trackStatus(track.index, track.strength) }}</span></td>
 								</tr>
 							}
 						</tbody>
 					</table>
+				</div>
+				<div class="track-table-footer"><span>{{ selectedTrackCountLabel() }}</span><span>Total Notes: {{ totalSelectedNotesLabel() }}</span></div>
+			</section>
+
+			<section class="card accordion-card mapping-card" [class.open]="mappingOpen()" [class.attention]="mappingNeedsAttention()">
+				<div class="accordion-header mapping-header">
+					<div class="accordion-copy">
+						<div class="accordion-title-row">
+							<h2>Mapping Review</h2>
+							<span class="review-badge" [class.warning]="mappingNeedsAttention()"><span aria-hidden="true">{{ mappingNeedsAttention() ? '△' : '✓' }}</span>{{ mappingStatusLabel() }}</span>
+						</div>
+						<p>{{ mappingSummary() }}</p>
+						<p class="profile-line">Profile: None</p>
+					</div>
+					<div class="accordion-actions">
+						<button class="button secondary small" type="button" (click)="toggleMappingReview()">{{ mappingActionLabel() }}</button>
+						<button class="chevron-button" type="button" (click)="toggleMappingReview()" [attr.aria-label]="mappingActionLabel()">{{ mappingOpen() ? '⌃' : '⌄' }}</button>
+					</div>
+				</div>
+				@if (mappingOpen()) {
+					<div class="table-frame mapping-frame">
+						<table class="mapping-table">
+							<thead><tr><th>Source Kind</th><th>Source Value</th><th>Detected Meaning</th><th>Current Mapping</th><th>Override</th><th>Status</th></tr></thead>
+							<tbody>
+								@for (row of mappingRows(); track row.key) {
+									<tr>
+										<td><span class="source-kind-mini" [class.gpif]="row.sourceKind === 'gpif'">{{ row.sourceKind.toUpperCase() }}</span></td>
+										<td>{{ mappingSourceValue(row) }}</td>
+										<td>{{ mappingDetectedMeaning(row) }}</td>
+										<td><span class="mapping-piece-pill" [class.unmapped]="mappingCurrentMapping(row) === 'Unmapped'">{{ mappingCurrentMapping(row) }}</span></td>
+										<td>
+											<select [ngModel]="overrideLabel(row.key)" (ngModelChange)="setOverride(row, $event)">
+												<option value="">Keep Current</option>
+												<option value="ignore">Ignore</option>
+												@for (piece of pieces; track piece) {
+													<option [value]="piece">Map to {{ pieceLabel(piece) }}</option>
+												}
+											</select>
+										</td>
+										<td><span class="mapping-status" [class.override]="mappingStatusLabelForRow(row) === 'Override'" [class.ignore]="mappingStatusLabelForRow(row) === 'Ignore'" [class.unmapped]="mappingStatusLabelForRow(row) === 'Unmapped'">{{ mappingStatusLabelForRow(row) }}</span></td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
 					<div class="mapping-details-grid">
-						<section class="mini-card"><h3>Active Overrides Summary</h3><p>{{ overrideCount() }} total overrides · {{ ignoredCount() }} ignored sources · {{ unknownCount() }} unknown sources</p></section>
-						<section class="mini-card profile-card"><h3>Profile Actions (Local Only)</h3><p>{{ profileStatus() }}</p><button class="button secondary small" type="button" (click)="saveProfileFromCurrent()">Save as Profile</button><button class="button secondary small" type="button" (click)="applyFirstProfile()">Apply Profile</button></section>
+						<section class="mini-card overrides-summary"><h3>Active Overrides Summary</h3><div class="override-metrics"><span><strong>{{ overrideCount() }}</strong>Total Overrides</span><span><strong>{{ changedMappingCount() }}</strong>Mappings Changed</span><span><strong>{{ ignoredCount() }}</strong>Ignored Sources</span><span><strong>{{ unknownCount() }}</strong>Unknown Sources</span></div><p>Overrides are applied during generation. They do not modify the source files.</p></section>
+						<section class="mini-card profile-card"><div><h3>Profile Actions (Local Only)</h3><p>{{ profileStatus() }}</p><p class="profile-hint">Profiles are stored locally on this machine and are not synced.</p></div><div class="profile-actions"><button class="button secondary small" type="button" (click)="saveProfileFromCurrent()">Save as Profile</button><button class="button secondary small" type="button" (click)="applyFirstProfile()">Apply Profile</button></div></section>
 					</div>
 				}
 			</section>
 
-			<section class="card accordion-card issues-card" [class.open]="issuesOpen()">
-				<div class="accordion-header">
-					<div>
+			<section class="card accordion-card issues-card" [class.open]="issuesOpen()" [class.attention]="issuesNeedAttention() || warningCount() > 0">
+				<div class="accordion-header issues-header">
+					<div class="issue-icon" aria-hidden="true">△</div>
+					<div class="accordion-copy">
 						<h2>Issues & Warnings</h2>
 						<p>{{ issuesSummary() }}</p>
 						@if (!issuesOpen() && issuePreview()) {
 							<p class="issue-preview">{{ issuePreview() }}</p>
 						}
 					</div>
-					<button class="button secondary small" type="button" (click)="toggleIssues()">{{ issuesActionLabel() }}</button>
+					<div class="accordion-actions">
+						<button class="button secondary small" type="button" (click)="toggleIssues()">{{ issuesActionLabel() }}</button>
+						<button class="chevron-button" type="button" (click)="toggleIssues()" [attr.aria-label]="issuesActionLabel()">{{ issuesOpen() ? '⌃' : '⌄' }}</button>
+					</div>
 				</div>
 				@if (issuesOpen()) {
-					<ul class="issues-list">
-						@for (issue of displayIssues(); track issue.severity + issue.code + issue.message) {
-							<li [class.info]="issue.severity === 'info'" [class.warning]="issue.severity === 'warning'" [class.error]="issue.severity === 'error'"><strong>{{ issueLabel(issue) }}</strong><span>{{ issue.message }}</span>@if (isMappingIssue(issue)) { <button class="button ghost small" type="button" (click)="mappingUserOpen = true">Review in Mapping Review</button> }</li>
-						}
-					</ul>
+					<div class="issues-panel">
+						<section class="issue-group warnings-group">
+							<h3>Warnings</h3>
+							@if (warningIssues().length === 0) { <p class="empty-group">No warnings.</p> }
+							<ul class="issues-list">
+								@for (issue of warningIssues(); track issue.severity + issue.code + issue.message) {
+									<li [class.warning]="issue.severity === 'warning'" [class.error]="issue.severity === 'error'"><strong>{{ issueLabel(issue) }}</strong><span>{{ issue.message }}</span>@if (isMappingIssue(issue)) { <button class="button ghost small" type="button" (click)="mappingUserOpen = true">Review in Mapping Review</button> }</li>
+								}
+							</ul>
+						</section>
+						<section class="issue-group info-group">
+							<h3>Unknowns / Info</h3>
+							@if (infoIssues().length === 0) { <p class="empty-group">No info messages.</p> }
+							<ul class="issues-list">
+								@for (issue of infoIssues(); track issue.severity + issue.code + issue.message) {
+									<li class="info"><strong>{{ issueLabel(issue) }}</strong><span>{{ issue.message }}</span></li>
+								}
+							</ul>
+						</section>
+					</div>
 				}
 			</section>
 
@@ -199,48 +260,165 @@ type DisplayIssue = ProjectIssue & {
 			}
 
 			<div class="source-review-actions">
-				<a class="button ghost" routerLink="/projects/details">Back to Project Details</a>
-				<button class="button primary" type="button" [disabled]="!canContinue()" (click)="continueToGenerate()">Continue to Generate</button>
+				<a class="button ghost back-button" routerLink="/projects/details"><span aria-hidden="true">←</span> Back to Project Details</a>
+				<button class="button primary continue-button" type="button" [disabled]="!canContinue()" (click)="continueToGenerate()">Continue to Generate <span aria-hidden="true">→</span></button>
 			</div>
 		}
+
 	`,
 	styles: [
 		`
+		:host { display: block; margin: 0 auto; max-width: 1360px; min-width: 0; width: min(100%, 1360px); }
 		.source-review-header, .selected-source-card, .accordion-header, .source-review-actions { align-items: center; display: flex; gap: var(--space-4); justify-content: space-between; }
-		.source-review-header { margin-bottom: var(--space-5); }
-		.source-review-header h1 { font-size: 2rem; margin: 0 0 var(--space-2); }
-		.source-review-header p, .selected-source-copy p, .accordion-header p { color: var(--color-muted); margin: 0; }
-		.review-status { border: 1px solid rgba(101,222,119,0.35); border-radius: 999px; color: var(--color-success); padding: .45rem .75rem; }
+		.source-review-header { margin: 0 0 1rem; }
+		.source-review-title h1 { font-size: clamp(1.7rem, 2vw, 2rem); letter-spacing: -0.03em; margin: 0 0 .35rem; }
+		.source-review-title p, .selected-source-copy p, .accordion-header p { color: var(--color-text-soft); margin: 0; }
+		.review-status, .source-card-status, .review-badge { align-items: center; border-radius: 999px; display: inline-flex; font-weight: 800; gap: .45rem; white-space: nowrap; }
+		.review-status { background: rgba(20, 27, 36, .58); border: 1px solid rgba(101,222,119,0.28); color: var(--color-success); font-size: .85rem; padding: .5rem .8rem; }
+		.review-status .status-glyph { background: var(--color-success); border-radius: 999px; box-shadow: 0 0 0 4px rgba(101,222,119,.14); height: .55rem; width: .55rem; }
 		.review-status.attention { border-color: rgba(246,180,80,.35); color: var(--color-warning); }
+		.review-status.attention .status-glyph { background: var(--color-warning); box-shadow: 0 0 0 4px rgba(246,180,80,.14); }
 		.review-status.failed { border-color: rgba(255,107,122,.35); color: var(--color-danger); }
-		.selected-source-card { margin-bottom: var(--space-4); }
-		.file-icon { align-items: center; background: rgba(151,83,229,.24); border: 1px solid rgba(151,83,229,.36); border-radius: .85rem; color: var(--color-accent-soft); display: grid; font-weight: 900; height: 4rem; justify-items: center; width: 4rem; }
-		.selected-source-copy { flex: 1; min-width: 0; }
-		.selected-source-copy h2 { margin: 0 0 .2rem; }
-		.selected-source-card dl { display: grid; gap: .25rem 1rem; grid-template-columns: auto auto; }
-		.selected-source-card dt { color: var(--color-muted); font-size: .75rem; font-weight: 900; text-transform: uppercase; }
-		.selected-source-card dd { margin: 0; }
-		.source-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-		.summary-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr 1fr 1.35fr; margin-bottom: var(--space-4); }
-		.piece-summary { display: grid; gap: var(--space-2); grid-template-columns: repeat(7, minmax(0, 1fr)); }
-		.piece-item { align-items: center; border-left: 1px solid var(--color-border); display: grid; gap: .35rem; justify-items: center; min-width: 0; padding: .3rem .25rem; text-align: center; }
-		.piece-icon { align-items: center; background: radial-gradient(circle at 35% 30%, rgba(203,162,255,.96), rgba(151,83,229,.76)); border: 1px solid rgba(203,162,255,.45); border-radius: 999px; box-shadow: 0 0 .8rem rgba(151,83,229,.25); color: #170f24; display: inline-flex; font-size: .9rem; font-weight: 900; height: 1.7rem; justify-content: center; line-height: 1; width: 1.7rem; }
-		.piece-item strong { color: var(--color-text-soft); font-size: .78rem; font-weight: 700; line-height: 1.15; }
-		.piece-item span:last-child { color: var(--color-text); font-size: .95rem; }
-		.table-card, .accordion-card { margin-bottom: var(--space-4); }
-		.accordion-card.open { border-color: rgba(166,108,255,.35); }
-		.mapping-table select { max-width: 14rem; }
-		.mapping-details-grid { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; margin-top: var(--space-3); }
-		.profile-card { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; }
-		.issue-preview { color: var(--color-text-soft); font-size: .85rem; margin-top: .3rem !important; }
-		.issues-list { display: grid; gap: var(--space-2); list-style: none; margin: var(--space-3) 0 0; max-height: 22rem; overflow-y: auto; padding: 0 var(--space-2) 0 0; }
-		.issues-list li { align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: var(--space-2); grid-template-columns: minmax(11rem, .36fr) 1fr auto; padding: .65rem .75rem; }
-		.issues-list li.info { opacity: .78; }
-		.issues-list li.warning { border-color: rgba(246,180,80,.28); }
-		.issues-list li.error { border-color: rgba(255,107,122,.34); }
+		.review-status.failed .status-glyph { background: var(--color-danger); box-shadow: 0 0 0 4px rgba(255,107,122,.14); }
+
+		.card { box-shadow: 0 16px 52px rgba(0,0,0,.22); }
+		.selected-source-card { background: linear-gradient(180deg, rgba(24,32,43,.88), rgba(17,23,31,.86)); display: grid; grid-template-columns: 4.9rem minmax(16rem, 1fr) minmax(16rem, .7fr) auto; margin-bottom: .85rem; padding: 1.25rem; }
+		.file-icon { align-items: center; background: linear-gradient(135deg, rgba(151,83,229,.35), rgba(151,83,229,.14)); border: 1px solid rgba(203,162,255,.28); border-radius: .85rem; color: var(--color-accent-soft); display: grid; font-size: .9rem; font-weight: 900; height: 4.25rem; justify-items: center; position: relative; width: 4.25rem; }
+		.file-icon::before { border: 2px solid currentColor; border-radius: .25rem; content: ""; height: 2.35rem; opacity: .95; width: 1.75rem; }
+		.file-icon::after { border-color: currentColor currentColor transparent transparent; border-style: solid; border-width: .45rem; content: ""; position: absolute; right: 1.12rem; top: .96rem; }
+		.file-icon span { background: rgba(13,17,23,.92); border: 1px solid rgba(203,162,255,.36); border-radius: 999px; bottom: .68rem; font-size: .68rem; line-height: 1; padding: .28rem .34rem; position: absolute; }
+		.file-icon.midi span { font-size: .58rem; }
+		.selected-source-copy { min-width: 0; }
+		.selected-source-copy .eyebrow { color: var(--color-accent-soft); font-size: .77rem; letter-spacing: .04em; margin: 0 0 .55rem; text-transform: none; }
+		.source-name-row { align-items: center; display: flex; flex-wrap: wrap; gap: .6rem; }
+		.source-name-row h2 { font-size: 1.18rem; letter-spacing: -.01em; margin: 0; }
+		.source-kind-chip { background: rgba(151,83,229,.24); border: 1px solid rgba(151,83,229,.3); border-radius: .48rem; color: var(--color-accent-soft); font-size: .77rem; font-weight: 800; padding: .2rem .5rem; }
+		.source-path { color: var(--color-muted) !important; font-size: .86rem; margin-top: .55rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.source-meta { display: grid; gap: 1.25rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+		.source-meta div { display: grid; gap: .45rem; }
+		.source-meta dt, .summary-list dt { color: var(--color-muted); font-size: .78rem; font-weight: 600; }
+		.source-meta dd { color: var(--color-text-soft); font-size: .92rem; margin: 0; }
+		.source-card-side { align-items: end; display: grid; gap: 1rem; justify-items: end; }
+		.source-card-status { color: var(--color-success); font-size: .84rem; }
+		.source-card-status > span { border: 1px solid currentColor; border-radius: 999px; display: inline-grid; height: 1.25rem; place-items: center; width: 1.25rem; }
+		.source-card-status.attention { color: var(--color-warning); }
+		.source-card-status.failed { color: var(--color-danger); }
+		.source-actions { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: end; }
+		.button.small { min-height: 2.35rem; padding: .48rem .75rem; }
+		.icon-button { min-width: 2.35rem; padding-inline: .55rem; }
+
+		.summary-grid { display: grid; gap: .85rem; grid-template-columns: minmax(0, .95fr) minmax(0, .95fr) minmax(28rem, 1.45fr); margin-bottom: .85rem; }
+		.summary-card { min-height: 13.4rem; padding: 1.05rem 1rem; }
+		.summary-card h2, .table-card h2, .accordion-card h2 { font-size: 1rem; letter-spacing: -.01em; margin: 0; }
+		.help-dot { border: 1px solid rgba(203,213,225,.42); border-radius: 999px; color: var(--color-muted); display: inline-grid; font-size: .62rem; height: .95rem; margin-left: .25rem; place-items: center; width: .95rem; }
+		.summary-list { display: grid; gap: .58rem; grid-template-columns: 1fr; margin: .9rem 0 0; }
+		.summary-list div { align-items: center; display: grid; gap: .75rem; grid-template-columns: minmax(9.5rem, 1fr) auto; }
+		.summary-list dt { align-items: center; display: inline-flex; gap: .55rem; }
+		.summary-list dt span { color: var(--color-accent-soft); display: inline-grid; font-size: 1rem; width: 1rem; }
+		.summary-list dt.warning-label span { color: var(--color-warning); }
+		.summary-list dd { color: var(--color-text-soft); font-size: .9rem; margin: 0; text-align: right; }
+		.piece-summary-card { overflow: hidden; }
+		.piece-summary { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 1.35rem; }
+		.piece-item { align-items: center; border-left: 1px solid rgba(197,209,225,.09); display: grid; gap: .48rem; justify-items: center; min-width: 0; padding: .1rem .35rem .2rem; text-align: center; }
+		.piece-item:first-child { border-left: 0; }
+		.piece-icon { align-items: center; display: inline-grid; height: 2rem; justify-items: center; position: relative; width: 2.25rem; }
+		.piece-icon::before, .piece-icon::after, .piece-icon i { background: linear-gradient(135deg, #c795ff, #8f51de); border: 1px solid rgba(217,190,255,.45); box-shadow: 0 0 1rem rgba(151,83,229,.26); content: ""; display: block; }
+		.kick .piece-icon::before { border-radius: 50%; height: 1.55rem; width: 1.55rem; }
+		.kick .piece-icon::after { background: transparent; border-left: 2px solid #a66cff; border-top: 2px solid #a66cff; box-shadow: none; height: .72rem; position: absolute; right: .18rem; top: .18rem; transform: rotate(17deg); width: .72rem; }
+		.snare .piece-icon::before { border-radius: 50%; height: .65rem; width: 1.9rem; }
+		.snare .piece-icon::after { border-radius: 0 0 45% 45%; height: .65rem; margin-top: -.2rem; width: 1.9rem; }
+		.hihat_closed .piece-icon::before, .hihat_open .piece-icon::before, .crash .piece-icon::before, .ride .piece-icon::before { border-radius: 50%; height: .36rem; transform: rotate(-4deg); width: 1.85rem; }
+		.hihat_open .piece-icon::before { transform: rotate(-12deg); }
+		.crash .piece-icon::before, .ride .piece-icon::before { width: 1.7rem; }
+		.hihat_closed .piece-icon::after, .hihat_open .piece-icon::after, .crash .piece-icon::after, .ride .piece-icon::after { background: rgba(166,108,255,.85); border: 0; box-shadow: none; height: .85rem; width: .08rem; }
+		.toms .piece-icon { grid-template-columns: repeat(3, .6rem); width: 2.35rem; }
+		.toms .piece-icon::before, .toms .piece-icon::after, .toms .piece-icon i { border-radius: .2rem; height: 1rem; width: .58rem; }
+		.piece-item strong { color: var(--color-text-soft); font-size: .79rem; font-weight: 600; line-height: 1.15; min-height: 1.8rem; }
+		.piece-item span:last-child { color: var(--color-text); font-size: .95rem; font-weight: 500; }
+
+		.table-card, .accordion-card { margin-bottom: .85rem; }
+		.table-card { margin-top: 0; padding: 1rem; }
+		.table-header p { color: var(--color-muted); font-size: .84rem; margin: .2rem 0 0; }
+		.selected-count, .track-table-footer span:first-child { color: var(--color-accent-soft); font-size: .86rem; font-weight: 800; }
+		.table-frame { background: rgba(255,255,255,.025); border: 1px solid rgba(197,209,225,.09); border-radius: .55rem; margin-top: .8rem; overflow: hidden; }
+		table { border-collapse: collapse; color: var(--color-text-soft); font-size: .86rem; width: 100%; }
+		th, td { border-bottom: 1px solid rgba(197,209,225,.08); padding: .48rem .75rem; text-align: left; vertical-align: middle; }
+		th { background: rgba(255,255,255,.035); color: var(--color-muted); font-size: .72rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
+		tbody tr:last-child td { border-bottom: 0; }
+		tbody tr.selected-row { background: linear-gradient(90deg, rgba(151,83,229,.18), rgba(151,83,229,.08)); }
+		input[type="checkbox"] { accent-color: var(--color-accent); min-width: auto; padding: 0; }
+		.confidence-pill { border-radius: .35rem; font-size: .75rem; padding: .18rem .55rem; }
+		.confidence-pill.strong { background: rgba(101,222,119,.16); border-color: rgba(101,222,119,.16); color: #65de77; }
+		.confidence-pill.medium { background: rgba(246,180,80,.18); border-color: rgba(246,180,80,.18); color: var(--color-warning); }
+		.confidence-pill.weak { background: rgba(246,180,80,.12); border-color: rgba(246,180,80,.12); color: #c8a35c; }
+		.confidence-pill.na { background: rgba(148,163,184,.11); border-color: rgba(148,163,184,.12); color: var(--color-muted); }
+		.status-badge, .mapping-status, .mapping-piece-pill { border-radius: .38rem; display: inline-flex; font-size: .76rem; font-weight: 800; padding: .18rem .55rem; }
+		.status-badge { color: var(--color-text-soft); }
+		.status-badge.auto { background: rgba(151,83,229,.19); border: 1px solid rgba(151,83,229,.32); color: var(--color-accent-soft); }
+		.status-badge.low { color: var(--color-warning); }
+		.track-table-footer { align-items: center; display: flex; justify-content: space-between; padding-top: .65rem; }
+		.track-table-footer span:last-child { color: var(--color-text-soft); font-size: .86rem; }
+
+		.accordion-card { padding: .9rem 1rem; }
+		.accordion-card.open { border-color: rgba(166,108,255,.30); }
+		.accordion-card.attention { border-color: rgba(246,180,80,.22); }
+		.accordion-header { min-height: 2.6rem; }
+		.accordion-copy { min-width: 0; }
+		.accordion-title-row { align-items: center; display: flex; flex-wrap: wrap; gap: 1rem; }
+		.accordion-copy p { color: var(--color-text-soft); font-size: .86rem; margin-top: .25rem; }
+		.profile-line { color: var(--color-muted) !important; margin-top: .05rem !important; }
+		.review-badge { color: var(--color-success); font-size: .82rem; }
+		.review-badge > span { border: 1px solid currentColor; border-radius: 999px; display: inline-grid; height: 1.18rem; place-items: center; width: 1.18rem; }
+		.review-badge.warning { color: var(--color-warning); }
+		.accordion-actions { align-items: center; display: flex; gap: .7rem; }
+		.chevron-button { background: transparent; border: 0; color: var(--color-text-soft); min-height: 2rem; min-width: 2rem; padding: .2rem; }
+		.mapping-frame { margin-top: .85rem; }
+		.mapping-table select { max-width: 15rem; min-height: 2.15rem; min-width: 11rem; padding: .35rem .65rem; width: 100%; }
+		.source-kind-mini { align-items: center; display: inline-flex; gap: .35rem; font-weight: 800; }
+		.source-kind-mini::before { color: var(--color-accent-soft); content: "♪"; font-size: 1.05rem; }
+		.source-kind-mini.gpif::before { border: 1px solid var(--color-accent-soft); border-radius: 999px; content: "GP"; font-size: .52rem; padding: .12rem .18rem; }
+		.mapping-piece-pill { background: rgba(151,83,229,.13); border: 1px solid rgba(151,83,229,.28); color: var(--color-accent-soft); }
+		.mapping-piece-pill.unmapped { color: var(--color-muted); }
+		.mapping-status { background: rgba(148,163,184,.1); color: var(--color-text-soft); }
+		.mapping-status.override { background: rgba(101,222,119,.13); color: var(--color-success); }
+		.mapping-status.ignore { background: rgba(148,163,184,.12); color: var(--color-text-soft); }
+		.mapping-status.unmapped { background: rgba(246,180,80,.13); color: var(--color-warning); }
+		.mapping-details-grid { display: grid; gap: .85rem; grid-template-columns: 1fr 1fr; margin-top: .85rem; }
+		.mini-card h3 { font-size: .95rem; margin: 0 0 .75rem; }
+		.override-metrics { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+		.override-metrics span { background: rgba(255,255,255,.035); border: 1px solid rgba(197,209,225,.09); border-radius: .5rem; color: var(--color-muted); display: grid; font-size: .74rem; gap: .15rem; padding: .55rem; text-align: center; }
+		.override-metrics strong { color: var(--color-text); font-size: 1.15rem; }
+		.overrides-summary p, .profile-card p { font-size: .82rem; margin: .65rem 0 0; }
+		.profile-card { display: grid; gap: .75rem; grid-template-columns: 1fr auto; }
+		.profile-actions { align-content: center; display: grid; gap: .55rem; }
+		.profile-hint { color: var(--color-muted) !important; }
+
+		.issues-header { justify-content: start; }
+		.issue-icon { color: var(--color-warning); font-size: 1.05rem; margin-right: .25rem; }
+		.issues-header .accordion-actions { margin-left: auto; }
+		.issue-preview { color: var(--color-text-soft); font-size: .84rem; margin-top: .32rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.issues-panel { display: grid; gap: .85rem; grid-template-columns: 1fr 1fr; margin-top: .75rem; max-height: 13.5rem; overflow-y: auto; padding-right: .35rem; }
+		.issue-group { background: rgba(255,255,255,.025); border: 1px solid rgba(197,209,225,.08); border-radius: .58rem; min-width: 0; padding: .75rem; }
+		.issue-group h3 { font-size: .88rem; margin: 0 0 .55rem; }
+		.empty-group { color: var(--color-muted); font-size: .82rem; margin: 0; }
+		.issues-list { display: grid; gap: .45rem; list-style: none; margin: 0; padding: 0; }
+		.issues-list li { align-items: center; background: rgba(255,255,255,.025); border: 1px solid rgba(197,209,225,.08); border-radius: .45rem; display: grid; gap: .55rem; grid-template-columns: minmax(8rem, .35fr) 1fr auto; padding: .48rem .55rem; }
+		.issues-list li strong { color: var(--color-warning); font-size: .76rem; text-transform: capitalize; }
+		.issues-list li span { color: var(--color-text-soft); font-size: .8rem; }
+		.issues-list li.info { opacity: .8; }
+		.issues-list li.info strong { color: var(--color-accent-soft); }
+		.issues-list li.warning { border-color: rgba(246,180,80,.23); }
+		.issues-list li.error { border-color: rgba(255,107,122,.32); }
+
 		.json-card pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }
-		.source-review-actions { margin-top: var(--space-5); }
-		@media (max-width: 1180px) { .summary-grid { grid-template-columns: 1fr; } .piece-summary { grid-template-columns: repeat(2, 1fr); } .selected-source-card, .source-review-header, .source-review-actions { align-items: stretch; flex-direction: column; } }
+		.source-review-actions { margin-top: 1.35rem; }
+		.back-button { min-width: 16rem; }
+		.continue-button { min-width: 24rem; }
+		.sr-only { clip: rect(0,0,0,0); border: 0; height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; }
+		@media (max-width: 1420px) { :host { max-width: none; width: 100%; } .selected-source-card { grid-template-columns: 4.9rem minmax(14rem, 1fr) minmax(13rem, .65fr); } .source-card-side { grid-column: 2 / -1; grid-template-columns: 1fr auto; align-items: center; } }
+		@media (max-width: 1180px) { .summary-grid, .mapping-details-grid, .issues-panel { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: 1fr; } .piece-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); } .selected-source-card { grid-template-columns: 4.9rem minmax(0, 1fr); } .source-meta, .source-card-side { grid-column: 2; grid-template-columns: 1fr; justify-items: start; } .source-actions { justify-content: start; } }
+		@media (max-width: 760px) { .source-review-header, .source-review-actions, .accordion-header { align-items: stretch; flex-direction: column; } .piece-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .continue-button, .back-button { min-width: 0; width: 100%; } .profile-card { grid-template-columns: 1fr; } }
+
 	`,
 	],
 })
@@ -309,10 +487,7 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	trackStatus(trackIndex: number, strength: string): string {
-		if (this.isSelected(trackIndex))
-			return this.state().selectedTracks.length === 1
-				? "Auto-selected"
-				: "Selected";
+		if (this.isSelected(trackIndex)) return "Auto-selected";
 		return strength === "weak" ? "Low confidence" : "Available";
 	}
 
@@ -386,11 +561,36 @@ export class SourceReviewPageComponent implements OnInit {
 
 	mappingSummary(): string {
 		const rows = this.mappingRows();
-		const unknown = rows.filter(
-			(row) => row.automaticPiece === "unknown" || !row.automaticPiece,
-		).length;
+		const unknown = this.unknownCount();
 		const overrides = this.overrideCount();
-		return `${rows.length - unknown} mapped sources · ${unknown} unknown · ${overrides} overrides · Profile: None`;
+		return `${rows.length - unknown} mapped sources · ${unknown} unknown · ${overrides} overrides`;
+	}
+
+	mappingStatusLabel(): string {
+		return this.mappingNeedsAttention()
+			? "Manual review recommended"
+			: "Automatic mapping ready";
+	}
+
+	mappingDetectedMeaning(row: MappingRow): string {
+		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unknown";
+		return this.pieceLabel(row.automaticPiece);
+	}
+
+	mappingCurrentMapping(row: MappingRow): string {
+		const override = this.state().mappingOverrides[row.key];
+		if (override?.target.kind === "ignore") return "Ignored";
+		if (override?.target.kind === "piece") return this.pieceLabel(override.target.piece);
+		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unmapped";
+		return this.pieceLabel(row.automaticPiece);
+	}
+
+	mappingStatusLabelForRow(row: MappingRow): string {
+		const override = this.state().mappingOverrides[row.key];
+		if (override?.target.kind === "ignore") return "Ignore";
+		if (override?.target.kind === "piece") return "Override";
+		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unmapped";
+		return "Default";
 	}
 
 	overrideLabel(key: string): string {
@@ -469,6 +669,11 @@ export class SourceReviewPageComponent implements OnInit {
 	ignoredCount(): number {
 		return Object.values(this.state().mappingOverrides).filter(
 			(override) => override.target.kind === "ignore",
+		).length;
+	}
+	changedMappingCount(): number {
+		return Object.values(this.state().mappingOverrides).filter(
+			(override) => override.target.kind === "piece",
 		).length;
 	}
 	warningCount(): number {
@@ -556,6 +761,14 @@ export class SourceReviewPageComponent implements OnInit {
 		return Array.from(grouped.values());
 	}
 
+	warningIssues(): DisplayIssue[] {
+		return this.displayIssues().filter((issue) => issue.severity !== "info");
+	}
+
+	infoIssues(): DisplayIssue[] {
+		return this.displayIssues().filter((issue) => issue.severity === "info");
+	}
+
 	issueLabel(issue: DisplayIssue): string {
 		const base = `${issue.severity} · ${issue.code}`;
 		return issue.count > 1 ? `${base} · ${issue.count} similar` : base;
@@ -599,19 +812,19 @@ export class SourceReviewPageComponent implements OnInit {
 		return `${this.formatNumber(summary.duplicateHitCount)} (${percent.toFixed(1)}%)`;
 	}
 
-	pieceEntries(): Array<{ label: string; count: number; icon: string }> {
+	pieceEntries(): Array<{ kind: string; label: string; count: number }> {
 		const summary = this.state().normalizationPreview?.pieceSummary ?? {};
 		return [
-			["kick", "Kick", "●"],
-			["snare", "Snare", "▬"],
-			["hihat_closed", "Hi-Hat Closed", "◆"],
-			["hihat_open", "Hi-Hat Open", "◇"],
-			["crash", "Crash", "✦"],
-			["ride", "Ride", "✧"],
-			["toms", "Toms", "▥"],
-		].map(([key, label, icon]) => ({
+			["kick", "Kick"],
+			["snare", "Snare"],
+			["hihat_closed", "Hi-Hat Closed"],
+			["hihat_open", "Hi-Hat Open"],
+			["crash", "Crash"],
+			["ride", "Ride"],
+			["toms", "Toms"],
+		].map(([key, label]) => ({
+			kind: key,
 			label,
-			icon,
 			count:
 				key === "toms"
 					? (summary["tom_high"] ?? 0) +
@@ -619,6 +832,19 @@ export class SourceReviewPageComponent implements OnInit {
 						(summary["tom_floor"] ?? 0)
 					: (summary[key] ?? 0),
 		}));
+	}
+
+	totalSelectedNotesLabel(): string {
+		const selected = new Set(this.state().selectedTracks);
+		let total = 0;
+		for (const track of this.state().inspection?.tracks ?? []) {
+			if (!selected.has(track.index)) continue;
+			if (typeof track.noteCount !== "number" || !Number.isFinite(track.noteCount)) {
+				return "n/a";
+			}
+			total += track.noteCount;
+		}
+		return this.formatNumber(total);
 	}
 
 	pieceLabel(piece: string): string {
