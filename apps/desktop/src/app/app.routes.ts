@@ -6,7 +6,6 @@ import { ProjectDetailsPageComponent } from "./pages/projects/project-details/pr
 import { PreviewPageComponent } from "./pages/preview/preview-page.component";
 import { ProjectsPageComponent } from "./pages/projects/projects-page.component";
 import { SettingsPageComponent } from "./pages/settings/settings-page.component";
-import { ValidationPageComponent } from "./pages/validation/validation-page.component";
 
 export const routes: Routes = [
 	{ path: "", pathMatch: "full", redirectTo: "home" },
@@ -19,7 +18,7 @@ export const routes: Routes = [
 	{ path: "track-selection", redirectTo: "source-review" },
 	{ path: "mapping", redirectTo: "source-review" },
 	{ path: "generate", component: GeneratePageComponent },
-	{ path: "validation", component: ValidationPageComponent },
+	{ path: "validation", redirectTo: "generate" },
 	{ path: "preview", component: PreviewPageComponent },
 	{ path: "settings", component: SettingsPageComponent },
 	{ path: "**", redirectTo: "home" },

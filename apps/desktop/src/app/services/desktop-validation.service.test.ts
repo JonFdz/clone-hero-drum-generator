@@ -152,6 +152,30 @@ describe("desktop validation model", () => {
 		);
 	});
 
+	it("treats a non-zero chart offset as a non-blocking warning", () => {
+		const summary = buildDesktopValidationSummary(
+			generateState({
+				sourcePath: "song.mid",
+				audioPath: "song.ogg",
+				outputDir: "/tmp/out",
+				selectedTracks: [3],
+				offsetMs: 25,
+				metadata: { artist: "Artist", charter: "Charter" },
+			}),
+			projectState(),
+		);
+
+		expect(summary.canGenerate).toBe(true);
+		expect(summary.items).toContainEqual(
+			expect.objectContaining({
+				id: "offset.present",
+				category: "offset",
+				severity: "warning",
+				blocking: false,
+			}),
+		);
+	});
+
 	it("blocks when FFmpeg diagnostic is unavailable and audio conversion is required", () => {
 		const summary = buildDesktopValidationSummary(
 			generateState({

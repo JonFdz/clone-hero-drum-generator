@@ -22,4 +22,16 @@ describe("app routes source", () => {
 		expect(source).toContain('path: "track-selection", redirectTo: "source-review"');
 		expect(source).toContain('path: "mapping", redirectTo: "source-review"');
 	});
+
+	it("keeps Generate canonical and redirects legacy Validation", () => {
+		const source = readFileSync(
+			join(process.cwd(), "apps/desktop/src/app/app.routes.ts"),
+			"utf8",
+		);
+
+		expect(source).toContain('path: "generate", component: GeneratePageComponent');
+		expect(source).toContain('path: "validation", redirectTo: "generate"');
+		expect(source).not.toContain("ValidationPageComponent");
+		expect(source).not.toContain('path: "validation", component');
+	});
 });

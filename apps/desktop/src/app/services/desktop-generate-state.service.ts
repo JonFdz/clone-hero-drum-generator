@@ -316,13 +316,14 @@ export class DesktopGenerateStateService {
 	}
 
 	applyError(message: string, issues: ProjectIssue[] = []): void {
+		const wasGenerating = this.state().status === "generating";
 		this.patch({
 			errorMessage: message,
 			issues,
 			status: "error",
 			logs: appendLog(this.state().logs, `Error: ${message}`),
 		});
-		if (this.state().status === "generating") {
+		if (wasGenerating) {
 			this.projectState.markFailed();
 		}
 	}

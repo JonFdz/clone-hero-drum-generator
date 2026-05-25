@@ -167,11 +167,12 @@ export function buildDesktopValidationItems(
 		);
 	} else if (generate.offsetMs !== undefined) {
 		items.push(
-			infoItem(
+			warningItem(
 				"offset.present",
 				"offset",
 				"Chart offset set",
 				`${generate.offsetMs} ms; note ticks are not moved.`,
+				"/projects/details",
 			),
 		);
 	}

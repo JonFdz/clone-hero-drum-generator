@@ -10,7 +10,6 @@ export type HomeNextActionId =
 	| "continue_setup"
 	| "source_review"
 	| "generate"
-	| "validate"
 	| "preview"
 	| "review_generate"
 	| "open_project";
@@ -71,9 +70,7 @@ export type HomeDashboardModelInput = {
 export const HOME_WORKFLOW_LABELS = [
 	"Import source",
 	"Source Review",
-	"Track selection",
 	"Generate",
-	"Validate",
 	"Preview",
 ] as const;
 
@@ -83,9 +80,7 @@ const workflowDescriptions: Record<
 > = {
 	"Import source": "Load a source file (MIDI, GP, etc.)",
 	"Source Review": "Analyze source content, selected tracks, and mapping",
-	"Track selection": "Confirm the track(s) to generate",
-	Generate: "Generate drum chart from selected track(s)",
-	Validate: "Run validations and fix any issues",
+	Generate: "Validate readiness and generate drum chart output",
 	Preview: "Preview chart and listen back",
 };
 
@@ -159,8 +154,6 @@ export function deriveHomeNextAction(
 			description:
 				"Project inputs changed since the last successful Clone Hero output.",
 			route: "/generate",
-			secondaryLabel: "Validate",
-			secondaryRoute: "/validation",
 		};
 	}
 
@@ -171,8 +164,8 @@ export function deriveHomeNextAction(
 			description:
 				"Ready to preview notes.chart with song.ogg from the output folder.",
 			route: "/preview",
-			secondaryLabel: "Validate",
-			secondaryRoute: "/validation",
+			secondaryLabel: "Generate",
+			secondaryRoute: "/generate",
 		};
 	}
 
@@ -202,7 +195,6 @@ export function deriveWorkflowStepStatuses(
 ): HomeWorkflowStep[] {
 	const { hasProject, generate, project } = input;
 	const hasSource = !!generate.sourcePath;
-	const inspected = !!generate.inspection;
 	const selected = generate.selectedTracks.length > 0;
 	const generated = project.outputStatus === "generated";
 	const failed = project.outputStatus === "failed";
@@ -211,8 +203,7 @@ export function deriveWorkflowStepStatuses(
 
 	const statuses: HomeWorkflowStepStatus[] = [
 		hasSource ? "complete" : hasProject ? "current" : "upcoming",
-		!hasSource ? "blocked" : inspected ? "complete" : "current",
-		!inspected ? "upcoming" : selected ? "complete" : "current",
+		!hasSource ? "blocked" : selected ? "complete" : "current",
 		generated
 			? "complete"
 			: failed
@@ -220,7 +211,6 @@ export function deriveWorkflowStepStatuses(
 				: canGenerate
 					? "current"
 					: "upcoming",
-		generated ? "available" : "upcoming",
 		generated ? "current" : "upcoming",
 	];
 
