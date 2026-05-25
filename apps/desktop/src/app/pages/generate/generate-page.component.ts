@@ -135,7 +135,7 @@ const severityRank: Record<ValidationItem["severity"], number> = {
             <div class="checklist-scroll">
               @for (item of filteredChecklistItems(); track item.id + item.message) {
                 <div class="checklist-row" role="row" [class.error]="item.severity === 'error'" [class.warning]="item.severity === 'warning'" [class.info]="item.severity === 'info'">
-                  <span class="severity-icon" aria-label="{{ item.severity }}">{{ severityIcon(item.severity) }}</span>
+                  <span class="severity-icon" [attr.aria-label]="item.severity">{{ severityIcon(item.severity) }}</span>
                   <strong>{{ item.title }}</strong>
                   <span class="category-badge">{{ item.category }}</span>
                   <span class="check-message">{{ item.message }}</span>
