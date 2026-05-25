@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	createProjectFile,
-	validateProjectFile,
-} from "./projectFile.js";
+import { createProjectFile, validateProjectFile } from "./projectFile.js";
 
 describe("projectFile", () => {
 	describe("createProjectFile", () => {
@@ -114,10 +111,111 @@ describe("projectFile", () => {
 			}
 		});
 
+		it("loads old project without analysis", () => {
+			const result = validateProjectFile(baseProject({}));
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.analysis).toBeUndefined();
+			}
+		});
+
+		it("accepts a valid Source Review analysis cache", () => {
+			const result = validateProjectFile(
+				baseProject({
+					analysis: {
+						schemaVersion: 1,
+						sourceFingerprint: {
+							path: "/tmp/demo.mid",
+							sizeBytes: 123,
+							mtimeMs: 456,
+						},
+						mappingFingerprint: "{}",
+						selectedTracks: [3],
+						inspectedAt: "2026-01-01T00:00:00.000Z",
+						normalizedAt: "2026-01-01T00:00:01.000Z",
+						inspection: {
+							sourceKind: "midi",
+							sourcePath: "/tmp/demo.mid",
+							tempos: [],
+							timeSignatures: [],
+							sections: [],
+							tracks: [],
+							issues: [],
+						},
+						normalizationPreview: {
+							sourceKind: "midi",
+							sourcePath: "/tmp/demo.mid",
+							selectedTrack: 3,
+							selectedTracks: [3],
+							hitCount: 0,
+							pieceSummary: {},
+							firstHits: [],
+							mappingCandidates: [],
+							issues: [],
+						},
+					},
+				}),
+			);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.analysis?.selectedTracks).toEqual([3]);
+				expect(result.project.analysis?.normalizationPreview?.hitCount).toBe(0);
+			}
+		});
+
+		it("accepts Source Review analysis cache schema version 2", () => {
+			const result = validateProjectFile(
+				baseProject({
+					analysis: {
+						schemaVersion: 2,
+						sourceFingerprint: { path: "/tmp/demo.gp" },
+						mappingFingerprint: "{}",
+						selectedTracks: [3],
+						inspectedAt: "2026-01-01T00:00:00.000Z",
+						inspection: {
+							sourceKind: "gpif",
+							sourcePath: "/tmp/demo.gp",
+							tempos: [],
+							timeSignatures: [],
+							sections: [],
+							tracks: [{ index: 3, noteCount: 1039, role: "drums", strength: "strong" }],
+							issues: [],
+						},
+					},
+				}),
+			);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.analysis?.schemaVersion).toBe(2);
+				expect(result.project.analysis?.inspection.tracks[0]?.noteCount).toBe(1039);
+			}
+		});
+
+		it("drops malformed Source Review analysis without blocking open", () => {
+			const result = validateProjectFile(
+				baseProject({
+					analysis: {
+						schemaVersion: 1,
+						sourceFingerprint: { path: 123 },
+						mappingFingerprint: "{}",
+						selectedTracks: [3],
+						inspectedAt: "2026-01-01T00:00:00.000Z",
+						inspection: {},
+					},
+				}),
+			);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.analysis).toBeUndefined();
+			}
+		});
+
 		it("rejects invalid cover image path", () => {
-			const result = validateProjectFile(baseProject({
-				cover: { imagePath: 123 },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					cover: { imagePath: 123 },
+				}),
+			);
 			expectInvalid(result, "INVALID_COVER_IMAGE_PATH");
 		});
 
@@ -191,105 +289,134 @@ describe("projectFile", () => {
 		});
 
 		it("rejects object sourcePath", () => {
-			const result = validateProjectFile(baseProject({
-				paths: { sourcePath: { bad: true } },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					paths: { sourcePath: { bad: true } },
+				}),
+			);
 			expectInvalid(result, "INVALID_PROJECT_PATH");
 		});
 
 		it("rejects numeric audioPath", () => {
-			const result = validateProjectFile(baseProject({
-				paths: { audioPath: 123 },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					paths: { audioPath: 123 },
+				}),
+			);
 			expectInvalid(result, "INVALID_PROJECT_PATH");
 		});
 
 		it("rejects array outputDir", () => {
-			const result = validateProjectFile(baseProject({
-				paths: { outputDir: [] },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					paths: { outputDir: [] },
+				}),
+			);
 			expectInvalid(result, "INVALID_PROJECT_PATH");
 		});
 
 		it("rejects numeric metadata.name", () => {
-			const result = validateProjectFile(baseProject({
-				metadata: { name: 123 },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					metadata: { name: 123 },
+				}),
+			);
 			expectInvalid(result, "INVALID_METADATA_FIELD");
 		});
 
 		it("rejects object metadata.artist", () => {
-			const result = validateProjectFile(baseProject({
-				metadata: { artist: { bad: true } },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					metadata: { artist: { bad: true } },
+				}),
+			);
 			expectInvalid(result, "INVALID_METADATA_FIELD");
 		});
 
 		it("rejects invalid source.sourceKind", () => {
-			const result = validateProjectFile(baseProject({
-				source: { sourceKind: "bad" },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					source: { sourceKind: "bad" },
+				}),
+			);
 			expectInvalid(result, "INVALID_SOURCE_KIND");
 		});
 
 		it("rejects string generation.offsetMs", () => {
-			const result = validateProjectFile(baseProject({
-				generation: { status: "not-generated", offsetMs: "900" },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: { status: "not-generated", offsetMs: "900" },
+				}),
+			);
 			expectInvalid(result, "INVALID_GENERATION_OFFSET");
 		});
 
 		it("rejects NaN generation.offsetMs", () => {
-			const result = validateProjectFile(baseProject({
-				generation: { status: "not-generated", offsetMs: Number.NaN },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: { status: "not-generated", offsetMs: Number.NaN },
+				}),
+			);
 			expectInvalid(result, "INVALID_GENERATION_OFFSET");
 		});
 
 		it("rejects Infinity generation.offsetMs", () => {
-			const result = validateProjectFile(baseProject({
-				generation: { status: "not-generated", offsetMs: Number.POSITIVE_INFINITY },
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: {
+						status: "not-generated",
+						offsetMs: Number.POSITIVE_INFINITY,
+					},
+				}),
+			);
 			expectInvalid(result, "INVALID_GENERATION_OFFSET");
 		});
 
 		it("rejects object generation.lastGeneratedAt", () => {
-			const result = validateProjectFile(baseProject({
-				generation: {
-					status: "generated",
-					lastGeneratedAt: { bad: true },
-				},
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: {
+						status: "generated",
+						lastGeneratedAt: { bad: true },
+					},
+				}),
+			);
 			expectInvalid(result, "INVALID_GENERATION_TIMESTAMP");
 		});
 
 		it("rejects numeric generation.outputFiles.chart", () => {
-			const result = validateProjectFile(baseProject({
-				generation: {
-					status: "generated",
-					outputFiles: { chart: 123 },
-				},
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: {
+						status: "generated",
+						outputFiles: { chart: 123 },
+					},
+				}),
+			);
 			expectInvalid(result, "INVALID_OUTPUT_FILE");
 		});
 
 		it("rejects object generation.outputFiles.songIni", () => {
-			const result = validateProjectFile(baseProject({
-				generation: {
-					status: "generated",
-					outputFiles: { songIni: { bad: true } },
-				},
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: {
+						status: "generated",
+						outputFiles: { songIni: { bad: true } },
+					},
+				}),
+			);
 			expectInvalid(result, "INVALID_OUTPUT_FILE");
 		});
 
 		it("rejects array generation.outputFiles.songOgg", () => {
-			const result = validateProjectFile(baseProject({
-				generation: {
-					status: "generated",
-					outputFiles: { songOgg: [] },
-				},
-			}));
+			const result = validateProjectFile(
+				baseProject({
+					generation: {
+						status: "generated",
+						outputFiles: { songOgg: [] },
+					},
+				}),
+			);
 			expectInvalid(result, "INVALID_OUTPUT_FILE");
 		});
 	});

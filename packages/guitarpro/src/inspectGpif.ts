@@ -137,6 +137,7 @@ function extractMetadata(entries: WalkEntry[]): GpMetadataInspection {
 function extractTracks(root: unknown, entries: WalkEntry[]): GpTrackInspection[] {
   const trackNodes = findObjectsByKey(root, "Track");
   const source = trackNodes.length > 0 ? trackNodes : inferTrackLikeObjects(entries);
+  const noteCounts = extractTrackNoteCounts(root, source);
 
   return source.map((track, index) => {
     const id = stringValue(track[`${ATTRIBUTE_PREFIX}id`] ?? track.id ?? track.Id ?? track.ID);
@@ -154,10 +155,111 @@ function extractTracks(root: unknown, entries: WalkEntry[]): GpTrackInspection[]
       instrument,
       type,
       channel,
+      ...(noteCounts.get(index) !== undefined ? { noteCount: noteCounts.get(index) } : {}),
       isDrumCandidate: reasons.length > 0,
       drumCandidateReasons: reasons,
     };
   });
+}
+
+function extractTrackNoteCounts(root: unknown, tracks: XmlNode[]): Map<number, number> {
+  const bars = findObjectsByKey(root, "Bar");
+  const notes = findObjectsByKey(root, "Note");
+  const counts = new Map<number, number>();
+  if (tracks.length === 0 || (bars.length === 0 && notes.length === 0)) {
+    return counts;
+  }
+
+  const globalVoices = objectMapById(findObjectsByKey(root, "Voice"));
+  const globalBeats = objectMapById(findObjectsByKey(root, "Beat"));
+  const globalNotes = objectMapById(notes);
+
+  tracks.forEach((track, index) => {
+    const selectedBars = selectBarsForTrack(root, bars, index, trackReferenceValues(track, index));
+    if (bars.length > 0 && selectedBars.length === 0) {
+      counts.set(index, 0);
+      return;
+    }
+
+    const candidateBars = selectedBars.length > 0 ? selectedBars : bars;
+    let count = 0;
+    for (const bar of candidateBars) {
+      const voices = resolveChildObjects(bar, "Voice", "Voices", globalVoices);
+      for (const voice of voices) {
+        const beats = resolveChildObjects(voice, "Beat", "Beats", globalBeats);
+        for (const beat of beats) {
+          count += resolveChildObjects(beat, "Note", "Notes", globalNotes).length;
+        }
+      }
+    }
+    counts.set(index, count);
+  });
+
+  return counts;
+}
+
+function resolveChildObjects(
+  parent: XmlNode,
+  childKey: string,
+  containerKey: string,
+  globalById: Map<string, XmlNode>
+): XmlNode[] {
+  const container = parent[containerKey];
+  const direct = isObject(container) ? container[childKey] : (container ?? parent[childKey]);
+  const values = Array.isArray(direct) ? direct : direct !== undefined ? [direct] : [];
+  return values.flatMap((value) => {
+    if (isObject(value) && Object.keys(value).some((key) => !isReferenceKey(key))) {
+      return [value];
+    }
+    const refs = referenceValues(value);
+    const resolved = refs.map((ref) => globalById.get(ref)).filter((item): item is XmlNode => item !== undefined);
+    if (resolved.length > 0) return resolved;
+    return isObject(value) ? [value] : [];
+  });
+}
+
+function objectMapById(objects: XmlNode[]): Map<string, XmlNode> {
+  const map = new Map<string, XmlNode>();
+  for (const obj of objects) {
+    const id = firstValueInObject(obj, [`${ATTRIBUTE_PREFIX}id`, "id", "Id", "ID"]);
+    if (id) map.set(id, obj);
+  }
+  return map;
+}
+
+function referenceValues(value: unknown): string[] {
+  const text = textFromUnknown(value);
+  if (text) return text.split(/\s+/).filter((part) => part !== "" && part !== "-1");
+  if (isObject(value)) {
+    return [firstValueInObject(value, ["ref", "id", "Id", `${ATTRIBUTE_PREFIX}ref`, `${ATTRIBUTE_PREFIX}id`])].filter((part): part is string => Boolean(part));
+  }
+  return [];
+}
+
+function trackReferenceValues(track: XmlNode | undefined, trackIndex: number): Set<string> {
+  return new Set([String(trackIndex), String(trackIndex + 1), firstValueInObject(track ?? {}, [`${ATTRIBUTE_PREFIX}id`, "id", "Id", "ID"])].filter((value): value is string => Boolean(value)));
+}
+
+function selectBarsForTrack(root: unknown, bars: XmlNode[], trackIndex: number, trackRefs: Set<string>): XmlNode[] {
+  const barById = objectMapById(bars);
+  const masterBars = findObjectsByKey(root, "MasterBar");
+  const selectedFromMasterBars = masterBars
+    .map((masterBar) => referenceValues(masterBar.Bars)[trackIndex])
+    .map((barId) => (barId !== undefined ? barById.get(barId) : undefined))
+    .filter((bar): bar is XmlNode => bar !== undefined);
+
+  if (selectedFromMasterBars.length > 0) return selectedFromMasterBars;
+  return bars.filter((bar) => barBelongsToTrack(bar, trackRefs));
+}
+
+function barBelongsToTrack(bar: XmlNode, trackRefs: Set<string>): boolean {
+  const value = firstNestedValue(bar, ["Track", "TrackId", "trackId", "track", `${ATTRIBUTE_PREFIX}track`, `${ATTRIBUTE_PREFIX}trackId`]);
+  if (value === undefined) return true;
+  return trackRefs.has(value);
+}
+
+function isReferenceKey(key: string): boolean {
+  return /^(?:@_)?(?:id|ref)$/i.test(key);
 }
 
 function extractTempos(root: unknown, entries: WalkEntry[]): unknown[] {

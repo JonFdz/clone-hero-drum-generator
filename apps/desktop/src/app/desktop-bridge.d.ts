@@ -6,8 +6,10 @@ import type {
 	NormalizationPreview,
 	NormalizeSelectionInput,
 	SourceInspectionResult,
+	ChdgProjectAnalysisCache,
 	ChdgProjectFile,
 	ChdgOutputStatus,
+	ChdgSourceFingerprint,
 	DesktopSettings,
 	MappingOverrideProfile,
 	RecentProject,
@@ -39,6 +41,9 @@ declare global {
 			normalizeSelection: (
 				input: NormalizeSelectionInput,
 			) => Promise<JsonEnvelope<NormalizationPreview>>;
+			getSourceFingerprint: (
+				sourcePath: string,
+			) => Promise<JsonEnvelope<ChdgSourceFingerprint>>;
 			generatePackage: (
 				input: GeneratePackageInput & { overwriteKnownFiles?: boolean },
 			) => Promise<JsonEnvelope<GeneratePackageResult>>;
@@ -51,9 +56,9 @@ declare global {
 				currentPath?: string,
 			) => Promise<PickedPath | null>;
 			openProjectFile: () => Promise<PickedPath | null>;
-			createProject: (
-				input: { projectName: string },
-			) => Promise<JsonEnvelope<ProjectStatePayload>>;
+			createProject: (input: {
+				projectName: string;
+			}) => Promise<JsonEnvelope<ProjectStatePayload>>;
 			saveProject: (
 				input: ProjectStatePayload,
 			) => Promise<JsonEnvelope<SaveProjectResult>>;
@@ -62,14 +67,12 @@ declare global {
 			) => Promise<JsonEnvelope<SaveProjectResult>>;
 			openProject: (
 				filePath: string,
-			) => Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>>;
+			) => Promise<
+				JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>
+			>;
 			readRecentProjects: () => Promise<JsonEnvelope<RecentProject[]>>;
-			removeRecentProject: (
-				projectPath: string,
-			) => Promise<JsonEnvelope<void>>;
-			deleteProjectFile: (
-				projectPath: string,
-			) => Promise<JsonEnvelope<void>>;
+			removeRecentProject: (projectPath: string) => Promise<JsonEnvelope<void>>;
+			deleteProjectFile: (projectPath: string) => Promise<JsonEnvelope<void>>;
 			getCoverImagePreviewUrl: (
 				imagePath: string,
 			) => Promise<JsonEnvelope<{ src: string }>>;
@@ -77,7 +80,9 @@ declare global {
 			writeSettings: (
 				settings: DesktopSettings,
 			) => Promise<JsonEnvelope<DesktopSettings>>;
-			readMappingProfiles: () => Promise<JsonEnvelope<MappingOverrideProfile[]>>;
+			readMappingProfiles: () => Promise<
+				JsonEnvelope<MappingOverrideProfile[]>
+			>;
 			saveMappingProfile: (
 				profile: MappingOverrideProfile,
 			) => Promise<JsonEnvelope<MappingOverrideProfile[]>>;

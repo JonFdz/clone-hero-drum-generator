@@ -57,6 +57,7 @@ describe("inspectSource", () => {
 					index: 3,
 					name: "Drums",
 					channel: 10,
+					noteCount: 9177,
 					isDrumCandidate: true,
 					drumCandidateReasons: [
 						"name/instrument indicates drums or percussion",
@@ -75,7 +76,7 @@ describe("inspectSource", () => {
 		expect(result.sourceKind).toBe("gpif");
 		expect(result.tracks[0]).toMatchObject({
 			index: 3,
-			noteCount: null,
+			noteCount: 9177,
 			role: "drums",
 			strength: "strong",
 		});

@@ -28,4 +28,16 @@ describe("AppComponent source", () => {
 		expect(source).not.toContain('label: "New Project"');
 		expect(source).toContain('path: "/projects"');
 	});
+
+	it("exposes Source Review instead of old separated review steps", () => {
+		const source = readFileSync(
+			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
+			"utf8",
+		);
+		expect(source).toContain('label: "Source Review"');
+		expect(source).toContain('path: "/source-review"');
+		expect(source).not.toContain('label: "Inspect Source"');
+		expect(source).not.toContain('label: "Track Selection"');
+		expect(source).not.toContain('label: "Mapping"');
+	});
 });

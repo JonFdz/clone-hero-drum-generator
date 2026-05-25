@@ -75,7 +75,7 @@ describe("home dashboard next action", () => {
 		).toBe("continue_setup");
 	});
 
-	it("uses Inspect Source for a safe not-generated setup", () => {
+	it("uses Source Review for a safe not-generated setup", () => {
 		expect(
 			deriveHomeNextAction({
 				project: project({ outputStatus: "not-generated" }),
@@ -87,7 +87,7 @@ describe("home dashboard next action", () => {
 				hasProject: true,
 				isDirty: false,
 			}).id,
-		).toBe("inspect_source");
+		).toBe("source_review");
 	});
 
 	it("uses Generate when output needs regeneration", () => {
@@ -147,8 +147,8 @@ describe("home dashboard helpers", () => {
 
 		expect(steps.map((step) => step.label)).toEqual([
 			"Import source",
-			"Inspect",
-			"Select track(s)",
+			"Source Review",
+			"Track selection",
 			"Generate",
 			"Validate",
 			"Preview",

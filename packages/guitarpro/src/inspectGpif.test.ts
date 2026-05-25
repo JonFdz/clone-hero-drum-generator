@@ -26,11 +26,19 @@ const minimalGpif = `<?xml version="1.0" encoding="UTF-8"?>
     <MasterBar>
       <TimeSignature>4/4</TimeSignature>
       <Marker><Name>Intro</Name></Marker>
+      <Bars>guitar-bar-1 drums-bar-1</Bars>
     </MasterBar>
     <MasterBar>
       <Marker><Name>Chorus</Name></Marker>
+      <Bars>guitar-bar-2 drums-bar-2</Bars>
     </MasterBar>
   </MasterBars>
+  <Bars>
+    <Bar id="guitar-bar-1"><Voices><Voice><Beats><Beat><Notes><Note><Name>G3</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+    <Bar id="drums-bar-1"><Voices><Voice><Beats><Beat><Notes><Note><Name>Kick</Name></Note><Note><Name>Snare</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+    <Bar id="guitar-bar-2"><Voices><Voice><Beats><Beat><Notes><Note><Name>A3</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+    <Bar id="drums-bar-2"><Voices><Voice><Beats><Beat><Notes><Note><Name>Crash</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+  </Bars>
   <DrumArticulations>
     <Articulation><Name>Kick</Name></Articulation>
     <Articulation><Name>Snare</Name></Articulation>
@@ -59,8 +67,10 @@ describe("inspectGpifXml", () => {
       name: "Drums",
       instrument: "Standard Drum Kit",
       channel: 10,
+      noteCount: 3,
       isDrumCandidate: true,
     });
+    expect(result.tracks[0].noteCount).toBe(2);
     expect(result.drumTrackCandidates).toEqual([1]);
     expect(result.tempos).toEqual([{ path: "GPIF.Score.Tempo", value: "147" }]);
     expect(result.timeSignatures).toContainEqual({ path: "GPIF.MasterBars.MasterBar[0].TimeSignature", value: "4/4" });

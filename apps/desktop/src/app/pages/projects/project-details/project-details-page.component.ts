@@ -161,7 +161,7 @@ import { createDefaultProjectName } from "../../../services/project-name-model";
 				@if (validation().errors.length > 0) {
 					<div class="message warning small-message"><strong>Before generation:</strong><ul><li *ngFor="let error of validation().errors">{{ error }}</li></ul></div>
 				}
-				<div class="summary-actions"><button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="inspectSource()">Inspect Source</button><button class="button secondary" type="button" (click)="saveProject()">{{ primarySaveLabel() }}</button><button class="button ghost" type="button" (click)="saveProjectAs()">Save As</button></div>
+				<div class="summary-actions"><button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="reviewSource()">Review Source</button><button class="button secondary" type="button" (click)="saveProject()">{{ primarySaveLabel() }}</button><button class="button ghost" type="button" (click)="saveProjectAs()">Save As</button></div>
 				<p class="summary-note">You can review and adjust settings before proceeding.</p>
 			</aside>
 		</div>
@@ -362,25 +362,12 @@ export class ProjectDetailsPageComponent {
 		this.generateState.setOffsetMsInput(value === null ? "" : String(value));
 	}
 
-	async inspectSource(): Promise<void> {
-		const sourcePath = this.state().sourcePath;
-		if (!sourcePath) {
+	async reviewSource(): Promise<void> {
+		if (!this.state().sourcePath) {
 			this.generateState.applyError("Source file is required.");
 			return;
 		}
-		this.generateState.startInspecting();
-		try {
-			const envelope = await this.bridge.inspectSource({
-				sourcePath,
-				drumsOnly: true,
-			});
-			this.generateState.applyInspection(envelope);
-			if (envelope.ok) await this.router.navigateByUrl("/inspect-source");
-		} catch (error) {
-			this.generateState.applyError(
-				error instanceof Error ? error.message : "Inspect failed.",
-			);
-		}
+		await this.router.navigateByUrl("/source-review");
 	}
 
 	fileName(filePath: string | undefined): string {

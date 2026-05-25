@@ -8,7 +8,7 @@ import type {
 export type HomeNextActionId =
 	| "new_project"
 	| "continue_setup"
-	| "inspect_source"
+	| "source_review"
 	| "generate"
 	| "validate"
 	| "preview"
@@ -70,8 +70,8 @@ export type HomeDashboardModelInput = {
 
 export const HOME_WORKFLOW_LABELS = [
 	"Import source",
-	"Inspect",
-	"Select track(s)",
+	"Source Review",
+	"Track selection",
 	"Generate",
 	"Validate",
 	"Preview",
@@ -82,8 +82,8 @@ const workflowDescriptions: Record<
 	string
 > = {
 	"Import source": "Load a source file (MIDI, GP, etc.)",
-	Inspect: "Analyze and review the source content",
-	"Select track(s)": "Choose the track(s) to generate",
+	"Source Review": "Analyze source content, selected tracks, and mapping",
+	"Track selection": "Confirm the track(s) to generate",
 	Generate: "Generate drum chart from selected track(s)",
 	Validate: "Run validations and fix any issues",
 	Preview: "Preview chart and listen back",
@@ -124,7 +124,7 @@ export function deriveHomeNextAction(
 			label: "New Project",
 			description:
 				"Create a .chdg project to start a local drum chart workflow.",
-			route: "/new-project",
+			route: "/projects/details",
 			secondaryLabel: "Open Project",
 			secondaryRoute: "/projects",
 		};
@@ -136,9 +136,9 @@ export function deriveHomeNextAction(
 			label: "Continue Setup",
 			description:
 				"Add or repair the source, audio, and output folder before generation.",
-			route: "/new-project",
-			secondaryLabel: "Inspect Source",
-			secondaryRoute: generate.sourcePath ? "/inspect-source" : undefined,
+			route: "/projects/details",
+			secondaryLabel: "Source Review",
+			secondaryRoute: generate.sourcePath ? "/source-review" : undefined,
 		};
 	}
 
@@ -178,11 +178,11 @@ export function deriveHomeNextAction(
 
 	if (generate.sourcePath) {
 		return {
-			id: "inspect_source",
-			label: "Inspect Source",
+			id: "source_review",
+			label: "Source Review",
 			description:
-				"Source, audio, and output are set. Inspect the source before track selection.",
-			route: "/inspect-source",
+				"Source is set. Review source analysis, selected tracks, and mapping before generation.",
+			route: "/source-review",
 			secondaryLabel: "Generate",
 			secondaryRoute:
 				generate.selectedTracks.length > 0 ? "/generate" : undefined,
@@ -192,8 +192,8 @@ export function deriveHomeNextAction(
 	return {
 		id: "continue_setup",
 		label: "Continue Setup",
-		description: "Complete project setup before inspecting or generating.",
-		route: "/new-project",
+		description: "Complete project setup before reviewing or generating.",
+		route: "/projects/details",
 	};
 }
 

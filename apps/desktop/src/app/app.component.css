@@ -1,6 +1,7 @@
 :host {
   display: block;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -8,7 +9,8 @@
 .app-shell {
   display: grid;
   grid-template-columns: 260px 1fr;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background:
     radial-gradient(circle at 78% 18%, rgba(151, 83, 229, 0.14), transparent 28rem),
     linear-gradient(135deg, var(--color-bg) 0%, var(--color-bg-elevated) 100%);
@@ -17,6 +19,8 @@
 .sidebar {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
   border-right: 1px solid var(--color-border);
   background: linear-gradient(180deg, rgba(24, 31, 40, 0.96), rgba(18, 24, 31, 0.96));
   padding: var(--space-8) var(--space-5);
@@ -89,7 +93,9 @@
 .content-shell {
   display: flex;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .topbar {
@@ -138,6 +144,8 @@
 
 .content-panel {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-4) var(--space-8) var(--space-8);
 }
 

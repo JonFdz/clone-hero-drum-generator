@@ -36,7 +36,7 @@ import { HomeWorkflowProgressComponent } from "./components/home-workflow-progre
 				<section class="card mock-actions-card" aria-label="Quick actions">
 					<h2>Quick Actions</h2>
 					<div class="mock-action-list">
-						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
 							<span class="mock-action-icon">▣</span>
 							<span>New Project</span>
 						</button>
@@ -44,11 +44,11 @@ import { HomeWorkflowProgressComponent } from "./components/home-workflow-progre
 							<span class="mock-action-icon">▰</span>
 							<span>Open Project</span>
 						</button>
-						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
 							<span class="mock-action-icon">♪</span>
 							<span>Import MIDI</span>
 						</button>
-						<button class="mock-action-button" type="button" (click)="navigateTo('/new-project')">
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
 							<span class="mock-action-icon gp-icon">GP</span>
 							<span>Import Guitar Pro</span>
 						</button>
@@ -166,7 +166,7 @@ export class HomePageComponent {
 	async openOutputFolder(): Promise<void> {
 		const outputDir = this.generateState.state().outputDir;
 		if (!outputDir) {
-			await this.navigateTo("/new-project");
+			await this.navigateTo("/projects/details");
 			return;
 		}
 		await this.bridge.openOutputFolder(outputDir);
@@ -187,6 +187,7 @@ export class HomePageComponent {
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
 			mappingOverrides: payload.mappingOverrides,
+			analysis: payload.analysis,
 		});
 	}
 }

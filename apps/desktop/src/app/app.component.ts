@@ -31,12 +31,10 @@ export class AppComponent implements OnInit {
 	readonly navItems: NavItem[] = [
 		{ label: "Home", path: "/home", icon: "⌂" },
 		{ label: "Projects", path: "/projects", icon: "□" },
-		{ label: "Inspect Source", path: "/inspect-source", icon: "⌕" },
-		{ label: "Track Selection", path: "/track-selection", icon: "♬" },
+		{ label: "Source Review", path: "/source-review", icon: "⌕" },
 		{ label: "Generate", path: "/generate", icon: "✦" },
 		{ label: "Validation", path: "/validation", icon: "◇" },
 		{ label: "Preview", path: "/preview", icon: "▷" },
-		{ label: "Mapping", path: "/mapping", icon: "▦" },
 		{ label: "Settings", path: "/settings", icon: "⚙" },
 	];
 
@@ -97,6 +95,7 @@ export class AppComponent implements OnInit {
 				lastGeneratedAt: payload.lastGeneratedAt,
 				outputFiles: payload.outputFiles,
 				mappingOverrides: payload.mappingOverrides,
+				analysis: payload.analysis,
 			});
 			await this.router.navigateByUrl("/projects/details");
 		}

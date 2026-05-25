@@ -7,8 +7,10 @@ import type {
 	NormalizationPreview,
 	NormalizeSelectionInput,
 	SourceInspectionResult,
+	ChdgProjectAnalysisCache,
 	ChdgProjectFile,
 	ChdgOutputStatus,
+	ChdgSourceFingerprint,
 	DesktopSettings,
 	MappingOverrideProfile,
 	RecentProject,
@@ -94,6 +96,7 @@ export type ProjectStatePayload = {
 		songOgg?: string;
 	};
 	mappingOverrides?: ProjectMappingOverrides;
+	analysis?: ChdgProjectAnalysisCache;
 };
 
 export type SaveProjectResult = {
@@ -161,6 +164,12 @@ export class DesktopBridgeService {
 		return this.requireBridge().normalizeSelection(input);
 	}
 
+	async getSourceFingerprint(
+		sourcePath: string,
+	): Promise<JsonEnvelope<ChdgSourceFingerprint>> {
+		return this.requireBridge().getSourceFingerprint(sourcePath);
+	}
+
 	async generatePackage(
 		input: GeneratePackageInput & { overwriteKnownFiles?: boolean },
 	): Promise<JsonEnvelope<GeneratePackageResult>> {
@@ -185,9 +194,9 @@ export class DesktopBridgeService {
 		return this.requireBridge().openProjectFile();
 	}
 
-	async createProject(
-		input: { projectName: string },
-	): Promise<JsonEnvelope<ProjectStatePayload>> {
+	async createProject(input: {
+		projectName: string;
+	}): Promise<JsonEnvelope<ProjectStatePayload>> {
 		return this.requireBridge().createProject(input);
 	}
 
@@ -213,15 +222,11 @@ export class DesktopBridgeService {
 		return this.requireBridge().readRecentProjects();
 	}
 
-	async removeRecentProject(
-		projectPath: string,
-	): Promise<JsonEnvelope<void>> {
+	async removeRecentProject(projectPath: string): Promise<JsonEnvelope<void>> {
 		return this.requireBridge().removeRecentProject(projectPath);
 	}
 
-	async deleteProjectFile(
-		projectPath: string,
-	): Promise<JsonEnvelope<void>> {
+	async deleteProjectFile(projectPath: string): Promise<JsonEnvelope<void>> {
 		return this.requireBridge().deleteProjectFile(projectPath);
 	}
 

@@ -11,6 +11,8 @@ const api = {
 		ipcRenderer.invoke("chdg:inspect-source", input),
 	normalizeSelection: (input: unknown) =>
 		ipcRenderer.invoke("chdg:normalize-selection", input),
+	getSourceFingerprint: (sourcePath: string) =>
+		ipcRenderer.invoke("chdg:get-source-fingerprint", sourcePath),
 	generatePackage: (input: unknown) =>
 		ipcRenderer.invoke("chdg:generate-package", input),
 	openOutputFolder: (folderPath: string) =>

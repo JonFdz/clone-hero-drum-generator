@@ -1,31 +1,42 @@
 import { access, readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import type { ChdgProjectFile } from "@chdg/project";
+import type { ChdgProjectAnalysisCache, ChdgProjectFile } from "@chdg/project";
 import { validateProjectFile, createProjectFile } from "@chdg/project";
 import type { ProjectMappingOverrides } from "@chdg/project";
 import { app } from "electron";
 
-export async function readProjectFile(filePath: string): Promise<{
-	ok: true;
-	project: ChdgProjectFile;
-	missingPaths: string[];
-} | {
-	ok: false;
-	code: string;
-	message: string;
-}> {
+export async function readProjectFile(filePath: string): Promise<
+	| {
+			ok: true;
+			project: ChdgProjectFile;
+			missingPaths: string[];
+	  }
+	| {
+			ok: false;
+			code: string;
+			message: string;
+	  }
+> {
 	let text: string;
 	try {
 		text = await readFile(filePath, "utf8");
 	} catch {
-		return { ok: false, code: "PROJECT_FILE_NOT_FOUND", message: `Could not read project file: ${filePath}` };
+		return {
+			ok: false,
+			code: "PROJECT_FILE_NOT_FOUND",
+			message: `Could not read project file: ${filePath}`,
+		};
 	}
 
 	let json: unknown;
 	try {
 		json = JSON.parse(text);
 	} catch {
-		return { ok: false, code: "INVALID_PROJECT_JSON", message: "Project file is not valid JSON." };
+		return {
+			ok: false,
+			code: "INVALID_PROJECT_JSON",
+			message: "Project file is not valid JSON.",
+		};
 	}
 
 	const validation = validateProjectFile(json);
@@ -106,10 +117,15 @@ export function buildProjectFileFromState(
 			charter?: string;
 		};
 		offsetMs?: number;
-		generationStatus: "not-generated" | "generated" | "needs-regenerate" | "failed";
+		generationStatus:
+			| "not-generated"
+			| "generated"
+			| "needs-regenerate"
+			| "failed";
 		lastGeneratedAt?: string;
 		outputFiles?: { chart?: string; songIni?: string; songOgg?: string };
 		mappingOverrides?: ProjectMappingOverrides;
+		analysis?: ChdgProjectAnalysisCache;
 	},
 ): ChdgProjectFile {
 	const now = new Date().toISOString();
@@ -126,7 +142,9 @@ export function buildProjectFileFromState(
 			audioPath: state.audioPath,
 			outputDir: state.outputDir,
 		},
-		cover: state.cover?.imagePath ? { imagePath: state.cover.imagePath } : undefined,
+		cover: state.cover?.imagePath
+			? { imagePath: state.cover.imagePath }
+			: undefined,
 		source: {
 			sourceKind: state.sourceKind,
 		},
@@ -141,6 +159,7 @@ export function buildProjectFileFromState(
 			outputFiles: state.outputFiles,
 		},
 		mappingOverrides: state.mappingOverrides,
+		analysis: state.analysis,
 	};
 }
 

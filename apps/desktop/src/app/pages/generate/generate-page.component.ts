@@ -110,7 +110,7 @@ import { DesktopValidationService } from "../../services/desktop-validation.serv
     </section>
 
     <div class="action-row">
-      <a class="button ghost" routerLink="/track-selection">Back</a>
+      <a class="button ghost" routerLink="/source-review">Back</a>
       <button class="button primary" type="button" [disabled]="state().status === 'generating' || !summary().canGenerate" (click)="generate(false)">Start Generate</button>
       <button class="button secondary" type="button" [disabled]="!state().generationResult" (click)="openOutputFolder()">Open Output Folder</button>
     </div>

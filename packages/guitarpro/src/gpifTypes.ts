@@ -14,6 +14,7 @@ export type GpTrackInspection = {
   instrument?: string;
   type?: string;
   channel?: number;
+  noteCount?: number;
   isDrumCandidate: boolean;
   drumCandidateReasons: string[];
 };

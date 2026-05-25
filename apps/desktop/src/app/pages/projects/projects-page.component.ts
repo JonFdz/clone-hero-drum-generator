@@ -182,6 +182,7 @@ export class ProjectsPageComponent {
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
 			mappingOverrides: payload.mappingOverrides,
+			analysis: payload.analysis,
 		});
 	}
 }
