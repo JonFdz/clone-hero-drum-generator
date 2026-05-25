@@ -137,7 +137,7 @@ describe("home dashboard next action", () => {
 });
 
 describe("home dashboard helpers", () => {
-	it("keeps six canonical workflow steps in order", () => {
+	it("keeps the unified canonical workflow steps in order", () => {
 		const steps = deriveWorkflowStepStatuses({
 			project: project(),
 			generate: generate(),
@@ -148,9 +148,7 @@ describe("home dashboard helpers", () => {
 		expect(steps.map((step) => step.label)).toEqual([
 			"Import source",
 			"Source Review",
-			"Track selection",
 			"Generate",
-			"Validate",
 			"Preview",
 		]);
 	});

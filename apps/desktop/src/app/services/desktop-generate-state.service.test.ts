@@ -117,4 +117,12 @@ describe("desktop generate state source regressions", () => {
 			"setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {\n\t\tthis.patch({\n\t\t\tmappingOverrides: { ...mappingOverrides },\n\t\t\tnormalizationPreview: undefined,",
 		);
 	});
+
+	it("marks generation failures before replacing the generating state", () => {
+		expect(source).toContain(
+			'const wasGenerating = this.state().status === "generating";',
+		);
+		expect(source).toContain("if (wasGenerating) {");
+		expect(source).not.toContain('if (this.state().status === "generating") {');
+	});
 });

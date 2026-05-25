@@ -152,6 +152,61 @@ describe("desktop validation model", () => {
 		);
 	});
 
+	it("treats a finite chart offset as valid without warning", () => {
+		const summary = buildDesktopValidationSummary(
+			generateState({
+				sourcePath: "song.mid",
+				audioPath: "song.ogg",
+				outputDir: "/tmp/out",
+				selectedTracks: [3],
+				offsetMs: 25,
+				metadata: { artist: "Artist", charter: "Charter" },
+			}),
+			projectState(),
+		);
+
+		expect(summary.canGenerate).toBe(true);
+		expect(summary.items).not.toContainEqual(
+			expect.objectContaining({
+				id: "offset.present",
+			}),
+		);
+		expect(summary.items).not.toContainEqual(
+			expect.objectContaining({
+				id: "offset.invalid",
+			}),
+		);
+	});
+
+	it("does not emit an offset warning when offset is unset or zero", () => {
+		const baseState = {
+			sourcePath: "song.mid",
+			audioPath: "song.ogg",
+			outputDir: "/tmp/out",
+			selectedTracks: [3],
+			metadata: { artist: "Artist", charter: "Charter" },
+		};
+
+		const unsetSummary = buildDesktopValidationSummary(
+			generateState(baseState),
+			projectState(),
+		);
+		const zeroSummary = buildDesktopValidationSummary(
+			generateState({ ...baseState, offsetMs: 0 }),
+			projectState(),
+		);
+
+		expect(unsetSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.present" }),
+		);
+		expect(zeroSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.present" }),
+		);
+		expect(zeroSummary.items).not.toContainEqual(
+			expect.objectContaining({ id: "offset.invalid" }),
+		);
+	});
+
 	it("blocks when FFmpeg diagnostic is unavailable and audio conversion is required", () => {
 		const summary = buildDesktopValidationSummary(
 			generateState({

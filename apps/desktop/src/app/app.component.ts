@@ -33,7 +33,6 @@ export class AppComponent implements OnInit {
 		{ label: "Projects", path: "/projects", icon: "□" },
 		{ label: "Source Review", path: "/source-review", icon: "⌕" },
 		{ label: "Generate", path: "/generate", icon: "✦" },
-		{ label: "Validation", path: "/validation", icon: "◇" },
 		{ label: "Preview", path: "/preview", icon: "▷" },
 		{ label: "Settings", path: "/settings", icon: "⚙" },
 	];

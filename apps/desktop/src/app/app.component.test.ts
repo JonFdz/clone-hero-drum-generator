@@ -40,4 +40,16 @@ describe("AppComponent source", () => {
 		expect(source).not.toContain('label: "Track Selection"');
 		expect(source).not.toContain('label: "Mapping"');
 	});
+
+	it("exposes Generate but not standalone Validation navigation", () => {
+		const source = readFileSync(
+			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
+			"utf8",
+		);
+
+		expect(source).toContain('label: "Generate"');
+		expect(source).toContain('path: "/generate"');
+		expect(source).not.toContain('label: "Validation"');
+		expect(source).not.toContain('path: "/validation"');
+	});
 });
