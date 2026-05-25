@@ -8,6 +8,7 @@ import {
 	type MappingProfileApplyMode,
 	type ProjectIssue,
 	type ProjectMappingOverrides,
+	type TrackCandidate,
 } from "@chdg/project/browser";
 import {
 	buildMappingRows,
@@ -117,11 +118,11 @@ const PIECES = [
 			</div>
 
 			<section class="card table-card">
-				<div class="split-row"><div><h2>Track Candidates</h2><p>Select one or more complementary drum tracks.</p></div><span>{{ state().selectedTracks.length }} tracks selected</span></div>
+				<div class="split-row"><div><h2>Track Candidates</h2><p>Select one or more complementary drum tracks.</p></div><span>{{ selectedTrackCountLabel() }}</span></div>
 				<table>
 					<thead><tr><th><span class="sr-only">Selected</span></th><th>Track</th><th>Name</th><th>Notes</th><th>Confidence</th><th>Status</th></tr></thead>
 					<tbody>
-						@for (track of state().inspection?.tracks ?? []; track track.index) {
+						@for (track of trackRows(); track track.index) {
 							<tr [class.selected-row]="isSelected(track.index)">
 								<td><input type="checkbox" [checked]="isSelected(track.index)" (change)="toggleTrack(track.index)" /></td>
 								<td>{{ track.index }}</td>
@@ -138,7 +139,7 @@ const PIECES = [
 			<section class="card accordion-card" [class.open]="mappingOpen()">
 				<div class="accordion-header">
 					<div><h2>Mapping Review</h2><p>{{ mappingSummary() }}</p></div>
-					<button class="button secondary small" type="button" (click)="mappingForcedOpen = true">Review Mapping</button>
+					<button class="button secondary small" type="button" (click)="toggleMappingReview()">{{ mappingActionLabel() }}</button>
 				</div>
 				@if (mappingOpen()) {
 					<table class="mapping-table">
@@ -147,7 +148,7 @@ const PIECES = [
 							@for (row of mappingRows(); track row.key) {
 								<tr>
 									<td>{{ row.sourceKind.toUpperCase() }}</td>
-									<td>{{ row.label ?? row.sourceValue }}</td>
+									<td>{{ mappingSourceValue(row) }}</td>
 									<td>{{ row.automaticPiece ?? 'Unknown' }}</td>
 									<td>{{ row.automaticPiece ?? 'Unmapped' }}</td>
 									<td><select [ngModel]="overrideLabel(row.key)" (ngModelChange)="setOverride(row, $event)"><option value="">Keep Current</option><option value="ignore">Ignore</option>@for (piece of pieces; track piece) { <option [value]="piece">Map to {{ pieceLabel(piece) }}</option> }</select></td>
@@ -171,7 +172,7 @@ const PIECES = [
 				@if (issuesOpen()) {
 					<ul class="issues-list">
 						@for (issue of reviewIssues(); track issue.code + issue.message) {
-							<li><strong>{{ issue.severity }} · {{ issue.code }}</strong><span>{{ issue.message }}</span><button class="button ghost small" type="button" (click)="mappingForcedOpen = true">Review in Mapping Review</button></li>
+							<li><strong>{{ issue.severity }} · {{ issue.code }}</strong><span>{{ issue.message }}</span>@if (isMappingIssue(issue)) { <button class="button ghost small" type="button" (click)="mappingUserOpen = true">Review in Mapping Review</button> }</li>
 						}
 					</ul>
 				}
@@ -230,7 +231,7 @@ export class SourceReviewPageComponent implements OnInit {
 	readonly state = this.generateState.state;
 	readonly status = this.orchestrator.status;
 	readonly pieces = PIECES;
-	mappingForcedOpen = false;
+	mappingUserOpen = false;
 	issuesForcedOpen = false;
 	jsonOpen = false;
 	profiles: MappingOverrideProfile[] = [];
@@ -300,12 +301,43 @@ export class SourceReviewPageComponent implements OnInit {
 		);
 	}
 
-	mappingOpen(): boolean {
+	trackRows(): TrackCandidate[] {
+		const selected = new Set(this.state().selectedTracks);
+		return [...(this.state().inspection?.tracks ?? [])].sort((left, right) => {
+			const leftSelected = selected.has(left.index) ? 0 : 1;
+			const rightSelected = selected.has(right.index) ? 0 : 1;
+			return leftSelected - rightSelected || left.index - right.index;
+		});
+	}
+
+	selectedTrackCountLabel(): string {
+		const count = this.state().selectedTracks.length;
+		return count === 1 ? "1 track selected" : `${count} tracks selected`;
+	}
+
+	mappingNeedsAttention(): boolean {
 		return shouldExpandMappingReview({
 			normalizationPreview: this.state().normalizationPreview,
 			overrides: this.state().mappingOverrides,
-			forcedOpen: this.mappingForcedOpen,
 		});
+	}
+
+	mappingOpen(): boolean {
+		return this.mappingNeedsAttention() || this.mappingUserOpen;
+	}
+
+	toggleMappingReview(): void {
+		if (this.mappingOpen() && !this.mappingNeedsAttention()) {
+			this.mappingUserOpen = false;
+			return;
+		}
+		this.mappingUserOpen = true;
+	}
+
+	mappingActionLabel(): string {
+		return this.mappingOpen() && !this.mappingNeedsAttention()
+			? "Hide Mapping"
+			: "Review Mapping";
 	}
 
 	issuesOpen(): boolean {
@@ -382,7 +414,7 @@ export class SourceReviewPageComponent implements OnInit {
 			mode: this.applyMode,
 		});
 		this.generateState.setMappingOverrides(result.overrides);
-		this.mappingForcedOpen = true;
+		this.mappingUserOpen = true;
 		await this.orchestrator.mappingChanged();
 	}
 
@@ -410,6 +442,18 @@ export class SourceReviewPageComponent implements OnInit {
 		return this.mappingRows().filter(
 			(row) => row.automaticPiece === "unknown" || !row.automaticPiece,
 		).length;
+	}
+
+	mappingSourceValue(row: MappingRow): string {
+		const value = row.label ?? row.sourceValue;
+		return row.sourceKind === "gpif" && /^MIDI\s+\d+/i.test(value)
+			? `GPIF articulation (${value})`
+			: value;
+	}
+
+	isMappingIssue(issue: ProjectIssue): boolean {
+		return /unknown|unmapped|mapping/i.test(issue.code) ||
+			Boolean(issue.details?.["notes"] || issue.details?.["unknownArticulations"]);
 	}
 
 	reviewIssues(): ProjectIssue[] {

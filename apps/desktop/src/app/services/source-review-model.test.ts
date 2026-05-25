@@ -4,6 +4,7 @@ import {
 	createAnalysisCache,
 	selectedTracksKey,
 	sourceFingerprintMatches,
+	shouldExpandMappingReview,
 	stableMappingFingerprint,
 	strongestDefaultTrack,
 	validateSourceReviewCache,
@@ -86,5 +87,55 @@ describe("source-review-model", () => {
 		expect(validateSourceReviewCache({ cache, sourceFingerprint: { ...sourceFingerprint, mtimeMs: 3 }, mappingFingerprint: "{}", selectedTracks: [3] })).toEqual({ valid: false, reason: "source" });
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "changed", selectedTracks: [3] })).toEqual({ valid: false, reason: "mapping" });
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [10] })).toEqual({ valid: false, reason: "tracks" });
+	});
+
+	it("keeps Mapping Review collapsed for generic warnings", () => {
+		expect(
+			shouldExpandMappingReview({
+				overrides: {},
+				normalizationPreview: {
+					...normalizationPreview,
+					issues: [
+						{
+							severity: "warning",
+							code: "GENERIC_WARNING",
+							message: "Generic warning belongs in Issues & Warnings.",
+						},
+					],
+				},
+			}),
+		).toBe(false);
+	});
+
+	it("opens Mapping Review for mapping unknowns or active overrides", () => {
+		expect(
+			shouldExpandMappingReview({
+				overrides: {},
+				normalizationPreview: {
+					...normalizationPreview,
+					mappingCandidates: [
+						{
+							key: "gpif:Mystery",
+							sourceKind: "gpif",
+							sourceValue: "Mystery",
+							automaticPiece: "unknown",
+							count: 1,
+						},
+					],
+				},
+			}),
+		).toBe(true);
+		expect(
+			shouldExpandMappingReview({
+				overrides: {
+					"gpif:Mystery": {
+						sourceKind: "gpif",
+						key: "gpif:Mystery",
+						target: { kind: "ignore" },
+					},
+				},
+				normalizationPreview,
+			}),
+		).toBe(true);
 	});
 });

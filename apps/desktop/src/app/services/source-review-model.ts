@@ -107,18 +107,13 @@ export function shouldExpandMappingReview(input: {
 	overrides: ProjectMappingOverrides;
 	manualReviewRecommended?: boolean;
 	profileError?: boolean;
-	forcedOpen?: boolean;
 }): boolean {
 	return Boolean(
-		input.forcedOpen ||
-			input.manualReviewRecommended ||
+		input.manualReviewRecommended ||
 			input.profileError ||
 			Object.keys(input.overrides).length > 0 ||
 			(input.normalizationPreview?.mappingCandidates ?? []).some(
 				(candidate) => candidate.automaticPiece === "unknown",
-			) ||
-			(input.normalizationPreview?.issues ?? []).some(
-				(issue) => issue.severity === "warning" || issue.severity === "error",
 			),
 	);
 }

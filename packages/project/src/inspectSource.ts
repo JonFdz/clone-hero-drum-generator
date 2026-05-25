@@ -66,7 +66,7 @@ export async function inspectSource(
 			index: track.index,
 			name: track.name,
 			channel: track.channel,
-			noteCount: null,
+			noteCount: readGpTrackNoteCount(track),
 			strength: track.isDrumCandidate ? "strong" : "unknown",
 			role: track.isDrumCandidate ? "drums" : "unknown",
 			reasons: track.drumCandidateReasons,
@@ -93,4 +93,9 @@ export async function inspectSource(
 	} catch (error) {
 		throw toProjectServiceError(error, "INSPECT_SOURCE_FAILED");
 	}
+}
+
+function readGpTrackNoteCount(track: unknown): number | null {
+	const value = (track as { noteCount?: unknown }).noteCount;
+	return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
