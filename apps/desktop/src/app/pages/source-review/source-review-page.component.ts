@@ -35,6 +35,16 @@ const PIECES = [
 	"tom_floor",
 ] as const;
 
+type IssueSeverityCounts = {
+	errors: number;
+	warnings: number;
+	info: number;
+};
+
+type DisplayIssue = ProjectIssue & {
+	count: number;
+};
+
 @Component({
 	selector: "chdg-source-review-page",
 	standalone: true,
@@ -111,7 +121,7 @@ const PIECES = [
 					<h2>Piece Summary Preview</h2>
 					<div class="piece-summary">
 						@for (piece of pieceEntries(); track piece.label) {
-							<div><strong>{{ piece.label }}</strong><span>{{ formatNumber(piece.count) }}</span></div>
+							<div class="piece-item"><span class="piece-icon" aria-hidden="true">{{ piece.icon }}</span><strong>{{ piece.label }}</strong><span>{{ formatNumber(piece.count) }}</span></div>
 						}
 					</div>
 				</section>
@@ -164,15 +174,21 @@ const PIECES = [
 				}
 			</section>
 
-			<section class="card accordion-card" [class.open]="issuesOpen()">
-				<div class="accordion-header" (click)="issuesForcedOpen = !issuesForcedOpen">
-					<h2>Issues & Warnings</h2>
-					<p>{{ warningCount() }} warnings · {{ issueCount() }} issues · {{ issueCount() === 0 ? 'All good!' : 'Review recommended' }}</p>
+			<section class="card accordion-card issues-card" [class.open]="issuesOpen()">
+				<div class="accordion-header">
+					<div>
+						<h2>Issues & Warnings</h2>
+						<p>{{ issuesSummary() }}</p>
+						@if (!issuesOpen() && issuePreview()) {
+							<p class="issue-preview">{{ issuePreview() }}</p>
+						}
+					</div>
+					<button class="button secondary small" type="button" (click)="toggleIssues()">{{ issuesActionLabel() }}</button>
 				</div>
 				@if (issuesOpen()) {
 					<ul class="issues-list">
-						@for (issue of reviewIssues(); track issue.code + issue.message) {
-							<li><strong>{{ issue.severity }} · {{ issue.code }}</strong><span>{{ issue.message }}</span>@if (isMappingIssue(issue)) { <button class="button ghost small" type="button" (click)="mappingUserOpen = true">Review in Mapping Review</button> }</li>
+						@for (issue of displayIssues(); track issue.severity + issue.code + issue.message) {
+							<li [class.info]="issue.severity === 'info'" [class.warning]="issue.severity === 'warning'" [class.error]="issue.severity === 'error'"><strong>{{ issueLabel(issue) }}</strong><span>{{ issue.message }}</span>@if (isMappingIssue(issue)) { <button class="button ghost small" type="button" (click)="mappingUserOpen = true">Review in Mapping Review</button> }</li>
 						}
 					</ul>
 				}
@@ -207,15 +223,21 @@ const PIECES = [
 		.source-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 		.summary-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr 1fr 1.35fr; margin-bottom: var(--space-4); }
 		.piece-summary { display: grid; gap: var(--space-2); grid-template-columns: repeat(7, minmax(0, 1fr)); }
-		.piece-summary div { border-left: 1px solid var(--color-border); display: grid; gap: .35rem; justify-items: center; padding: .35rem; text-align: center; }
-		.piece-summary span { color: var(--color-text-soft); }
+		.piece-item { align-items: center; border-left: 1px solid var(--color-border); display: grid; gap: .35rem; justify-items: center; min-width: 0; padding: .3rem .25rem; text-align: center; }
+		.piece-icon { align-items: center; background: radial-gradient(circle at 35% 30%, rgba(203,162,255,.96), rgba(151,83,229,.76)); border: 1px solid rgba(203,162,255,.45); border-radius: 999px; box-shadow: 0 0 .8rem rgba(151,83,229,.25); color: #170f24; display: inline-flex; font-size: .9rem; font-weight: 900; height: 1.7rem; justify-content: center; line-height: 1; width: 1.7rem; }
+		.piece-item strong { color: var(--color-text-soft); font-size: .78rem; font-weight: 700; line-height: 1.15; }
+		.piece-item span:last-child { color: var(--color-text); font-size: .95rem; }
 		.table-card, .accordion-card { margin-bottom: var(--space-4); }
 		.accordion-card.open { border-color: rgba(166,108,255,.35); }
 		.mapping-table select { max-width: 14rem; }
 		.mapping-details-grid { display: grid; gap: var(--space-3); grid-template-columns: 1fr 1fr; margin-top: var(--space-3); }
 		.profile-card { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; }
-		.issues-list { display: grid; gap: var(--space-2); list-style: none; margin: var(--space-3) 0 0; padding: 0; }
-		.issues-list li { align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: var(--space-2); grid-template-columns: minmax(10rem, .4fr) 1fr auto; padding: var(--space-3); }
+		.issue-preview { color: var(--color-text-soft); font-size: .85rem; margin-top: .3rem !important; }
+		.issues-list { display: grid; gap: var(--space-2); list-style: none; margin: var(--space-3) 0 0; max-height: 22rem; overflow-y: auto; padding: 0 var(--space-2) 0 0; }
+		.issues-list li { align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: var(--space-2); grid-template-columns: minmax(11rem, .36fr) 1fr auto; padding: .65rem .75rem; }
+		.issues-list li.info { opacity: .78; }
+		.issues-list li.warning { border-color: rgba(246,180,80,.28); }
+		.issues-list li.error { border-color: rgba(255,107,122,.34); }
 		.json-card pre { max-height: 24rem; overflow: auto; white-space: pre-wrap; }
 		.source-review-actions { margin-top: var(--space-5); }
 		@media (max-width: 1180px) { .summary-grid { grid-template-columns: 1fr; } .piece-summary { grid-template-columns: repeat(2, 1fr); } .selected-source-card, .source-review-header, .source-review-actions { align-items: stretch; flex-direction: column; } }
@@ -232,7 +254,7 @@ export class SourceReviewPageComponent implements OnInit {
 	readonly status = this.orchestrator.status;
 	readonly pieces = PIECES;
 	mappingUserOpen = false;
-	issuesForcedOpen = false;
+	issuesUserOpen = false;
 	jsonOpen = false;
 	profiles: MappingOverrideProfile[] = [];
 	applyMode: MappingProfileApplyMode = "merge";
@@ -340,8 +362,26 @@ export class SourceReviewPageComponent implements OnInit {
 			: "Review Mapping";
 	}
 
+	issuesNeedAttention(): boolean {
+		return this.reviewIssues().some((issue) => issue.severity === "error");
+	}
+
 	issuesOpen(): boolean {
-		return this.issuesForcedOpen || this.reviewIssues().length > 0;
+		return this.issuesNeedAttention() || this.issuesUserOpen;
+	}
+
+	toggleIssues(): void {
+		if (this.issuesOpen() && !this.issuesNeedAttention()) {
+			this.issuesUserOpen = false;
+			return;
+		}
+		this.issuesUserOpen = true;
+	}
+
+	issuesActionLabel(): string {
+		return this.issuesOpen() && !this.issuesNeedAttention()
+			? "Hide Details"
+			: "Review Issues";
 	}
 
 	mappingSummary(): string {
@@ -432,11 +472,49 @@ export class SourceReviewPageComponent implements OnInit {
 		).length;
 	}
 	warningCount(): number {
-		return this.reviewIssues().filter((issue) => issue.severity === "warning")
-			.length;
+		return this.issueSeverityCounts().warnings;
 	}
 	issueCount(): number {
 		return this.reviewIssues().length;
+	}
+	issueSeverityCounts(): IssueSeverityCounts {
+		return this.reviewIssues().reduce(
+			(counts, issue) => {
+				if (issue.severity === "error") counts.errors += 1;
+				else if (issue.severity === "warning") counts.warnings += 1;
+				else counts.info += 1;
+				return counts;
+			},
+			{ errors: 0, warnings: 0, info: 0 },
+		);
+	}
+	issuesSummary(): string {
+		const counts = this.issueSeverityCounts();
+		if (this.issueCount() === 0) return "0 warnings · 0 issues · All good";
+		const parts = [
+			counts.errors > 0
+				? `${counts.errors} ${counts.errors === 1 ? "error" : "errors"}`
+				: undefined,
+			counts.warnings > 0
+				? `${counts.warnings} ${counts.warnings === 1 ? "warning" : "warnings"}`
+				: undefined,
+			counts.info > 0
+				? `${counts.info} ${counts.info === 1 ? "info message" : "info messages"}`
+				: undefined,
+		].filter((part): part is string => Boolean(part));
+		const suffix =
+			counts.errors > 0 || counts.warnings > 0
+				? "Review recommended"
+				: "No blocking issues";
+		return `${parts.join(" · ")} · ${suffix}`;
+	}
+	issuePreview(): string | undefined {
+		const issue = this.sortedReviewIssues().find(
+			(item) => item.severity === "error" || item.severity === "warning",
+		);
+		if (issue) return `${issue.code} — ${issue.message}`;
+		const info = this.issueSeverityCounts().info;
+		return info > 0 ? `No blocking issues · ${info} info messages` : undefined;
 	}
 	unknownCount(): number {
 		return this.mappingRows().filter(
@@ -452,8 +530,55 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	isMappingIssue(issue: ProjectIssue): boolean {
-		return /unknown|unmapped|mapping/i.test(issue.code) ||
-			Boolean(issue.details?.["notes"] || issue.details?.["unknownArticulations"]);
+		if (issue.severity === "info") return false;
+		return (
+			/unknown|unmapped|mapping/i.test(issue.code) ||
+			/(unknown|unmapped|mapping|articulation|rimshot|side[- ]?stick|midi note|note \d+)/i.test(
+				issue.message,
+			) ||
+			Boolean(
+				issue.details?.["notes"] || issue.details?.["unknownArticulations"],
+			)
+		);
+	}
+
+	displayIssues(): DisplayIssue[] {
+		const grouped = new Map<string, DisplayIssue>();
+		for (const issue of this.sortedReviewIssues()) {
+			const key = this.issueGroupKey(issue);
+			const existing = grouped.get(key);
+			if (existing) {
+				existing.count += 1;
+			} else {
+				grouped.set(key, { ...issue, count: 1 });
+			}
+		}
+		return Array.from(grouped.values());
+	}
+
+	issueLabel(issue: DisplayIssue): string {
+		const base = `${issue.severity} · ${issue.code}`;
+		return issue.count > 1 ? `${base} · ${issue.count} similar` : base;
+	}
+
+	sortedReviewIssues(): ProjectIssue[] {
+		const severityRank: Record<ProjectIssue["severity"], number> = {
+			error: 0,
+			warning: 1,
+			info: 2,
+		};
+		return [...this.reviewIssues()].sort(
+			(left, right) =>
+				severityRank[left.severity] - severityRank[right.severity] ||
+				left.code.localeCompare(right.code) ||
+				left.message.localeCompare(right.message),
+		);
+	}
+
+	issueGroupKey(issue: ProjectIssue): string {
+		if (issue.severity !== "info")
+			return `${issue.severity}:${issue.code}:${issue.message}`;
+		return `${issue.severity}:${issue.code}:${issue.message.replace(/\d+/g, "#")}`;
 	}
 
 	reviewIssues(): ProjectIssue[] {
@@ -474,18 +599,19 @@ export class SourceReviewPageComponent implements OnInit {
 		return `${this.formatNumber(summary.duplicateHitCount)} (${percent.toFixed(1)}%)`;
 	}
 
-	pieceEntries(): Array<{ label: string; count: number }> {
+	pieceEntries(): Array<{ label: string; count: number; icon: string }> {
 		const summary = this.state().normalizationPreview?.pieceSummary ?? {};
 		return [
-			["kick", "Kick"],
-			["snare", "Snare"],
-			["hihat_closed", "Hi-Hat Closed"],
-			["hihat_open", "Hi-Hat Open"],
-			["crash", "Crash"],
-			["ride", "Ride"],
-			["toms", "Toms"],
-		].map(([key, label]) => ({
+			["kick", "Kick", "●"],
+			["snare", "Snare", "▬"],
+			["hihat_closed", "Hi-Hat Closed", "◆"],
+			["hihat_open", "Hi-Hat Open", "◇"],
+			["crash", "Crash", "✦"],
+			["ride", "Ride", "✧"],
+			["toms", "Toms", "▥"],
+		].map(([key, label, icon]) => ({
 			label,
+			icon,
 			count:
 				key === "toms"
 					? (summary["tom_high"] ?? 0) +
