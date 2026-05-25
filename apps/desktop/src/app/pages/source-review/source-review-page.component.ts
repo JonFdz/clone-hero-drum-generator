@@ -477,7 +477,9 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	trackStatus(trackIndex: number, strength: string): string {
-		if (this.isSelected(trackIndex)) return "Auto-selected";
+		if (this.isSelected(trackIndex)) {
+			return this.state().selectedTracks.length === 1 ? "Auto-selected" : "Selected";
+		}
 		return strength === "weak" ? "Low confidence" : "Available";
 	}
 
