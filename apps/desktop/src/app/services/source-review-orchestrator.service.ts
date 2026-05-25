@@ -69,7 +69,7 @@ export class SourceReviewOrchestratorService {
 			}
 
 			let inspection = current.analysisCache?.inspection;
-			if (cacheResult.reason === "source" || !inspection) {
+			if (cacheResult.reason === "source" || cacheResult.reason === "inspection" || !inspection) {
 				this.generateState.startInspecting();
 				const envelope = await this.bridge.inspectSource({
 					sourcePath,

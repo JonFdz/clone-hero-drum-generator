@@ -13,7 +13,7 @@ export type ChdgSourceFingerprint = {
 };
 
 export type ChdgProjectAnalysisCache = {
-	schemaVersion: 1;
+	schemaVersion: 1 | 2;
 	sourceFingerprint: ChdgSourceFingerprint;
 	mappingFingerprint: string;
 	selectedTracks: number[];

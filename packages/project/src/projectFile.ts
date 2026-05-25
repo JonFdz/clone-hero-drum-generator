@@ -136,7 +136,8 @@ export function validateAnalysisCache(
 ): ChdgProjectAnalysisCache | undefined {
 	if (input === undefined) return undefined;
 	if (!isRecord(input)) return undefined;
-	if (input["schemaVersion"] !== 1) return undefined;
+	const analysisSchemaVersion = input["schemaVersion"];
+	if (analysisSchemaVersion !== 1 && analysisSchemaVersion !== 2) return undefined;
 	const sourceFingerprint = validateSourceFingerprint(
 		input["sourceFingerprint"],
 	);
@@ -159,7 +160,7 @@ export function validateAnalysisCache(
 	}
 
 	return {
-		schemaVersion: 1,
+		schemaVersion: analysisSchemaVersion,
 		sourceFingerprint,
 		mappingFingerprint,
 		selectedTracks,

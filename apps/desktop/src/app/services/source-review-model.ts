@@ -16,7 +16,7 @@ export type SourceReviewCacheValidation =
 	  }
 	| {
 			valid: false;
-			reason: "missing" | "source" | "mapping" | "tracks" | "normalization";
+			reason: "missing" | "source" | "inspection" | "mapping" | "tracks" | "normalization";
 	  };
 
 export function strongestDefaultTrack(tracks: TrackCandidate[]): number[] {
@@ -58,6 +58,9 @@ export function validateSourceReviewCache(input: {
 	if (!sourceFingerprintMatches(cache.sourceFingerprint, sourceFingerprint)) {
 		return { valid: false, reason: "source" };
 	}
+	if (hasStaleGpifTrackNoteCounts(cache, selectedTracks)) {
+		return { valid: false, reason: "inspection" };
+	}
 	if (cache.mappingFingerprint !== mappingFingerprint) {
 		return cache.inspection
 			? { valid: false, reason: "mapping" }
@@ -79,6 +82,27 @@ export function validateSourceReviewCache(input: {
 	};
 }
 
+
+export function hasStaleGpifTrackNoteCounts(
+	cache: ChdgProjectAnalysisCache,
+	selectedTracks: number[],
+): boolean {
+	if (cache.schemaVersion >= 2) return false;
+	const inspection = cache.inspection;
+	if (inspection.sourceKind !== "gpif") return false;
+	if (inspection.tracks.length === 0) return false;
+	const hasKnownNoteCount = (track: TrackCandidate): boolean =>
+		typeof track.noteCount === "number" && Number.isFinite(track.noteCount);
+	const selected = new Set(selectedTracks);
+	const selectedTrackMissingCount = inspection.tracks.some(
+		(track) => selected.has(track.index) && !hasKnownNoteCount(track),
+	);
+	const allTracksMissingCounts = inspection.tracks.every(
+		(track) => !hasKnownNoteCount(track),
+	);
+	return selectedTrackMissingCount || allTracksMissingCounts;
+}
+
 export function createAnalysisCache(input: {
 	sourceFingerprint: ChdgSourceFingerprint;
 	mappingFingerprint: string;
@@ -89,7 +113,7 @@ export function createAnalysisCache(input: {
 	normalizedAt?: string;
 }): ChdgProjectAnalysisCache {
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		sourceFingerprint: input.sourceFingerprint,
 		mappingFingerprint: input.mappingFingerprint,
 		selectedTracks: [...input.selectedTracks].sort((a, b) => a - b),

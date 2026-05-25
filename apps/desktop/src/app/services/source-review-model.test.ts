@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { SourceInspectionResult } from "@chdg/project/browser";
 import {
 	createAnalysisCache,
+	hasStaleGpifTrackNoteCounts,
 	selectedTracksKey,
 	sourceFingerprintMatches,
 	shouldExpandMappingReview,
@@ -72,6 +73,62 @@ describe("source-review-model", () => {
 			inspection,
 			normalizationPreview,
 		});
+		expect(cache.schemaVersion).toBe(2);
+		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] }).valid).toBe(true);
+	});
+
+	it("invalidates stale GPIF v1 caches when selected track note counts are missing", () => {
+		const sourceFingerprint = { path: "/tmp/demo.gp", sizeBytes: 1, mtimeMs: 2 };
+		const staleInspection: SourceInspectionResult = {
+			sourceKind: "gpif",
+			sourcePath: "/tmp/demo.gp",
+			tempos: [],
+			timeSignatures: [],
+			sections: [],
+			tracks: [
+				{ index: 0, noteCount: null, role: "unknown", strength: "unknown" },
+				{ index: 3, noteCount: null, role: "drums", strength: "strong" },
+			],
+			issues: [],
+		};
+		const staleCache = {
+			schemaVersion: 1 as const,
+			sourceFingerprint,
+			mappingFingerprint: "{}",
+			selectedTracks: [3],
+			inspectedAt: "2026-01-01T00:00:00.000Z",
+			inspection: staleInspection,
+			normalizationPreview: {
+				...normalizationPreview,
+				sourceKind: "gpif" as const,
+				sourcePath: "/tmp/demo.gp",
+			},
+		};
+
+		expect(hasStaleGpifTrackNoteCounts(staleCache, [3])).toBe(true);
+		expect(validateSourceReviewCache({ cache: staleCache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] })).toEqual({ valid: false, reason: "inspection" });
+	});
+
+	it("keeps v2 GPIF caches valid even when a source truly has unknown note counts", () => {
+		const sourceFingerprint = { path: "/tmp/demo.gp", sizeBytes: 1, mtimeMs: 2 };
+		const cache = createAnalysisCache({
+			sourceFingerprint,
+			mappingFingerprint: "{}",
+			selectedTracks: [3],
+			inspection: {
+				...inspection,
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tracks: [{ index: 3, noteCount: null, role: "drums", strength: "strong" }],
+			},
+			normalizationPreview: {
+				...normalizationPreview,
+				sourceKind: "gpif" as const,
+				sourcePath: "/tmp/demo.gp",
+			},
+		});
+
+		expect(hasStaleGpifTrackNoteCounts(cache, [3])).toBe(false);
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] }).valid).toBe(true);
 	});
 

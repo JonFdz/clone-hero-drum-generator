@@ -163,6 +163,34 @@ describe("projectFile", () => {
 			}
 		});
 
+		it("accepts Source Review analysis cache schema version 2", () => {
+			const result = validateProjectFile(
+				baseProject({
+					analysis: {
+						schemaVersion: 2,
+						sourceFingerprint: { path: "/tmp/demo.gp" },
+						mappingFingerprint: "{}",
+						selectedTracks: [3],
+						inspectedAt: "2026-01-01T00:00:00.000Z",
+						inspection: {
+							sourceKind: "gpif",
+							sourcePath: "/tmp/demo.gp",
+							tempos: [],
+							timeSignatures: [],
+							sections: [],
+							tracks: [{ index: 3, noteCount: 1039, role: "drums", strength: "strong" }],
+							issues: [],
+						},
+					},
+				}),
+			);
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.analysis?.schemaVersion).toBe(2);
+				expect(result.project.analysis?.inspection.tracks[0]?.noteCount).toBe(1039);
+			}
+		});
+
 		it("drops malformed Source Review analysis without blocking open", () => {
 			const result = validateProjectFile(
 				baseProject({

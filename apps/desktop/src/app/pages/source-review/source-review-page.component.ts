@@ -85,14 +85,9 @@ type DisplayIssue = ProjectIssue & {
 					<div><dt>Last Analyzed</dt><dd>{{ analyzedAt() }}</dd></div>
 				</dl>
 				<div class="source-card-side">
-					<span class="source-card-status" [class.attention]="status() === 'attention'" [class.failed]="status() === 'failed'">
-						<span aria-hidden="true">{{ status() === 'failed' ? '!' : status() === 'attention' ? '△' : '✓' }}</span>
-						{{ statusLabel() }}
-					</span>
 					<div class="source-actions">
 						<button class="button secondary small" type="button" (click)="refreshAnalysis()"><span aria-hidden="true">↻</span> Refresh Analysis</button>
-						<button class="button secondary small" type="button" (click)="jsonOpen = !jsonOpen"><span aria-hidden="true">JSON</span> View JSON</button>
-						<button class="button icon-button small" type="button" aria-label="More source actions">⋮</button>
+						<button class="button secondary small" type="button" (click)="jsonOpen = !jsonOpen">View JSON</button>
 					</div>
 				</div>
 			</section>
@@ -165,7 +160,7 @@ type DisplayIssue = ProjectIssue & {
 						</tbody>
 					</table>
 				</div>
-				<div class="track-table-footer"><span>{{ selectedTrackCountLabel() }}</span><span>Total Notes: {{ totalSelectedNotesLabel() }}</span></div>
+				<div class="track-table-footer"><span>{{ selectedTrackCountLabel() }}</span><span>{{ trackNotesSummaryLabel() }}</span></div>
 			</section>
 
 			<section class="card accordion-card mapping-card" [class.open]="mappingOpen()" [class.attention]="mappingNeedsAttention()">
@@ -273,7 +268,7 @@ type DisplayIssue = ProjectIssue & {
 		.source-review-header { margin: 0 0 1rem; }
 		.source-review-title h1 { font-size: clamp(1.7rem, 2vw, 2rem); letter-spacing: -0.03em; margin: 0 0 .35rem; }
 		.source-review-title p, .selected-source-copy p, .accordion-header p { color: var(--color-text-soft); margin: 0; }
-		.review-status, .source-card-status, .review-badge { align-items: center; border-radius: 999px; display: inline-flex; font-weight: 800; gap: .45rem; white-space: nowrap; }
+		.review-status, .review-badge { align-items: center; border-radius: 999px; display: inline-flex; font-weight: 800; gap: .45rem; white-space: nowrap; }
 		.review-status { background: rgba(20, 27, 36, .58); border: 1px solid rgba(101,222,119,0.28); color: var(--color-success); font-size: .85rem; padding: .5rem .8rem; }
 		.review-status .status-glyph { background: var(--color-success); border-radius: 999px; box-shadow: 0 0 0 4px rgba(101,222,119,.14); height: .55rem; width: .55rem; }
 		.review-status.attention { border-color: rgba(246,180,80,.35); color: var(--color-warning); }
@@ -299,13 +294,8 @@ type DisplayIssue = ProjectIssue & {
 		.source-meta dt, .summary-list dt { color: var(--color-muted); font-size: .78rem; font-weight: 600; }
 		.source-meta dd { color: var(--color-text-soft); font-size: .92rem; margin: 0; }
 		.source-card-side { align-items: end; display: grid; gap: 1rem; justify-items: end; }
-		.source-card-status { color: var(--color-success); font-size: .84rem; }
-		.source-card-status > span { border: 1px solid currentColor; border-radius: 999px; display: inline-grid; height: 1.25rem; place-items: center; width: 1.25rem; }
-		.source-card-status.attention { color: var(--color-warning); }
-		.source-card-status.failed { color: var(--color-danger); }
 		.source-actions { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: end; }
 		.button.small { min-height: 2.35rem; padding: .48rem .75rem; }
-		.icon-button { min-width: 2.35rem; padding-inline: .55rem; }
 
 		.summary-grid { display: grid; gap: .85rem; grid-template-columns: minmax(0, .95fr) minmax(0, .95fr) minmax(28rem, 1.45fr); margin-bottom: .85rem; }
 		.summary-card { min-height: 13.4rem; padding: 1.05rem 1rem; }
@@ -834,17 +824,21 @@ export class SourceReviewPageComponent implements OnInit {
 		}));
 	}
 
-	totalSelectedNotesLabel(): string {
-		const selected = new Set(this.state().selectedTracks);
-		let total = 0;
-		for (const track of this.state().inspection?.tracks ?? []) {
-			if (!selected.has(track.index)) continue;
-			if (typeof track.noteCount !== "number" || !Number.isFinite(track.noteCount)) {
-				return "n/a";
+	trackNotesSummaryLabel(): string {
+		let knownTotal = 0;
+		let knownCount = 0;
+		let unknownCount = 0;
+		for (const track of this.trackRows()) {
+			if (typeof track.noteCount === "number" && Number.isFinite(track.noteCount)) {
+				knownTotal += track.noteCount;
+				knownCount += 1;
+			} else {
+				unknownCount += 1;
 			}
-			total += track.noteCount;
 		}
-		return this.formatNumber(total);
+		if (unknownCount === 0) return `Total Notes: ${this.formatNumber(knownTotal)}`;
+		if (knownCount > 0) return `Known Notes: ${this.formatNumber(knownTotal)}`;
+		return "Total Notes: n/a";
 	}
 
 	pieceLabel(piece: string): string {
