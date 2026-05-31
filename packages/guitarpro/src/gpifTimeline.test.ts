@@ -70,4 +70,36 @@ describe("buildGpifTimeline", () => {
 			{ tick: 7_680, numerator: 3, denominator: 4 },
 		]);
 	});
+	it("uses MasterBars length rather than per-track Bars count when MasterBars exist", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(2)}</MasterBars>
+  <Bars>
+    ${Array.from({ length: 10 }, (_, index) => `<Bar id="track-bar-${index}" />`).join("\n")}
+  </Bars>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.masterBars).toHaveLength(2);
+	});
+
+	it("documents current Position conversion semantics", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(2)}</MasterBars>
+</GPIF>`);
+		const timeline = buildGpifTimeline(root, 960);
+
+		// GPIF tempo evidence for Phase 17I only verified Position=0 in real Decode data.
+		// Until broader fixtures prove another unit, CHDG treats integer positions as
+		// raw ticks and fractional positions as quarter-note fractions.
+		expect(barPositionToTick(timeline, 1, 0)).toBe(3_840);
+		expect(barPositionToTick(timeline, 1, 0.5)).toBe(4_320);
+		expect(barPositionToTick(timeline, 1, 1)).toBe(3_841);
+		expect(barPositionToTick(timeline, 1, 960)).toBe(4_800);
+	});
+
 });

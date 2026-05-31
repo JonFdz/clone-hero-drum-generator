@@ -31,7 +31,7 @@ export function buildGpifTimeline(
 	const issues: string[] = [];
 	const masterBarNodes = findObjectsByKey(root, "MasterBar");
 	const fallbackBarCount = findObjectsByKey(root, "Bar").length;
-	const barCount = Math.max(masterBarNodes.length, fallbackBarCount, 1);
+	const barCount = masterBarNodes.length > 0 ? masterBarNodes.length : Math.max(fallbackBarCount, 1);
 	const masterBars = buildMasterBars(masterBarNodes, barCount, resolution);
 	const tempos = extractTempoEvents(root, masterBars, resolution);
 	const timeSignatures = extractTimeSignatureEvents(masterBars);
