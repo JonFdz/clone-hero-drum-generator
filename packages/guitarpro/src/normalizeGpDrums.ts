@@ -14,12 +14,18 @@ import {
 	mapGpifDynamicToVelocity,
 	mapGpifMidiDrumNumber,
 } from "./gpifDrumMapping.js";
+import { buildGpifTimeline } from "./gpifTimeline.js";
 
 const TEXT_KEY = "#text";
 const ATTRIBUTE_PREFIX = "@_";
 const DEFAULT_RESOLUTION = 960;
 
 type XmlNode = Record<string, unknown>;
+
+type SelectedGpifBar = {
+	bar: XmlNode;
+	masterBarIndex: number;
+};
 
 type GpifSource = {
 	kind: "gpif";
@@ -89,10 +95,12 @@ export function normalizeGpDrumsXml(
 		);
 	}
 
-	const resolution = extractResolution(root) ?? DEFAULT_RESOLUTION;
+	const parsedResolution = extractResolution(root);
+	const resolution = parsedResolution ?? DEFAULT_RESOLUTION;
+	const timeline = buildGpifTimeline(root, resolution);
 	if (
 		resolution === DEFAULT_RESOLUTION &&
-		extractResolution(root) === undefined
+		parsedResolution === undefined
 	) {
 		unhandled.add(
 			"No recognized GPIF PPQ/resolution found; defaulted to 960 PPQ.",
@@ -126,16 +134,21 @@ export function normalizeGpDrumsXml(
 	for (const item of detectUnsupportedTimingStructures(root)) {
 		unhandled.add(item);
 	}
+	for (const item of timeline.issues) {
+		unhandled.add(item);
+	}
 
 	const hits: DrumHit[] = [];
 	const unknowns = new Map<string, GpUnknownArticulation>();
-	let measureStartTick = 0;
+	let fallbackMeasureStartTick = 0;
 
-	selectedBars.forEach((bar, measureIndex) => {
+	selectedBars.forEach(({ bar, masterBarIndex }) => {
+		const timelineBar = timeline.masterBars[masterBarIndex];
+		const measureStartTick = timelineBar?.startTick ?? fallbackMeasureStartTick;
 		const voices = resolveChildObjects(bar, "Voice", "Voices", globalVoices);
 		if (voices.length === 0) {
 			unhandled.add(
-				`Measure ${measureIndex} has no recognized GPIF voices for selected track.`,
+				`Measure ${masterBarIndex} has no recognized GPIF voices for selected track.`,
 			);
 		}
 
@@ -146,10 +159,10 @@ export function normalizeGpDrumsXml(
 		);
 		if (explicitMeasureDuration === undefined) {
 			unhandled.add(
-				`Measure ${measureIndex} has no recognized duration; defaulted to 4/4.`,
+				`Measure ${masterBarIndex} has no recognized duration; defaulted to 4/4.`,
 			);
 		}
-		const measureDuration = explicitMeasureDuration ?? resolution * 4;
+		const measureDuration = timelineBar?.durationTicks ?? explicitMeasureDuration ?? resolution * 4;
 		for (const voice of voices) {
 			const beats = resolveChildObjects(voice, "Beat", "Beats", globalBeats);
 			let beatCursor = 0;
@@ -166,7 +179,7 @@ export function normalizeGpDrumsXml(
 					);
 					if (emptyBeatDuration === undefined) {
 						unhandled.add(
-							`Measure ${measureIndex} beat ${beatIndex} has no recognized duration; defaulted to quarter.`,
+							`Measure ${masterBarIndex} beat ${beatIndex} has no recognized duration; defaulted to quarter.`,
 						);
 					}
 					beatCursor += emptyBeatDuration ?? resolution;
@@ -187,7 +200,7 @@ export function normalizeGpDrumsXml(
 
 					if (!mapping.piece) {
 						recordUnknown(unknowns, rawArticulation, {
-							measureIndex,
+							measureIndex: masterBarIndex,
 							beatIndex,
 							noteIndex,
 						});
@@ -208,7 +221,7 @@ export function normalizeGpDrumsXml(
 							trackIndex: options.trackIndex,
 							trackName: track.name,
 							rawArticulation,
-							measureIndex,
+							measureIndex: masterBarIndex,
 							beatIndex,
 							noteIndex,
 						} satisfies GpifSource,
@@ -222,13 +235,13 @@ export function normalizeGpDrumsXml(
 				);
 				if (beatDuration === undefined) {
 					unhandled.add(
-						`Measure ${measureIndex} beat ${beatIndex} has no recognized duration; defaulted to quarter.`,
+						`Measure ${masterBarIndex} beat ${beatIndex} has no recognized duration; defaulted to quarter.`,
 					);
 				}
 				beatCursor += beatDuration ?? resolution;
 			});
 		}
-		measureStartTick += measureDuration;
+		fallbackMeasureStartTick += measureDuration;
 	});
 
 	hits.sort(
@@ -244,9 +257,9 @@ export function normalizeGpDrumsXml(
 		trackName: track.name,
 		resolution,
 		hits,
-		tempos: normalizeGpifTempos(inspection.metadata.tempo, inspection.tempos),
-		timeSignatures: normalizeGpifTimeSignatures(inspection.timeSignatures),
-		sections: normalizeGpifSections(inspection.sections),
+		tempos: timeline.tempos,
+		timeSignatures: timeline.timeSignatures,
+		sections: timeline.sections.length > 0 ? timeline.sections : normalizeGpifSections(inspection.sections),
 		unknownArticulations: Array.from(unknowns.values()).sort((a, b) =>
 			a.rawArticulation.localeCompare(b.rawArticulation),
 		),
@@ -440,16 +453,21 @@ function selectBarsForTrack(
 	bars: XmlNode[],
 	trackIndex: number,
 	trackRefs: Set<string>,
-): XmlNode[] {
+): SelectedGpifBar[] {
 	const barById = objectMapById(bars);
 	const masterBars = findObjectsByKey(root, "MasterBar");
 	const selectedFromMasterBars = masterBars
-		.map((masterBar) => referenceValues(masterBar.Bars)[trackIndex])
-		.map((barId) => (barId !== undefined ? barById.get(barId) : undefined))
-		.filter((bar): bar is XmlNode => bar !== undefined);
+		.map((masterBar, masterBarIndex) => {
+			const barId = referenceValues(masterBar.Bars)[trackIndex];
+			const bar = barId !== undefined ? barById.get(barId) : undefined;
+			return bar ? { bar, masterBarIndex } : undefined;
+		})
+		.filter((item): item is SelectedGpifBar => item !== undefined);
 
 	if (selectedFromMasterBars.length > 0) return selectedFromMasterBars;
-	return bars.filter((bar) => barBelongsToTrack(bar, trackRefs));
+	return bars
+		.map((bar, masterBarIndex) => ({ bar, masterBarIndex }))
+		.filter(({ bar }) => barBelongsToTrack(bar, trackRefs));
 }
 
 function barBelongsToTrack(bar: XmlNode, trackRefs: Set<string>): boolean {
