@@ -42,6 +42,80 @@ describe("parseChartPreviewData", () => {
 		expect(data.noteEvents[0]?.seconds).toBeCloseTo(0.5, 6);
 		expect(data.noteEvents[1]?.seconds).toBeCloseTo(1, 6);
 	});
+	it("parses generated chart section events with tempo-aware timing", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+
+[SyncTrack]
+{
+  0 = B 120000
+  384 = B 60000
+}
+
+[Events]
+{
+  192 = E "section Verse 1"
+  384 = E "phrase ignored"
+  576 = E "section Break"
+}
+
+[ExpertDrums]
+{
+  192 = N 0 0
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.sectionEvents).toEqual([
+			expect.objectContaining({
+				tick: 192,
+				name: "Verse 1",
+				seconds: 0.5,
+				source: "generated-chart",
+			}),
+			expect.objectContaining({
+				tick: 576,
+				name: "Break",
+				source: "generated-chart",
+			}),
+		]);
+		expect(data.sectionEvents[1]?.seconds).toBeCloseTo(2, 6);
+	});
+
+	it("returns no section events when generated chart has no section markers", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+
+[Events]
+{
+  0 = E "phrase intro"
+}
+
+[ExpertDrums]
+{
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.sectionEvents).toEqual([]);
+	});
+
 });
 
 describe("resolveChartPreviewPath", () => {

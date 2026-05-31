@@ -20,6 +20,21 @@ export type HighwayNote = {
 	ghost?: boolean;
 };
 
+export type PreviewSectionNavigationItem = {
+	index: number;
+	tick: number;
+	name: string;
+	displayName: string;
+	label: string;
+	seconds: number;
+	effectiveSeconds: number;
+};
+
+export type PreviewAdjacentSections = {
+	previous?: PreviewSectionNavigationItem;
+	next?: PreviewSectionNavigationItem;
+};
+
 export const HIGHWAY_HIT_LINE_PERCENT = 18;
 
 const laneMap: Record<number, HighwayLane> = {
@@ -87,6 +102,105 @@ export function effectiveNoteTime(
 	previewOffsetMs: number,
 ): number {
 	return noteTimeSeconds + offsetMsToSeconds(previewOffsetMs);
+}
+
+export function formatSectionTimestamp(seconds: number): string {
+	if (!Number.isFinite(seconds) || seconds < 0) return "00:00";
+	const mins = Math.floor(seconds / 60)
+		.toString()
+		.padStart(2, "0");
+	const secs = Math.floor(seconds % 60)
+		.toString()
+		.padStart(2, "0");
+	return `${mins}:${secs}`;
+}
+
+export function effectiveSectionTime(
+	sectionTimeSeconds: number,
+	previewOffsetMs: number,
+): number {
+	return sectionTimeSeconds + offsetMsToSeconds(previewOffsetMs);
+}
+
+export function deriveSectionNavigationItems(
+	chartData: ChartPreviewData | null,
+	previewOffsetMs = 0,
+): PreviewSectionNavigationItem[] {
+	const sectionEvents = chartData?.sectionEvents ?? [];
+	if (sectionEvents.length === 0) return [];
+	const sortedSections = sectionEvents
+		.map((sectionEvent, originalIndex) => ({
+			...sectionEvent,
+			effectiveSeconds: effectiveSectionTime(
+				sectionEvent.seconds,
+				previewOffsetMs,
+			),
+			originalIndex,
+		}))
+		.sort(
+			(a, b) =>
+				a.effectiveSeconds - b.effectiveSeconds ||
+				a.seconds - b.seconds ||
+				a.tick - b.tick ||
+				a.originalIndex - b.originalIndex,
+		);
+	const nameCounts = new Map<string, number>();
+	return sortedSections.map((sectionEvent) => {
+		const occurrence = (nameCounts.get(sectionEvent.name) ?? 0) + 1;
+		nameCounts.set(sectionEvent.name, occurrence);
+		const displayName =
+			occurrence === 1
+				? sectionEvent.name
+				: `${sectionEvent.name} ${occurrence}`;
+		return {
+			index: sectionEvent.originalIndex,
+			tick: sectionEvent.tick,
+			name: sectionEvent.name,
+			displayName,
+			label: `${displayName} · ${formatSectionTimestamp(sectionEvent.effectiveSeconds)}`,
+			seconds: sectionEvent.seconds,
+			effectiveSeconds: sectionEvent.effectiveSeconds,
+		};
+	});
+}
+
+export function deriveCurrentSection(
+	chartData: ChartPreviewData | null,
+	currentTimeSeconds: number,
+	previewOffsetMs = 0,
+): PreviewSectionNavigationItem | undefined {
+	if (!Number.isFinite(currentTimeSeconds)) return undefined;
+	let current: PreviewSectionNavigationItem | undefined;
+	for (const item of deriveSectionNavigationItems(chartData, previewOffsetMs)) {
+		if (item.effectiveSeconds <= currentTimeSeconds) {
+			current = item;
+			continue;
+		}
+		break;
+	}
+	return current;
+}
+
+export function deriveAdjacentSections(
+	sectionItems: PreviewSectionNavigationItem[],
+	currentTimeSeconds: number,
+): PreviewAdjacentSections {
+	if (sectionItems.length === 0 || !Number.isFinite(currentTimeSeconds)) return {};
+	let currentIndex = -1;
+	for (let index = 0; index < sectionItems.length; index += 1) {
+		if (sectionItems[index].effectiveSeconds <= currentTimeSeconds) {
+			currentIndex = index;
+			continue;
+		}
+		break;
+	}
+	return {
+		previous: currentIndex > 0 ? sectionItems[currentIndex - 1] : undefined,
+		next:
+			currentIndex === -1
+				? sectionItems[0]
+				: sectionItems[currentIndex + 1],
+	};
 }
 
 export function deriveTimelineNotes(

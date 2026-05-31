@@ -132,6 +132,7 @@ describe("preview-chart-stage-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 1, lane: 0, seconds: 1 },
 					{ tick: 2, lane: 2, seconds: 2 },
@@ -172,6 +173,7 @@ describe("preview-chart-stage-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 1, lane: 0, seconds: 11.1 },
 					{ tick: 2, lane: 1, seconds: 11.5 },
