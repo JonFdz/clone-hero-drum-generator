@@ -1,6 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { normalizeGpDrumsXml } from "./normalizeGpDrums.js";
 
+
+function masterBars(count: number): string {
+	return Array.from({ length: count }, () => `<MasterBar><Time>4/4</Time></MasterBar>`).join("\n");
+}
+
+const decodeLikeTempoMapGpif = `<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Score><Title>Decode-like</Title></Score>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(49)}</MasterBars>
+  <Automations>
+    <Automation><Type>Tempo</Type><Bar>0</Bar><Position>0</Position><Value>164 2</Value></Automation>
+    <Automation><Type>Tempo</Type><Bar>48</Bar><Position>0</Position><Value>160 2</Value></Automation>
+  </Automations>
+  <Markers><Marker><Name>Bridge</Name><Bar>48</Bar><Position>0</Position></Marker></Markers>
+  <Tracks><Track id="1"><Name>Drums</Name><InstrumentName>Standard Drum Kit</InstrumentName><Channel>10</Channel></Track></Tracks>
+  <Bars>
+    <Bar><Track>1</Track><Voices><Voice><Beats><Beat><Duration>Quarter</Duration><Notes><Note><Name>Kick</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+  </Bars>
+</GPIF>`;
+
 const syntheticGpif = `<?xml version="1.0" encoding="UTF-8"?>
 <GPIF>
   <Score><Title>Normalization Demo</Title><Tempo>147</Tempo></Score>
@@ -84,6 +105,21 @@ describe("normalizeGpDrumsXml", () => {
 			{ tick: 0, numerator: 7, denominator: 8 },
 		]);
 		expect(result.sections).toEqual([]);
+	});
+
+	it("preserves GPIF tempo automations at their timeline ticks", () => {
+		const result = normalizeGpDrumsXml(decodeLikeTempoMapGpif, { trackIndex: 0 });
+
+		expect(result.tempos).toEqual([
+			{ tick: 0, bpm: 164 },
+			{ tick: 184_320, bpm: 160 },
+		]);
+	});
+
+	it("places GPIF sections from bar context on the timeline", () => {
+		const result = normalizeGpDrumsXml(decodeLikeTempoMapGpif, { trackIndex: 0 });
+
+		expect(result.sections).toEqual([{ tick: 184_320, name: "Bridge" }]);
 	});
 
 	it("maps open and closed hi-hats distinctly", () => {

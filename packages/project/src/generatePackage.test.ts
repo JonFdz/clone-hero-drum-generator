@@ -146,6 +146,36 @@ describe("generatePackage", () => {
 		await expect(stat(join(outDir, "notes.chart"))).resolves.toMatchObject({});
 	});
 
+	it("writes all GPIF tempo map events into generated notes.chart", async () => {
+		const outDir = join(tempDir, "gp-tempo-output");
+		mocks.normalizeGpDrums.mockResolvedValue({
+			trackIndex: 3,
+			trackName: "Drums",
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 184_320, name: "Bridge" }],
+			hits: [],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [],
+		});
+
+		await generatePackage({
+			sourcePath: "decode-like.gp",
+			trackIndex: 3,
+			outDir,
+		});
+
+		const chart = await readFile(join(outDir, "notes.chart"), "utf8");
+		expect(chart).toContain("0 = B 164000");
+		expect(chart).toContain("184320 = B 160000");
+		expect(chart).toContain(`184320 = E "section Bridge"`);
+	});
+
 	it("requires --track for GPIF generation", async () => {
 		await expect(
 			generatePackage({
