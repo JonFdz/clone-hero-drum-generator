@@ -53,7 +53,7 @@ export type FfmpegDiagnostic = {
 
 export type AudioPreviewSource = {
 	src: string;
-	sourceKind: "generated" | "selected-audio";
+	sourceKind: "generated";
 };
 
 export type ChartPreviewData = {
@@ -94,6 +94,7 @@ export type ProjectStatePayload = {
 		chart?: string;
 		songIni?: string;
 		songOgg?: string;
+		albumJpg?: string;
 	};
 	mappingOverrides?: ProjectMappingOverrides;
 	analysis?: ChdgProjectAnalysisCache;
@@ -269,7 +270,6 @@ export class DesktopBridgeService {
 	async getAudioPreviewSource(input: {
 		outputDir?: string;
 		generatedSongOggPath?: string;
-		selectedAudioPath?: string;
 	}): Promise<JsonEnvelope<AudioPreviewSource>> {
 		return this.requireBridge().getAudioPreviewSource(input);
 	}

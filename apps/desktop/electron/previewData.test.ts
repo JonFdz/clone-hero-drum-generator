@@ -13,10 +13,8 @@ describe("pickAudioPreviewCandidate", () => {
 		const result = pickAudioPreviewCandidate({
 			generatedSongOggPath: "/tmp/output/song.ogg",
 			outputDir: "/tmp/output",
-			selectedAudioPath: "/tmp/source/demo.wav",
 		});
 		expect(result.generatedPath).toBe("/tmp/output/song.ogg");
-		expect(result.selectedAudioPath).toBe("/tmp/source/demo.wav");
 	});
 
 	it("derives generated song.ogg from output dir", () => {
@@ -24,10 +22,9 @@ describe("pickAudioPreviewCandidate", () => {
 		expect(result.generatedPath).toBe("/tmp/output/song.ogg");
 	});
 
-	it("keeps selected audio as fallback candidate", () => {
-		const result = pickAudioPreviewCandidate({ selectedAudioPath: "/tmp/source/demo.wav" });
+	it("does not accept selected source audio as a generated Preview fallback", () => {
+		const result = pickAudioPreviewCandidate({});
 		expect(result.generatedPath).toBeUndefined();
-		expect(result.selectedAudioPath).toBe("/tmp/source/demo.wav");
 	});
 });
 

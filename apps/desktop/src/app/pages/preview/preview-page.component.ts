@@ -67,7 +67,6 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 						<chdg-preview-chart-stage
 							[waveformOverview]="preview.waveformOverview()"
 							[chartData]="preview.chartData()"
-							[normalizationPreview]="preview.normalizationPreview()"
 							[currentTime]="preview.currentTime()"
 							[duration]="preview.duration()"
 							[previewOffsetMs]="preview.previewOffsetMs()"

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-export type AudioPreviewSourceKind = "generated" | "selected-audio";
+export type AudioPreviewSourceKind = "generated";
 
 export type AudioPreviewSourceResult = {
 	srcPath: string;
@@ -11,7 +11,6 @@ export type AudioPreviewSourceResult = {
 export type AudioPreviewRequest = {
 	outputDir?: string;
 	generatedSongOggPath?: string;
-	selectedAudioPath?: string;
 };
 
 export type ChartPreviewData = {
@@ -58,7 +57,6 @@ export function resolveChartPreviewPath(input: ChartPreviewRequest): {
 
 export function pickAudioPreviewCandidate(input: AudioPreviewRequest): {
 	generatedPath?: string;
-	selectedAudioPath?: string;
 } {
 	const generatedPath =
 		typeof input.generatedSongOggPath === "string" &&
@@ -68,14 +66,7 @@ export function pickAudioPreviewCandidate(input: AudioPreviewRequest): {
 				? path.join(input.outputDir, "song.ogg")
 				: undefined;
 
-	return {
-		generatedPath,
-		selectedAudioPath:
-			typeof input.selectedAudioPath === "string" &&
-			input.selectedAudioPath.trim().length > 0
-				? input.selectedAudioPath
-				: undefined,
-	};
+	return { generatedPath };
 }
 
 export async function parseChartPreviewData(chartPath: string): Promise<ChartPreviewData> {

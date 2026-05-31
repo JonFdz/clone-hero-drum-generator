@@ -29,7 +29,7 @@ import {
 @Injectable({ providedIn: "root" })
 export class DesktopPreviewService {
 	readonly audioSrc = signal<string | null>(null);
-	readonly sourceKind = signal<"generated" | "selected-audio" | null>(null);
+	readonly sourceKind = signal<"generated" | null>(null);
 	readonly chartData = signal<ChartPreviewData | null>(null);
 	readonly error = signal<string | null>(null);
 	readonly currentTime = signal(0);
@@ -63,7 +63,6 @@ export class DesktopPreviewService {
 	readonly audioSourceLabel = computed(() => {
 		const sourceKind = this.sourceKind();
 		if (sourceKind === "generated") return "generated song.ogg";
-		if (sourceKind === "selected-audio") return "project audio";
 		return "unknown";
 	});
 	readonly previewTitle = computed(
@@ -75,16 +74,13 @@ export class DesktopPreviewService {
 			this.generateState.state().metadata.artist?.trim() || "Unknown artist";
 		return `${artist} • Expert Pro Drums`;
 	});
-	readonly normalizationPreview = computed(
-		() => this.generateState.state().normalizationPreview,
-	);
 	readonly previewNoteCount = computed(() => {
 		const chartEvents = this.chartData()?.noteEvents;
 		if (chartEvents?.length) {
 			return chartEvents.filter((event) => event.lane >= 0 && event.lane <= 4)
 				.length;
 		}
-		return this.generateState.state().normalizationPreview?.hitCount ?? 0;
+		return 0;
 	});
 	readonly previewStatus = computed(() => {
 		if (this.error()) return "Preview unavailable";
@@ -97,8 +93,6 @@ export class DesktopPreviewService {
 	readonly timelineNotes = computed(() =>
 		deriveTimelineNotes(
 			this.chartData(),
-			this.generateState.state().normalizationPreview,
-			this.duration(),
 			this.currentTime(),
 			this.previewOffsetMs(),
 		),
@@ -106,17 +100,12 @@ export class DesktopPreviewService {
 	readonly highwayNotes = computed(() =>
 		deriveHighwayNotes(
 			this.chartData(),
-			this.generateState.state().normalizationPreview,
 			this.currentTime(),
-			this.duration(),
 			this.previewOffsetMs(),
 		),
 	);
 	readonly highwayLimitations = computed(() =>
-		deriveHighwayLimitations(
-			this.chartData(),
-			this.generateState.state().normalizationPreview,
-		),
+		deriveHighwayLimitations(this.chartData()),
 	);
 	readonly currentTimeText = computed(() => formatTime(this.currentTime()));
 	readonly durationText = computed(() => formatTime(this.duration()));
@@ -134,33 +123,48 @@ export class DesktopPreviewService {
 		this.offsetStatus.set(null);
 		this.offsetInputValid.set(true);
 		const state = this.generateState.state();
+		if (
+			state.status === "idle" ||
+			(!state.outputFiles?.chart && !state.outputFiles?.songOgg)
+		) {
+			this.setUnavailable(
+				"Generate this project to preview notes.chart and song.ogg.",
+			);
+			return;
+		}
+
+		const chart = await this.bridge.getChartPreviewData({
+			outputDir: state.outputDir,
+			chartPath: state.outputFiles?.chart,
+		});
+		if (!chart.ok) {
+			this.setUnavailable(`Generated notes.chart unavailable: ${chart.error.message}`);
+			return;
+		}
+		this.chartData.set(chart.data);
+
 		const audio = await this.bridge.getAudioPreviewSource({
 			outputDir: state.outputDir,
 			generatedSongOggPath: state.outputFiles?.songOgg,
-			selectedAudioPath: state.audioPath,
 		});
 		if (!audio.ok) {
-			this.audioSrc.set(null);
-			this.sourceKind.set(null);
-			this.waveformOverview.set(null);
-			this.waveformStatus.set("empty");
-			this.waveformError.set(null);
-			this.error.set(audio.error.message);
+			this.setUnavailable(`Generated song.ogg unavailable: ${audio.error.message}`);
 			return;
 		}
 		this.audioSrc.set(audio.data.src);
 		this.sourceKind.set(audio.data.sourceKind);
 		await this.loadWaveform(audio.data.src);
 
-		const chart = await this.bridge.getChartPreviewData({
-			outputDir: state.outputDir,
-			chartPath: state.outputFiles?.chart,
-		});
-		if (chart.ok) {
-			this.chartData.set(chart.data);
-		} else {
-			this.chartData.set(null);
-		}
+	}
+
+	private setUnavailable(message: string): void {
+		this.audioSrc.set(null);
+		this.sourceKind.set(null);
+		this.chartData.set(null);
+		this.waveformOverview.set(null);
+		this.waveformStatus.set("empty");
+		this.waveformError.set(null);
+		this.error.set(message);
 	}
 
 	nudgeOffset(deltaMs: number): void {

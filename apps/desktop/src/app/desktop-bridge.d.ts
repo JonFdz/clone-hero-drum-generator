@@ -93,7 +93,6 @@ declare global {
 			getAudioPreviewSource: (input: {
 				outputDir?: string;
 				generatedSongOggPath?: string;
-				selectedAudioPath?: string;
 			}) => Promise<JsonEnvelope<AudioPreviewSource>>;
 			getChartPreviewData: (input: {
 				outputDir?: string;

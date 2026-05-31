@@ -300,7 +300,11 @@ export class ProjectDetailsPageComponent {
 		const name = this.projectState.state().projectName;
 		const filePath = this.projectState.state().projectFilePath;
 		const payload = this.generateState.buildProjectStatePayload(name, filePath);
-		await this.projectState.saveProject(payload);
+		const saved = await this.projectState.saveProject(payload);
+		if (saved) {
+			this.generateState.setSavedOutputDir(saved.payload.outputDir);
+		}
+
 	}
 
 	async saveProjectAs(): Promise<void> {

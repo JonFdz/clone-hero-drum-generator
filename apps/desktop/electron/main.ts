@@ -30,6 +30,7 @@ import {
 	getDefaultProjectFilePath,
 	getDefaultOutputDir,
 	resolveUniqueProjectTarget,
+	renameManagedProjectTarget,
 } from "./projectFileService.js";
 import {
 	readSettings,
@@ -68,7 +69,7 @@ const __dirname = path.dirname(__filename);
 
 const rendererIndex = path.join(__dirname, "../renderer/browser/index.html");
 const preloadScript = path.join(__dirname, "preload.cjs");
-const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
+const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg", "album.jpg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
 const allowedCoverImageFiles = new Set<string>();
@@ -120,6 +121,7 @@ type ProjectStatePayload = {
 		chart?: string;
 		songIni?: string;
 		songOgg?: string;
+		albumJpg?: string;
 	};
 	mappingOverrides?: ProjectMappingOverrides;
 	analysis?: ChdgProjectAnalysisCache;
@@ -309,6 +311,9 @@ app.whenReady().then(() => {
 				const generateInput = assertGenerateInput(input);
 				const sourcePath = assertAllowedSourcePath(generateInput.sourcePath);
 				const audioSource = assertAllowedAudioPath(generateInput.audioSource);
+				const coverImagePath = generateInput.coverImagePath
+					? assertAllowedCoverImagePath(generateInput.coverImagePath)
+					: undefined;
 				const normalizedOutDir = assertAllowedOutputFolder(
 					generateInput.outDir,
 				);
@@ -323,6 +328,7 @@ app.whenReady().then(() => {
 					...generateInput,
 					sourcePath,
 					audioSource,
+					coverImagePath,
 					outDir: normalizedOutDir,
 				});
 			});
@@ -453,12 +459,51 @@ app.whenReady().then(() => {
 				if (!payload.projectFilePath) {
 					addAllowedProjectFile(allowedProjectFiles, candidatePath);
 				}
-				const filePath = assertAllowedProjectFile(
+				let filePath = assertAllowedProjectFile(
 					allowedProjectFiles,
 					candidatePath,
 					"PROJECT_SAVE_PATH_NOT_SELECTED",
 					"Project save path was not selected or created by a trusted desktop flow.",
 				);
+
+				if (payload.projectFilePath) {
+					const existing = await readProjectFile(filePath);
+					if (existing.ok) {
+						try {
+							const renameResult = await renameManagedProjectTarget({
+								currentFilePath: filePath,
+								oldProjectName: existing.project.project.name,
+								newProjectName: payload.projectName,
+								projectLocation: (await readSettings()).projectLocation,
+								outputDir: payload.outputDir,
+								outputFiles: payload.outputFiles,
+							});
+							if (renameResult.renamed) {
+								await removeRecentProject(filePath);
+								filePath = renameResult.filePath;
+								payload.projectFilePath = filePath;
+								payload.outputDir = renameResult.outputDir;
+								payload.outputFiles = renameResult.outputFiles;
+								addAllowedProjectFile(allowedProjectFiles, filePath);
+								if (payload.outputDir) {
+									addAllowedPath(allowedOutputFolders, payload.outputDir);
+								}
+							}
+						} catch (error) {
+							if (
+								error instanceof Error &&
+								error.message === "PROJECT_RENAME_TARGET_EXISTS"
+							) {
+								throw new DesktopIpcError(
+									"PROJECT_RENAME_TARGET_EXISTS",
+									"Project rename target already exists; choose another project name or Save As.",
+								);
+							}
+							throw error;
+						}
+					}
+				}
+
 				const coverImagePath = payload.cover?.imagePath;
 				if (coverImagePath) {
 					payload.cover = {
@@ -620,13 +665,15 @@ app.whenReady().then(() => {
 					projectPath,
 					"Project path is required.",
 				);
-				const filePath = await resolveDeletableProjectFilePath(
+				const deletable = await resolveDeletableProjectFilePath(
 					target,
 					allowedProjectFiles,
 					readRecentProjects,
 				);
-				await deleteProjectFilePath(filePath);
-				await removeRecentProject(filePath);
+				if (deletable.exists) {
+					await deleteProjectFilePath(deletable.filePath);
+				}
+				await removeRecentProject(deletable.filePath);
 			});
 		},
 	);
@@ -731,7 +778,7 @@ app.whenReady().then(() => {
 			_event,
 			input: unknown,
 		): Promise<
-			JsonEnvelope<{ src: string; sourceKind: "generated" | "selected-audio" }>
+			JsonEnvelope<{ src: string; sourceKind: "generated" }>
 		> => {
 			return toEnvelope(async () => {
 				const value = assertRecord(input, "Audio preview input is required.");
@@ -743,10 +790,6 @@ app.whenReady().then(() => {
 					generatedSongOggPath: optionalString(
 						value["generatedSongOggPath"],
 						"generatedSongOggPath must be text.",
-					),
-					selectedAudioPath: optionalString(
-						value["selectedAudioPath"],
-						"selectedAudioPath must be text.",
 					),
 				});
 
@@ -765,15 +808,6 @@ app.whenReady().then(() => {
 							// try fallback below
 						}
 					}
-				}
-
-				if (candidate.selectedAudioPath) {
-					const selected = assertAllowedAudioPath(candidate.selectedAudioPath);
-					await access(selected);
-					return {
-						src: pathToFileURL(selected).toString(),
-						sourceKind: "selected-audio" as const,
-					};
 				}
 
 				throw new DesktopIpcError(
@@ -1043,6 +1077,10 @@ function assertGenerateInput(input: unknown): DesktopGeneratePackageInput {
 		year: optionalString(value["year"], "Year must be text."),
 		genre: optionalString(value["genre"], "Genre must be text."),
 		charter: optionalString(value["charter"], "Charter must be text."),
+		coverImagePath: optionalString(
+			value["coverImagePath"],
+			"Cover image path must be text.",
+		),
 		overwriteKnownFiles: optionalBoolean(
 			value["overwriteKnownFiles"],
 			"overwriteKnownFiles must be boolean.",
@@ -1273,13 +1311,14 @@ function assertGenerationStatus(input: unknown): ChdgOutputStatus {
 
 function optionalOutputFiles(
 	input: unknown,
-): { chart?: string; songIni?: string; songOgg?: string } | undefined {
+): { chart?: string; songIni?: string; songOgg?: string; albumJpg?: string } | undefined {
 	if (typeof input !== "object" || input === null) return undefined;
 	const value = input as Record<string, unknown>;
 	return {
 		chart: optionalString(value["chart"], "chart must be a string."),
 		songIni: optionalString(value["songIni"], "songIni must be a string."),
 		songOgg: optionalString(value["songOgg"], "songOgg must be a string."),
+		albumJpg: optionalString(value["albumJpg"], "albumJpg must be a string."),
 	};
 }
 

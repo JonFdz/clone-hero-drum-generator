@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -304,4 +304,61 @@ describe("generatePackage", () => {
 			result.issues.find((issue) => issue.code === "UNKNOWN_GPIF_ARTICULATION"),
 		).toBeUndefined();
 	});
+	it("copies JPG project cover to album.jpg during generation", async () => {
+		const outDir = join(tempDir, "output-cover");
+		const coverPath = join(tempDir, "cover.jpeg");
+		await writeFile(coverPath, "jpeg-data", "utf8");
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53, name: "Drums" },
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits: [],
+			unknownNotes: [],
+		});
+
+		const result = await generatePackage({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			outDir,
+			coverImagePath: coverPath,
+		});
+
+		expect(result.files.albumJpg).toBe(join(outDir, "album.jpg"));
+		expect(await readFile(join(outDir, "album.jpg"), "utf8")).toBe("jpeg-data");
+		expect(result.issues.find((issue) => issue.code.startsWith("COVER_OUTPUT"))).toBeUndefined();
+	});
+
+	it("keeps generation successful and warns when cover format is unsupported", async () => {
+		const outDir = join(tempDir, "output-cover-warning");
+		const coverPath = join(tempDir, "cover.png");
+		await writeFile(coverPath, "png-data", "utf8");
+		mocks.normalizeDrumsFromFile.mockResolvedValue({
+			track: { index: 53, name: "Drums" },
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits: [],
+			unknownNotes: [],
+		});
+
+		const result = await generatePackage({
+			sourcePath: "demo.mid",
+			trackIndex: 53,
+			outDir,
+			coverImagePath: coverPath,
+		});
+
+		await expect(stat(join(outDir, "notes.chart"))).resolves.toMatchObject({});
+		expect(result.files.albumJpg).toBeUndefined();
+		expect(result.issues).toContainEqual(
+			expect.objectContaining({
+				severity: "warning",
+				code: "COVER_OUTPUT_UNSUPPORTED_FORMAT",
+			}),
+		);
+	});
+
 });

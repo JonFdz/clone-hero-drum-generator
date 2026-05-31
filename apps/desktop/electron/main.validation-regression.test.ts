@@ -22,6 +22,12 @@ describe("electron main payload validation regressions", () => {
 		);
 	});
 
+	it("treats album.jpg as a known generated output", () => {
+		expect(source).toContain(
+			'const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg", "album.jpg"];',
+		);
+	});
+
 	it("uses validation helper for optional mapping overrides", () => {
 		expect(source).toContain(
 			"function optionalMappingOverrides(",

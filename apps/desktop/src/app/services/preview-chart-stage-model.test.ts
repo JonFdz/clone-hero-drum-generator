@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type {
-	NormalizationHitPreview,
-	NormalizationPreview,
-} from "@chdg/project/browser";
 import {
 	PREVIEW_LANES,
 	adaptChartPreviewDataToPreviewNotes,
@@ -148,8 +144,6 @@ describe("preview-chart-stage-model", () => {
 					{ tick: 6, lane: 99, seconds: 6 },
 				],
 			},
-			undefined,
-			10,
 			50,
 		);
 		expect(notes.map((note) => note.piece)).toEqual([
@@ -165,24 +159,9 @@ describe("preview-chart-stage-model", () => {
 		);
 	});
 
-	it("adapts normalization fallback data and safely skips unknown pieces", () => {
-		const notes = adaptChartPreviewDataToPreviewNotes(
-			null,
-			makeNormalizationPreview([
-				{ tick: 0, piece: "kick", velocity: 100, source: midiSource() },
-				{
-					tick: 50,
-					piece: "unknown_piece" as NormalizationHitPreview["piece"],
-					velocity: 100,
-					source: midiSource(),
-				},
-				{ tick: 100, piece: "crash", velocity: 100, source: midiSource() },
-			]),
-			8,
-		);
-		expect(notes.map((note) => note.piece)).toEqual(["kick", "crash"]);
-		expect(notes[1]?.seconds).toBe(8);
-		expect(notes[1]?.shape).toBe("diamond");
+	it("does not adapt normalization fallback data into generated preview notes", () => {
+		const notes = adaptChartPreviewDataToPreviewNotes(null);
+		expect(notes).toEqual([]);
 	});
 
 	it("produces visible chart-stage notes around the current viewport", () => {
@@ -200,8 +179,7 @@ describe("preview-chart-stage-model", () => {
 					{ tick: 4, lane: 3, seconds: 15.4 },
 				],
 			},
-			undefined,
-			30,
+			0,
 		);
 		expect(filterVisiblePreviewNotes(notes, viewport).map((note) => note.piece)).toEqual([
 			"snare",
@@ -219,24 +197,4 @@ function makeNote(id: string, seconds: number): PreviewNote {
 		color: "#ff8a1f",
 		shape: "circle",
 	};
-}
-
-function makeNormalizationPreview(
-	firstHits: NormalizationHitPreview[],
-): NormalizationPreview {
-	return {
-		sourceKind: "midi",
-		sourcePath: "/tmp/demo.mid",
-		selectedTrack: 0,
-		selectedTracks: [0],
-		hitCount: firstHits.length,
-		pieceSummary: { kick: firstHits.length },
-		firstHits,
-		issues: [],
-		mappingCandidates: [],
-	};
-}
-
-function midiSource() {
-	return { midiNote: 36, trackIndex: 0, trackName: "Test", channel: 9 };
 }

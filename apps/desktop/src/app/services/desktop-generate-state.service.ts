@@ -57,6 +57,7 @@ export type DesktopGenerateState = {
 		chart?: string;
 		songIni?: string;
 		songOgg?: string;
+		albumJpg?: string;
 	};
 	mappingOverrides: ProjectMappingOverrides;
 	issues: ProjectIssue[];
@@ -130,6 +131,10 @@ export class DesktopGenerateStateService {
 	setOutputDir(outputDir: string): void {
 		this.patch({ outputDir });
 		this.projectState.markNeedsRegenerate();
+	}
+
+	setSavedOutputDir(outputDir: string | undefined): void {
+		this.patch({ outputDir });
 	}
 
 	setCoverImagePath(imagePath: string | undefined): void {
@@ -306,6 +311,7 @@ export class DesktopGenerateStateService {
 				chart: envelope.data.files.chart,
 				songIni: envelope.data.files.songIni,
 				songOgg: envelope.data.files.songOgg,
+				albumJpg: envelope.data.files.albumJpg,
 			},
 			issues: envelope.issues,
 			status: "generated",
@@ -369,6 +375,7 @@ export class DesktopGenerateStateService {
 				...cleanMetadata(state.metadata),
 				overwriteKnownFiles,
 				mappingOverrides: state.mappingOverrides,
+				coverImagePath: state.cover?.imagePath,
 			},
 			state.selectedTracks,
 		);
@@ -395,6 +402,7 @@ export class DesktopGenerateStateService {
 			chart?: string;
 			songIni?: string;
 			songOgg?: string;
+			albumJpg?: string;
 		};
 	}): void {
 		const sourceKind =
