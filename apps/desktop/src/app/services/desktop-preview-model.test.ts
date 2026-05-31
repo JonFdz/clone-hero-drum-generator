@@ -146,7 +146,7 @@ describe("desktop-preview-model", () => {
 	});
 
 
-	it("derives section navigation labels with offset and UI-only duplicate suffixes", () => {
+	it("sorts section navigation before assigning UI-only duplicate suffixes", () => {
 		const items = deriveSectionNavigationItems(
 			{
 				resolution: 192,
@@ -155,8 +155,8 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				noteEvents: [],
 				sectionEvents: [
-					{ tick: 0, name: "Chorus", seconds: 30, source: "generated-chart" },
 					{ tick: 192, name: "Chorus", seconds: 72.6, source: "generated-chart" },
+					{ tick: 0, name: "Chorus", seconds: 30, source: "generated-chart" },
 					{ tick: 384, name: "Bridge", seconds: 90, source: "generated-chart" },
 				],
 			},
@@ -168,6 +168,7 @@ describe("desktop-preview-model", () => {
 			"Chorus 2",
 			"Bridge",
 		]);
+		expect(items.map((item) => item.tick)).toEqual([0, 192, 384]);
 		expect(items[0]?.name).toBe("Chorus");
 		expect(items[0]?.effectiveSeconds).toBe(30.25);
 		expect(items[1]?.label).toBe("Chorus 2 · 01:12");

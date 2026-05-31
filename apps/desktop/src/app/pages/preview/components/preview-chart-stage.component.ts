@@ -39,6 +39,20 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 				<h2>Chart Preview</h2>
 				<p>Click or drag the chart to scrub timing.</p>
 			</div>
+			<div class="section-nav" *ngIf="sectionItems().length > 0">
+				<div class="section-nav-copy">
+					<span>Section</span>
+					<strong>{{ currentSection()?.displayName || "Before first section" }}</strong>
+				</div>
+				<div class="section-nav-controls">
+					<button type="button" [disabled]="!adjacentSections().previous" (click)="seekToSection(adjacentSections().previous)" aria-label="Previous section">‹</button>
+					<select aria-label="Jump to section" [value]="currentSection()?.index ?? ''" (change)="onSectionSelect($event)">
+						<option value="" disabled>Select section…</option>
+						<option *ngFor="let section of sectionItems(); trackBy: trackSection" [value]="section.index">{{ section.label }}</option>
+					</select>
+					<button type="button" [disabled]="!adjacentSections().next" (click)="seekToSection(adjacentSections().next)" aria-label="Next section">›</button>
+				</div>
+			</div>
 			<div class="stage-shell">
 				<svg #chartSvg viewBox="0 0 1240 555" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview chart highway">
 					<defs>
@@ -133,20 +147,6 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 						(pointercancel)="onStagePointerUp($event)"
 					/>
 				</svg>
-				<div class="section-nav" *ngIf="sectionItems().length > 0">
-					<div class="section-nav-copy">
-						<span>Section</span>
-						<strong>{{ currentSection()?.displayName || "Before first section" }}</strong>
-					</div>
-					<div class="section-nav-controls">
-						<button type="button" [disabled]="!adjacentSections().previous" (click)="seekToSection(adjacentSections().previous)" aria-label="Previous section">‹</button>
-						<select aria-label="Jump to section" [value]="currentSection()?.index ?? ''" (change)="onSectionSelect($event)">
-							<option value="" disabled>Select section…</option>
-							<option *ngFor="let section of sectionItems(); trackBy: trackSection" [value]="section.index">{{ section.label }}</option>
-						</select>
-						<button type="button" [disabled]="!adjacentSections().next" (click)="seekToSection(adjacentSections().next)" aria-label="Next section">›</button>
-					</div>
-				</div>
 				<div class="waveform-message" *ngIf="waveformStatus === 'loading'">Loading waveform preview…</div>
 				<div class="waveform-message warning" *ngIf="waveformStatus === 'error'">Waveform decode failed; notes and audio controls remain available.</div>
 				<div class="empty-notes" *ngIf="allNotes().length === 0">No chart preview notes available yet.</div>
@@ -184,7 +184,7 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 			.playhead-dot { fill: #8b5cf6; }
 			.playhead-label { fill: #a855f7; font-size: 16px; font-weight: 900; }
 			.seek-hit-area { cursor: ew-resize; }
-			.section-nav { align-items: center; background: rgba(4, 10, 24, 0.86); border: 1px solid rgba(139, 92, 246, 0.34); border-radius: 0.9rem; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.24); display: flex; gap: 0.75rem; justify-content: space-between; left: 1rem; max-width: min(34rem, calc(100% - 2rem)); padding: 0.65rem 0.75rem; position: absolute; top: 1rem; z-index: 2; }
+			.section-nav { align-items: center; background: rgba(4, 10, 24, 0.72); border: 1px solid rgba(139, 92, 246, 0.28); border-radius: 0.9rem; display: flex; gap: 0.75rem; justify-content: space-between; padding: 0.65rem 0.75rem; }
 			.section-nav-copy { display: grid; min-width: 8rem; }
 			.section-nav-copy span { color: #a78bfa; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
 			.section-nav-copy strong { color: #f8fafc; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -196,7 +196,7 @@ import { PreviewFooterStatsComponent } from "./preview-footer-stats.component";
 			.waveform-message, .empty-notes { background: rgba(4, 10, 24, 0.72); border: 1px solid rgba(197, 209, 225, 0.12); border-radius: 999px; color: #cbd5e1; left: 50%; padding: 0.5rem 0.8rem; position: absolute; top: 1rem; transform: translateX(-50%); }
 			.waveform-message.warning { color: #fbbf24; }
 			.empty-notes { top: 50%; }
-			@media (max-width: 980px) { .stage-copy { align-items: start; display: grid; } .stage-copy p { text-align: left; } }
+			@media (max-width: 980px) { .stage-copy, .section-nav { align-items: start; display: grid; } .stage-copy p { text-align: left; } .section-nav-controls { flex-wrap: wrap; } .section-nav select { max-width: 100%; min-width: 0; width: 100%; } }
 		`,
 	],
 })

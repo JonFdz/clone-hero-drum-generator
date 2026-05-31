@@ -128,30 +128,40 @@ export function deriveSectionNavigationItems(
 ): PreviewSectionNavigationItem[] {
 	const sectionEvents = chartData?.sectionEvents ?? [];
 	if (sectionEvents.length === 0) return [];
-	const nameCounts = new Map<string, number>();
-	return sectionEvents
-		.map((sectionEvent, index) => {
-			const occurrence = (nameCounts.get(sectionEvent.name) ?? 0) + 1;
-			nameCounts.set(sectionEvent.name, occurrence);
-			const displayName =
-				occurrence === 1
-					? sectionEvent.name
-					: `${sectionEvent.name} ${occurrence}`;
-			const effectiveSeconds = effectiveSectionTime(
+	const sortedSections = sectionEvents
+		.map((sectionEvent, originalIndex) => ({
+			...sectionEvent,
+			effectiveSeconds: effectiveSectionTime(
 				sectionEvent.seconds,
 				previewOffsetMs,
-			);
-			return {
-				index,
-				tick: sectionEvent.tick,
-				name: sectionEvent.name,
-				displayName,
-				label: `${displayName} · ${formatSectionTimestamp(effectiveSeconds)}`,
-				seconds: sectionEvent.seconds,
-				effectiveSeconds,
-			};
-		})
-		.sort((a, b) => a.effectiveSeconds - b.effectiveSeconds || a.tick - b.tick);
+			),
+			originalIndex,
+		}))
+		.sort(
+			(a, b) =>
+				a.effectiveSeconds - b.effectiveSeconds ||
+				a.seconds - b.seconds ||
+				a.tick - b.tick ||
+				a.originalIndex - b.originalIndex,
+		);
+	const nameCounts = new Map<string, number>();
+	return sortedSections.map((sectionEvent) => {
+		const occurrence = (nameCounts.get(sectionEvent.name) ?? 0) + 1;
+		nameCounts.set(sectionEvent.name, occurrence);
+		const displayName =
+			occurrence === 1
+				? sectionEvent.name
+				: `${sectionEvent.name} ${occurrence}`;
+		return {
+			index: sectionEvent.originalIndex,
+			tick: sectionEvent.tick,
+			name: sectionEvent.name,
+			displayName,
+			label: `${displayName} · ${formatSectionTimestamp(sectionEvent.effectiveSeconds)}`,
+			seconds: sectionEvent.seconds,
+			effectiveSeconds: sectionEvent.effectiveSeconds,
+		};
+	});
 }
 
 export function deriveCurrentSection(
