@@ -35,7 +35,7 @@ export function buildGpifTimeline(
 	const masterBars = buildMasterBars(masterBarNodes, barCount, resolution);
 	const tempos = extractTempoEvents(root, masterBars, resolution);
 	const timeSignatures = extractTimeSignatureEvents(masterBars);
-	const sections = extractSectionEvents(root, masterBars, resolution);
+	const sections = extractSectionEvents(root, masterBarNodes, masterBars, resolution);
 
 	if (tempos.length === 0) {
 		tempos.push({ tick: 0, bpm: 120 });
@@ -141,25 +141,65 @@ function extractTimeSignatureEvents(
 
 function extractSectionEvents(
 	root: unknown,
+	masterBarNodes: XmlNode[],
 	masterBars: GpifMasterBarTimelineEntry[],
 	resolution: number,
 ): SongSection[] {
 	const sections: SongSection[] = [];
+	sections.push(...extractMasterBarSectionEvents(masterBarNodes, masterBars));
+
 	for (const node of [
 		...findObjectsByKey(root, "Marker"),
 		...findObjectsByKey(root, "Section"),
 	]) {
-		const name = firstNestedValue(node, ["Name", "name", "Text", "text", "Title", "title"]);
-		if (!name || name.length > 120 || /^-?\d+(?:\.\d+)?$/.test(name)) continue;
+		const name = sectionNameFromUnknown(node);
+		if (!isUsableSectionName(name)) continue;
 		const bar = firstIntegerInObject(node, ["Bar", "bar", "Measure", "measure"]);
 		const position = firstNumberInObject(node, ["Position", "position", "Tick", "tick", "Ticks", "ticks"]);
 		let tick = firstNumberInObject(node, ["StartTick", "startTick"]);
 		if (tick === undefined && bar !== undefined) {
 			tick = barPositionToTick({ masterBars, resolution }, bar, position ?? 0);
 		}
-		sections.push({ tick: Math.max(0, Math.trunc(tick ?? 0)), name });
+		if (tick !== undefined) {
+			sections.push({ tick: Math.max(0, Math.trunc(tick)), name });
+		}
 	}
 	return sections;
+}
+
+function extractMasterBarSectionEvents(
+	masterBarNodes: XmlNode[],
+	masterBars: GpifMasterBarTimelineEntry[],
+): SongSection[] {
+	const sections: SongSection[] = [];
+	masterBarNodes.forEach((masterBar, index) => {
+		const timelineBar = masterBars[index];
+		if (!timelineBar) return;
+		for (const key of ["Marker", "marker", "Section", "section", "Rehearsal", "rehearsal", "Direction", "direction"]) {
+			const values = arrayFromUnknown(masterBar[key]);
+			for (const value of values) {
+				const name = sectionNameFromUnknown(value);
+				if (isUsableSectionName(name)) {
+					sections.push({ tick: timelineBar.startTick, name });
+				}
+			}
+		}
+	});
+	return sections;
+}
+
+function sectionNameFromUnknown(value: unknown): string | undefined {
+	return firstNestedValue(value, ["Name", "name", "Text", "text", "Title", "title"]) ?? textFromUnknown(value);
+}
+
+function isUsableSectionName(name: string | undefined): name is string {
+	const cleaned = cleanSectionName(name);
+	return Boolean(cleaned && cleaned.length <= 120 && !/^-?\d+(?:\.\d+)?$/.test(cleaned));
+}
+
+function arrayFromUnknown(value: unknown): unknown[] {
+	if (value === undefined) return [];
+	return Array.isArray(value) ? value : [value];
 }
 
 function positionToTicks(position: number, resolution: number): number {
@@ -227,15 +267,28 @@ function dedupeTimeSignatures(events: TimeSignatureEvent[]): TimeSignatureEvent[
 
 function dedupeSections(sections: SongSection[]): SongSection[] {
 	const seen = new Set<string>();
-	return sections
-		.filter((section) => section.name.trim().length > 0)
-		.filter((section) => {
-			const key = `${section.tick}:${section.name}`;
-			if (seen.has(key)) return false;
+	const normalized: SongSection[] = [];
+	for (const section of sections) {
+		const tick = Math.max(0, Math.trunc(section.tick));
+		const name = cleanSectionName(section.name);
+		if (!isUsableSectionName(name)) continue;
+		const key = `${tick}:${sectionNameKey(name)}`;
+		if (!seen.has(key)) {
 			seen.add(key);
-			return true;
-		})
-		.sort((a, b) => a.tick - b.tick || a.name.localeCompare(b.name));
+			normalized.push({ tick, name });
+		}
+	}
+	return normalized.sort(
+		(a, b) => a.tick - b.tick || sectionNameKey(a.name).localeCompare(sectionNameKey(b.name)),
+	);
+}
+
+function cleanSectionName(name: string | undefined): string {
+	return name?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+function sectionNameKey(name: string): string {
+	return cleanSectionName(name).toLocaleLowerCase();
 }
 
 function findObjectsByKey(value: unknown, targetKey: string): XmlNode[] {

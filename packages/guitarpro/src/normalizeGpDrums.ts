@@ -259,7 +259,7 @@ export function normalizeGpDrumsXml(
 		hits,
 		tempos: timeline.tempos,
 		timeSignatures: timeline.timeSignatures,
-		sections: timeline.sections.length > 0 ? timeline.sections : normalizeGpifSections(inspection.sections),
+		sections: timeline.sections,
 		unknownArticulations: Array.from(unknowns.values()).sort((a, b) =>
 			a.rawArticulation.localeCompare(b.rawArticulation),
 		),

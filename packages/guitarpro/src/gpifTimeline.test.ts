@@ -56,6 +56,118 @@ describe("buildGpifTimeline", () => {
 		expect(timeline.sections).toEqual([{ tick: 15_360, name: "Chorus" }]);
 	});
 
+	it("places Decode-like master-bar section labels at their bar start ticks", () => {
+		const labels: Record<number, string> = {
+			0: "Intro",
+			8: "Verse 1",
+			24: "Refrain",
+			32: "Chorus",
+			48: "Break",
+			52: "Verse 2",
+			92: "Solo",
+			108: "Bridge",
+		};
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>
+    ${Array.from(
+			{ length: 109 },
+			(_, index) => `<MasterBar><Time>4/4</Time>${labels[index] ? `<Section>${labels[index]}</Section>` : ""}</MasterBar>`,
+		).join("\n")}
+  </MasterBars>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.sections).toEqual([
+			{ tick: 0, name: "Intro" },
+			{ tick: 30_720, name: "Verse 1" },
+			{ tick: 92_160, name: "Refrain" },
+			{ tick: 122_880, name: "Chorus" },
+			{ tick: 184_320, name: "Break" },
+			{ tick: 199_680, name: "Verse 2" },
+			{ tick: 353_280, name: "Solo" },
+			{ tick: 414_720, name: "Bridge" },
+		]);
+		expect(timeline.sections.some((section) => section.tick > 0)).toBe(true);
+	});
+
+	it("does not guess tick zero for unpositioned standalone sections", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(2)}</MasterBars>
+  <Sections><Section><Name>Floating</Name></Section></Sections>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.sections).toEqual([]);
+	});
+
+	it("deduplicates master-bar and standalone sections by tick and normalized name", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>
+    ${Array.from(
+			{ length: 49 },
+			(_, index) => `<MasterBar><Time>4/4</Time>${index === 48 ? "<Section>Break</Section>" : ""}</MasterBar>`,
+		).join("\n")}
+  </MasterBars>
+  <Markers>
+    <Marker><Name>Break</Name><Bar>48</Bar><Position>0</Position></Marker>
+    <Marker><Name> break </Name><Bar>48</Bar><Position>0</Position></Marker>
+  </Markers>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.sections).toHaveLength(1);
+		expect(timeline.sections.filter((section) => section.name === "Break")).toEqual([
+			{ tick: 184_320, name: "Break" },
+		]);
+	});
+
+	it("keeps different section names at the same tick while sorting deterministically", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(49)}</MasterBars>
+  <Markers>
+    <Marker><Name>Solo</Name><Bar>48</Bar><Position>0</Position></Marker>
+    <Marker><Name>Break</Name><Bar>48</Bar><Position>0</Position></Marker>
+  </Markers>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.sections).toEqual([
+			{ tick: 184_320, name: "Break" },
+			{ tick: 184_320, name: "Solo" },
+		]);
+	});
+
+	it("sorts standalone sections by timeline tick instead of XML discovery order", () => {
+		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Resolution>960</Resolution>
+  <MasterBars>${masterBars(109)}</MasterBars>
+  <Markers>
+    <Marker><Name>Bridge</Name><Bar>108</Bar><Position>0</Position></Marker>
+    <Marker><Name>Verse 1</Name><Bar>8</Bar><Position>0</Position></Marker>
+  </Markers>
+</GPIF>`);
+
+		const timeline = buildGpifTimeline(root, 960);
+
+		expect(timeline.sections).toEqual([
+			{ tick: 30_720, name: "Verse 1" },
+			{ tick: 414_720, name: "Bridge" },
+		]);
+	});
+
 	it("emits time signature changes at master bar start ticks", () => {
 		const root = parse(`<?xml version="1.0" encoding="UTF-8"?>
 <GPIF>

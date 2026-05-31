@@ -36,6 +36,35 @@ const decodeLikeTempoMapGpif = `<?xml version="1.0" encoding="UTF-8"?>
   </Bars>
 </GPIF>`;
 
+const decodeLikeSections = new Map<number, string>([
+	[0, "Intro"],
+	[8, "Verse 1"],
+	[24, "Refrain"],
+	[32, "Chorus"],
+	[48, "Break"],
+	[52, "Verse 2"],
+	[92, "Solo"],
+	[108, "Bridge"],
+]);
+
+const decodeLikeSectionsGpif = `<?xml version="1.0" encoding="UTF-8"?>
+<GPIF>
+  <Score><Title>Decode-like sections</Title></Score>
+  <Resolution>960</Resolution>
+  <MasterBars>
+    ${Array.from({ length: 109 }, (_, index) => {
+			const section = decodeLikeSections.get(index);
+			return `<MasterBar><Time>4/4</Time><Bars>${index}</Bars>${section ? `<Section>${section}</Section>` : ""}</MasterBar>`;
+		}).join("\n")}
+  </MasterBars>
+  <Tracks>
+    <Track id="drums"><Name>Drums</Name><InstrumentName>Standard Drum Kit</InstrumentName><Channel>10</Channel></Track>
+  </Tracks>
+  <Bars>
+    <Bar id="0"><Track>drums</Track><Voices><Voice><Beats><Beat><Duration>Quarter</Duration><Notes><Note><Name>Kick</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar>
+  </Bars>
+</GPIF>`;
+
 const syntheticGpif = `<?xml version="1.0" encoding="UTF-8"?>
 <GPIF>
   <Score><Title>Normalization Demo</Title><Tempo>147</Tempo></Score>
@@ -134,6 +163,22 @@ describe("normalizeGpDrumsXml", () => {
 		const result = normalizeGpDrumsXml(decodeLikeTempoMapGpif, { trackIndex: 1 });
 
 		expect(result.sections).toEqual([{ tick: 184_320, name: "Bridge" }]);
+	});
+
+	it("normalizes Decode-like GPIF master-bar sections at non-zero timeline ticks", () => {
+		const result = normalizeGpDrumsXml(decodeLikeSectionsGpif, { trackIndex: 0 });
+
+		expect(result.sections).toEqual([
+			{ tick: 0, name: "Intro" },
+			{ tick: 30_720, name: "Verse 1" },
+			{ tick: 92_160, name: "Refrain" },
+			{ tick: 122_880, name: "Chorus" },
+			{ tick: 184_320, name: "Break" },
+			{ tick: 199_680, name: "Verse 2" },
+			{ tick: 353_280, name: "Solo" },
+			{ tick: 414_720, name: "Bridge" },
+		]);
+		expect(result.sections.some((section) => section.tick > 0)).toBe(true);
 	});
 
 	it("uses the original master bar index for selected GPIF note ticks", () => {

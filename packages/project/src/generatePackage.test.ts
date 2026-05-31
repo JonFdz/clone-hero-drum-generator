@@ -157,7 +157,13 @@ describe("generatePackage", () => {
 				{ tick: 184_320, bpm: 160 },
 			],
 			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
-			sections: [{ tick: 184_320, name: "Bridge" }],
+			sections: [
+				{ tick: 0, name: "Intro" },
+				{ tick: 30_720, name: "Verse 1" },
+				{ tick: 184_320, name: "Break" },
+				{ tick: 353_280, name: "Solo" },
+				{ tick: 414_720, name: "Bridge" },
+			],
 			hits: [],
 			warnings: [],
 			unhandled: [],
@@ -173,7 +179,11 @@ describe("generatePackage", () => {
 		const chart = await readFile(join(outDir, "notes.chart"), "utf8");
 		expect(chart).toContain("0 = B 164000");
 		expect(chart).toContain("184320 = B 160000");
-		expect(chart).toContain(`184320 = E "section Bridge"`);
+		expect(chart).toContain(`0 = E "section Intro"`);
+		expect(chart).toContain(`30720 = E "section Verse 1"`);
+		expect(chart).toContain(`184320 = E "section Break"`);
+		expect(chart).toContain(`353280 = E "section Solo"`);
+		expect(chart).toContain(`414720 = E "section Bridge"`);
 	});
 
 	it("requires --track for GPIF generation", async () => {
