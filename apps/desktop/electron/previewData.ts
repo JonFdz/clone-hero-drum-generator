@@ -13,12 +13,20 @@ export type AudioPreviewRequest = {
 	generatedSongOggPath?: string;
 };
 
+export type ChartPreviewSectionEvent = {
+	tick: number;
+	name: string;
+	seconds: number;
+	source: "generated-chart";
+};
+
 export type ChartPreviewData = {
 	resolution: number;
 	offsetSeconds: number;
 	hasAccurateTiming: boolean;
 	limitations: string[];
 	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
+	sectionEvents: ChartPreviewSectionEvent[];
 };
 
 export type ChartPreviewRequest = {
@@ -78,6 +86,11 @@ export async function parseChartPreviewData(chartPath: string): Promise<ChartPre
 		...note,
 		seconds: tickToSeconds(note.tick, resolution, tempos),
 	}));
+	const sectionEvents = parseSectionEvents(text).map((sectionEvent) => ({
+		...sectionEvent,
+		seconds: tickToSeconds(sectionEvent.tick, resolution, tempos),
+		source: "generated-chart" as const,
+	}));
 	return {
 		resolution,
 		offsetSeconds,
@@ -87,6 +100,7 @@ export async function parseChartPreviewData(chartPath: string): Promise<ChartPre
 				? []
 				: ["Tempo map unavailable; note timing uses 120 BPM fallback."],
 		noteEvents,
+		sectionEvents,
 	};
 }
 
@@ -133,6 +147,22 @@ function parseExpertDrumsNotes(text: string): Array<{ tick: number; lane: number
 	return notes.sort((a, b) => a.tick - b.tick);
 }
 
+function parseSectionEvents(text: string): Array<{ tick: number; name: string }> {
+	const events = section(text, "Events");
+	if (!events) return [];
+	const sectionEvents: Array<{ tick: number; name: string }> = [];
+	for (const line of events.split(/\r?\n/)) {
+		const m = line.match(/^(\s*\d+)\s*=\s*E\s+"section\s+(.+)"\s*$/);
+		if (!m) continue;
+		const tick = Number(m[1].trim());
+		const name = m[2].trim();
+		if (Number.isFinite(tick) && name.length > 0) {
+			sectionEvents.push({ tick, name });
+		}
+	}
+	return sectionEvents.sort((a, b) => a.tick - b.tick);
+}
+
 function tickToSeconds(tick: number, resolution: number, tempos: Array<{ tick: number; bpm: number }>): number {
 	if (!Number.isFinite(tick) || tick <= 0) return 0;
 	if (tempos.length === 0) {
@@ -153,7 +183,7 @@ function tickToSeconds(tick: number, resolution: number, tempos: Array<{ tick: n
 	return total;
 }
 
-function section(text: string, name: "SyncTrack" | "ExpertDrums"): string | undefined {
+function section(text: string, name: "SyncTrack" | "ExpertDrums" | "Events"): string | undefined {
 	const marker = `[${name}]`;
 	const start = text.indexOf(marker);
 	if (start < 0) return undefined;

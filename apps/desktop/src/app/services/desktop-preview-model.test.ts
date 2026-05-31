@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,
+	deriveAdjacentSections,
+	deriveCurrentSection,
 	deriveHighwayLimitations,
 	deriveHighwayNotes,
+	deriveSectionNavigationItems,
 	deriveTimelineNotes,
 	effectiveNoteTime,
 	formatTime,
@@ -33,6 +36,7 @@ describe("desktop-preview-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 0, lane: 0, seconds: 1 },
 					{ tick: 100, lane: 1, seconds: 2 },
@@ -52,6 +56,7 @@ describe("desktop-preview-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 192, lane: 2, seconds: 1 },
 					{ tick: 192, lane: 66, seconds: 1 },
@@ -78,6 +83,7 @@ describe("desktop-preview-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [{ tick: 192, lane: 66, seconds: 1 }],
 			},
 			0,
@@ -93,6 +99,7 @@ describe("desktop-preview-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 1, lane: 1, seconds: 0.8 },
 					{ tick: 2, lane: 2, seconds: 1.0 },
@@ -120,6 +127,7 @@ describe("desktop-preview-model", () => {
 				offsetSeconds: 0,
 				hasAccurateTiming: true,
 				limitations: [],
+				sectionEvents: [],
 				noteEvents: [
 					{ tick: 1, lane: 1, seconds: 0.8 },
 					{ tick: 2, lane: 2, seconds: 1.0 },
@@ -137,6 +145,62 @@ describe("desktop-preview-model", () => {
 		expect(notes).toEqual([]);
 	});
 
+
+	it("derives section navigation labels with offset and UI-only duplicate suffixes", () => {
+		const items = deriveSectionNavigationItems(
+			{
+				resolution: 192,
+				offsetSeconds: 0,
+				hasAccurateTiming: true,
+				limitations: [],
+				noteEvents: [],
+				sectionEvents: [
+					{ tick: 0, name: "Chorus", seconds: 30, source: "generated-chart" },
+					{ tick: 192, name: "Chorus", seconds: 72.6, source: "generated-chart" },
+					{ tick: 384, name: "Bridge", seconds: 90, source: "generated-chart" },
+				],
+			},
+			250,
+		);
+
+		expect(items.map((item) => item.displayName)).toEqual([
+			"Chorus",
+			"Chorus 2",
+			"Bridge",
+		]);
+		expect(items[0]?.name).toBe("Chorus");
+		expect(items[0]?.effectiveSeconds).toBe(30.25);
+		expect(items[1]?.label).toBe("Chorus 2 · 01:12");
+	});
+
+	it("derives current and adjacent sections using preview offset", () => {
+		const chartData = {
+			resolution: 192,
+			offsetSeconds: 0,
+			hasAccurateTiming: true,
+			limitations: [],
+			noteEvents: [],
+			sectionEvents: [
+				{ tick: 0, name: "Intro", seconds: 0, source: "generated-chart" as const },
+				{ tick: 192, name: "Verse", seconds: 30, source: "generated-chart" as const },
+				{ tick: 384, name: "Break", seconds: 60, source: "generated-chart" as const },
+			],
+		};
+
+		expect(deriveCurrentSection(chartData, 30.1, 250)?.name).toBe("Intro");
+		expect(deriveCurrentSection(chartData, 30.25, 250)?.name).toBe("Verse");
+
+		const items = deriveSectionNavigationItems(chartData, 250);
+		expect(deriveAdjacentSections(items, 30.25).previous?.name).toBe("Intro");
+		expect(deriveAdjacentSections(items, 30.25).next?.name).toBe("Break");
+		expect(
+			deriveCurrentSection(
+				{ ...chartData, sectionEvents: [chartData.sectionEvents[1]] },
+				30.1,
+				250,
+			),
+		).toBeUndefined();
+	});
 
 	it("returns limited state when no highway data", () => {
 		expect(deriveHighwayLimitations(null)[0]).toContain(

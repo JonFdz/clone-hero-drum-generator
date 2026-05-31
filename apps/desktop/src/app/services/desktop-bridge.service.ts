@@ -56,12 +56,20 @@ export type AudioPreviewSource = {
 	sourceKind: "generated";
 };
 
+export type ChartPreviewSectionEvent = {
+	tick: number;
+	name: string;
+	seconds: number;
+	source?: "generated-chart";
+};
+
 export type ChartPreviewData = {
 	resolution: number;
 	offsetSeconds: number;
 	hasAccurateTiming: boolean;
 	limitations: string[];
 	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
+	sectionEvents: ChartPreviewSectionEvent[];
 };
 
 export type ApplyChartOffsetInput = {
