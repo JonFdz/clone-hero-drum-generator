@@ -69,7 +69,7 @@ const __dirname = path.dirname(__filename);
 
 const rendererIndex = path.join(__dirname, "../renderer/browser/index.html");
 const preloadScript = path.join(__dirname, "preload.cjs");
-const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg"];
+const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg", "album.jpg"];
 const allowedSourceFiles = new Set<string>();
 const allowedAudioFiles = new Set<string>();
 const allowedCoverImageFiles = new Set<string>();
@@ -476,17 +476,24 @@ app.whenReady().then(() => {
 								newProjectName: payload.projectName,
 								projectLocation: (await readSettings()).projectLocation,
 								outputDir: payload.outputDir,
+								outputFiles: payload.outputFiles,
 							});
 							if (renameResult.renamed) {
 								await removeRecentProject(filePath);
 								filePath = renameResult.filePath;
 								payload.projectFilePath = filePath;
 								payload.outputDir = renameResult.outputDir;
+								payload.outputFiles = renameResult.outputFiles;
 								addAllowedProjectFile(allowedProjectFiles, filePath);
-								if (payload.outputDir) addAllowedPath(allowedOutputFolders, payload.outputDir);
+								if (payload.outputDir) {
+									addAllowedPath(allowedOutputFolders, payload.outputDir);
+								}
 							}
 						} catch (error) {
-							if (error instanceof Error && error.message === "PROJECT_RENAME_TARGET_EXISTS") {
+							if (
+								error instanceof Error &&
+								error.message === "PROJECT_RENAME_TARGET_EXISTS"
+							) {
 								throw new DesktopIpcError(
 									"PROJECT_RENAME_TARGET_EXISTS",
 									"Project rename target already exists; choose another project name or Save As.",

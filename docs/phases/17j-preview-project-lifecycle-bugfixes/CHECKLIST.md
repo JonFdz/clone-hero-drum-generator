@@ -29,6 +29,7 @@
 - [x] Cover failure does not block generation.
 - [x] Generate result/UI exposes cover warning.
 - [x] Tests cover cover success and warning-only failure.
+- [x] `album.jpg` is treated as a known CHDG generated output for overwrite safety.
 
 ## P2 — Rename
 
@@ -36,6 +37,7 @@
 - [x] Renaming project updates folder/file when safe.
 - [x] `projectFilePath` is updated.
 - [x] default `outputDir` is updated.
+- [x] generated `outputFiles` paths are remapped when default outputDir moves.
 - [x] recents are updated.
 - [x] custom paths are not renamed.
 - [x] conflicts are handled safely.
@@ -43,7 +45,7 @@
 ## P3 — Delete
 
 - [x] `.chdg` deletion remains path-safe.
-- [ ] safe auto-created folder deletion is implemented or clearly scoped.
+- [x] safe auto-created folder deletion is explicitly deferred; this PR only deletes trusted `.chdg` files and cleans recents.
 - [x] arbitrary directories are never deleted.
 - [x] missing project files are handled gracefully where appropriate.
 - [x] recents cleanup works.
@@ -68,14 +70,19 @@
 - [ ] Add cover and generate: output contains `album.jpg` or warning if unsupported.
 - [ ] Rename auto-created project: folder/file paths update safely.
 - [ ] Rename custom-path project: folder is not renamed.
-- [ ] Delete project: safe deletion and recents cleanup behave correctly.
+- [ ] Delete project: trusted missing `.chdg` recents cleanup behaves correctly; full folder cleanup is deferred.
 
 ## Agent validation notes
 
-- `pnpm test` passed: 57 files / 446 tests.
+- `pnpm test` passed: 57 files / 448 tests.
 - `pnpm --filter @chdg/project typecheck` passed.
+- `pnpm --filter @chdg/desktop exec tsc -p tsconfig.app.json --noEmit` passed.
 - `pnpm --filter @chdg/desktop exec tsc -p tsconfig.electron.json --noEmit` passed.
 - `pnpm typecheck` reached package checks successfully, then desktop `ng build --configuration development` aborted with `Abort trap: 6` under local Node v25.9.0.
 - Build commands were not intentionally run separately because AGENTS.md says never build after changes; `pnpm typecheck` invokes desktop build internally.
 - `pnpm chdg --help` passed when rerun outside sandbox; sandbox run failed with tsx IPC `EPERM`.
 - Manual desktop validation is still pending local app run by Jon/ChatGPT.
+
+## P3 scope note
+
+Full project folder/output cleanup is deferred to a future dedicated safe-deletion pass. This PR intentionally scopes P3 to trusted `.chdg` deletion, already-missing trusted `.chdg` recents cleanup, and refusal of unsafe/custom directories.

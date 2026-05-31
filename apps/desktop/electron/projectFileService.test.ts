@@ -173,8 +173,9 @@ describe("projectFileService", () => {
 	});
 
 	describe("renameManagedProjectTarget", () => {
-		it("renames auto-created project folder, file, and default output dir", async () => {
+		it("renames auto-created project folder, file, default output dir, and generated output file paths", async () => {
 			const oldFolder = join(tempDir, "Old Name");
+			const oldOutputDir = join(oldFolder, "output");
 			const oldFile = join(oldFolder, "Old Name.chdg");
 			mkdirSync(oldFolder, { recursive: true });
 			writeFileSync(oldFile, "{}", "utf8");
@@ -184,15 +185,56 @@ describe("projectFileService", () => {
 				oldProjectName: "Old Name",
 				newProjectName: "New Name",
 				projectLocation: tempDir,
-				outputDir: join(oldFolder, "output"),
+				outputDir: oldOutputDir,
+				outputFiles: {
+					chart: join(oldOutputDir, "notes.chart"),
+					songIni: join(oldOutputDir, "song.ini"),
+					songOgg: join(oldOutputDir, "song.ogg"),
+					albumJpg: join(oldOutputDir, "album.jpg"),
+				},
 			});
 
+			const newOutputDir = join(tempDir, "New Name", "output");
 			expect(result).toMatchObject({
 				filePath: join(tempDir, "New Name", "New Name.chdg"),
-				outputDir: join(tempDir, "New Name", "output"),
+				outputDir: newOutputDir,
+				outputFiles: {
+					chart: join(newOutputDir, "notes.chart"),
+					songIni: join(newOutputDir, "song.ini"),
+					songOgg: join(newOutputDir, "song.ogg"),
+					albumJpg: join(newOutputDir, "album.jpg"),
+				},
 				renamed: true,
+				oldOutputDir,
+				newOutputDir,
 			});
 			expect(readFileSync(result.filePath, "utf8")).toBe("{}");
+		});
+
+		it("does not rewrite custom output dirs or output files outside the old default output dir", async () => {
+			const oldFolder = join(tempDir, "Old Name");
+			const oldFile = join(oldFolder, "Old Name.chdg");
+			const customOutputDir = join(tempDir, "custom-output");
+			mkdirSync(oldFolder, { recursive: true });
+			writeFileSync(oldFile, "{}", "utf8");
+
+			const outputFiles = {
+				chart: join(customOutputDir, "notes.chart"),
+				songIni: join(customOutputDir, "song.ini"),
+				songOgg: join(customOutputDir, "song.ogg"),
+				albumJpg: join(customOutputDir, "album.jpg"),
+			};
+			const result = await renameManagedProjectTarget({
+				currentFilePath: oldFile,
+				oldProjectName: "Old Name",
+				newProjectName: "New Name",
+				projectLocation: tempDir,
+				outputDir: customOutputDir,
+				outputFiles,
+			});
+
+			expect(result.outputDir).toBe(customOutputDir);
+			expect(result.outputFiles).toEqual(outputFiles);
 		});
 
 		it("does not rename custom project paths", async () => {
@@ -212,6 +254,7 @@ describe("projectFileService", () => {
 			expect(result).toEqual({
 				filePath: customFile,
 				outputDir: join(customFolder, "output"),
+				outputFiles: undefined,
 				renamed: false,
 			});
 			expect(readFileSync(customFile, "utf8")).toBe("{}");

@@ -1,4 +1,4 @@
-import { rm, stat, unlink } from "node:fs/promises";
+import { stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { RecentProject } from "@chdg/project";
 
@@ -65,19 +65,6 @@ export async function resolveDeletableProjectFilePath(
 
 export async function deleteProjectFilePath(filePath: string): Promise<void> {
 	await unlink(filePath);
-}
-
-export async function deleteManagedProjectFolderIfEmpty(input: {
-	projectFilePath: string;
-	projectLocation: string;
-	projectName: string;
-}): Promise<boolean> {
-	const projectLocation = path.resolve(input.projectLocation);
-	const projectFolder = path.dirname(path.resolve(input.projectFilePath));
-	const expectedFolder = path.join(projectLocation, input.projectName);
-	if (projectFolder !== expectedFolder) return false;
-	await rm(projectFolder, { recursive: false, force: true });
-	return true;
 }
 
 function isMissingFileError(error: unknown): boolean {

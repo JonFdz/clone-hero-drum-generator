@@ -206,10 +206,20 @@ export function getDefaultOutputDir(projectFilePath: string): string {
 }
 
 
+export type ManagedOutputFiles = {
+	chart?: string;
+	songIni?: string;
+	songOgg?: string;
+	albumJpg?: string;
+};
+
 export type ManagedProjectRenameResult = {
 	filePath: string;
 	outputDir?: string;
+	outputFiles?: ManagedOutputFiles;
 	renamed: boolean;
+	oldOutputDir?: string;
+	newOutputDir?: string;
 };
 
 export async function renameManagedProjectTarget(input: {
@@ -218,6 +228,7 @@ export async function renameManagedProjectTarget(input: {
 	newProjectName: string;
 	projectLocation: string;
 	outputDir?: string;
+	outputFiles?: ManagedOutputFiles;
 }): Promise<ManagedProjectRenameResult> {
 	const currentFilePath = path.resolve(input.currentFilePath);
 	const currentFolder = path.dirname(currentFilePath);
@@ -226,11 +237,21 @@ export async function renameManagedProjectTarget(input: {
 	const newName = sanitizeProjectName(input.newProjectName);
 
 	if (oldName === newName) {
-		return { filePath: currentFilePath, outputDir: input.outputDir, renamed: false };
+		return {
+			filePath: currentFilePath,
+			outputDir: input.outputDir,
+			outputFiles: input.outputFiles,
+			renamed: false,
+		};
 	}
 
 	if (!isAutoCreatedProjectPath(currentFilePath, oldName, projectLocation)) {
-		return { filePath: currentFilePath, outputDir: input.outputDir, renamed: false };
+		return {
+			filePath: currentFilePath,
+			outputDir: input.outputDir,
+			outputFiles: input.outputFiles,
+			renamed: false,
+		};
 	}
 
 	const targetFolder = path.join(projectLocation, newName);
@@ -239,20 +260,43 @@ export async function renameManagedProjectTarget(input: {
 		await access(targetFolder);
 		throw new Error("PROJECT_RENAME_TARGET_EXISTS");
 	} catch (error) {
-		if (error instanceof Error && error.message === "PROJECT_RENAME_TARGET_EXISTS") {
+		if (
+			error instanceof Error &&
+			error.message === "PROJECT_RENAME_TARGET_EXISTS"
+		) {
+			throw error;
+		}
+		if (!isMissingPathError(error)) {
 			throw error;
 		}
 	}
 
 	const oldDefaultOutputDir = getDefaultOutputDir(currentFilePath);
-	const nextOutputDir =
-		input.outputDir && path.resolve(input.outputDir) === path.resolve(oldDefaultOutputDir)
-			? getDefaultOutputDir(targetFilePath)
-			: input.outputDir;
+	const defaultOutputRenamed =
+		input.outputDir !== undefined &&
+		path.resolve(input.outputDir) === path.resolve(oldDefaultOutputDir);
+	const newDefaultOutputDir = getDefaultOutputDir(targetFilePath);
+	const nextOutputDir = defaultOutputRenamed
+		? newDefaultOutputDir
+		: input.outputDir;
+	const nextOutputFiles = defaultOutputRenamed
+		? remapManagedOutputFiles(
+				input.outputFiles,
+				oldDefaultOutputDir,
+				newDefaultOutputDir,
+			)
+		: input.outputFiles;
 
 	await rename(currentFolder, targetFolder);
 	await rename(path.join(targetFolder, `${oldName}.chdg`), targetFilePath);
-	return { filePath: targetFilePath, outputDir: nextOutputDir, renamed: true };
+	return {
+		filePath: targetFilePath,
+		outputDir: nextOutputDir,
+		outputFiles: nextOutputFiles,
+		renamed: true,
+		oldOutputDir: defaultOutputRenamed ? oldDefaultOutputDir : undefined,
+		newOutputDir: defaultOutputRenamed ? newDefaultOutputDir : undefined,
+	};
 }
 
 export function isAutoCreatedProjectPath(
@@ -266,4 +310,53 @@ export function isAutoCreatedProjectPath(
 	const expectedFolder = path.join(resolvedLocation, safeName);
 	const expectedFile = path.join(expectedFolder, `${safeName}.chdg`);
 	return resolvedFile === expectedFile;
+}
+
+export function remapManagedOutputFiles(
+	outputFiles: ManagedOutputFiles | undefined,
+	oldOutputDir: string,
+	newOutputDir: string,
+): ManagedOutputFiles | undefined {
+	if (!outputFiles) return undefined;
+	return {
+		chart: remapPathInsideDir(outputFiles.chart, oldOutputDir, newOutputDir),
+		songIni: remapPathInsideDir(
+			outputFiles.songIni,
+			oldOutputDir,
+			newOutputDir,
+		),
+		songOgg: remapPathInsideDir(
+			outputFiles.songOgg,
+			oldOutputDir,
+			newOutputDir,
+		),
+		albumJpg: remapPathInsideDir(
+			outputFiles.albumJpg,
+			oldOutputDir,
+			newOutputDir,
+		),
+	};
+}
+
+function remapPathInsideDir(
+	filePath: string | undefined,
+	oldOutputDir: string,
+	newOutputDir: string,
+): string | undefined {
+	if (!filePath) return undefined;
+	const relative = path.relative(
+		path.resolve(oldOutputDir),
+		path.resolve(filePath),
+	);
+	if (relative.startsWith("..") || path.isAbsolute(relative)) return filePath;
+	return path.join(path.resolve(newOutputDir), relative);
+}
+
+function isMissingPathError(error: unknown): boolean {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"code" in error &&
+		(error as { code?: unknown }).code === "ENOENT"
+	);
 }

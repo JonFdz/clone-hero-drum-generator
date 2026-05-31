@@ -497,6 +497,12 @@ function validateOutputFiles(
 			"INVALID_OUTPUT_FILE",
 			"generation.outputFiles.songOgg must be a string.",
 		),
+		albumJpg: optionalStringField(
+			outputFiles,
+			"albumJpg",
+			"INVALID_OUTPUT_FILE",
+			"generation.outputFiles.albumJpg must be a string.",
+		),
 	};
 }
 

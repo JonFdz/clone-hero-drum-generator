@@ -123,7 +123,10 @@ export class DesktopPreviewService {
 		this.offsetStatus.set(null);
 		this.offsetInputValid.set(true);
 		const state = this.generateState.state();
-		if (!state.outputDir && !state.outputFiles?.chart && !state.outputFiles?.songOgg) {
+		if (
+			state.status === "idle" ||
+			(!state.outputFiles?.chart && !state.outputFiles?.songOgg)
+		) {
 			this.setUnavailable(
 				"Generate this project to preview notes.chart and song.ogg.",
 			);
