@@ -1,4 +1,3 @@
-import type { NormalizationPreview } from "@chdg/project/browser";
 import type { ChartPreviewData } from "./desktop-bridge.service";
 
 export type PreviewLaneId =
@@ -228,18 +227,12 @@ export function filterVisiblePreviewNotes(
 
 export function adaptChartPreviewDataToPreviewNotes(
 	chartData: ChartPreviewData | null,
-	normalization: NormalizationPreview | undefined,
-	durationSeconds: number,
 	previewOffsetMs = 0,
 ): PreviewNote[] {
 	if (chartData?.noteEvents.length) {
 		return adaptChartEvents(chartData, previewOffsetMs);
 	}
-	return adaptNormalizationHits(
-		normalization,
-		durationSeconds,
-		previewOffsetMs,
-	);
+	return [];
 }
 
 function adaptChartEvents(
@@ -274,38 +267,6 @@ function adaptChartEvents(
 		}
 	}
 	return notes.sort((a, b) => a.seconds - b.seconds);
-}
-
-function adaptNormalizationHits(
-	normalization: NormalizationPreview | undefined,
-	durationSeconds: number,
-	previewOffsetMs: number,
-): PreviewNote[] {
-	if (!normalization?.firstHits.length) return [];
-	const maxTick = Math.max(
-		...normalization.firstHits.map((hit) => hit.tick),
-		1,
-	);
-	const safeDuration =
-		Number.isFinite(durationSeconds) && durationSeconds > 0
-			? durationSeconds
-			: 0;
-	return normalization.firstHits.flatMap((hit, index) => {
-		const glyph = pieceToPreviewGlyph(hit.piece);
-		if (!glyph) return [];
-		return [
-			{
-				id: `${hit.tick}-${hit.piece}-${index}`,
-				laneId: glyph.laneId,
-				piece: hit.piece,
-				seconds: (hit.tick / maxTick) * safeDuration + previewOffsetMs / 1000,
-				tick: hit.tick,
-				color: glyph.color,
-				shape: glyph.shape,
-				open: hit.piece === "hihat_open",
-			},
-		];
-	});
 }
 
 function chartLaneToPiece(

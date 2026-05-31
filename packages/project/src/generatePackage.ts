@@ -30,6 +30,7 @@ import {
 	hasPieceOverrideForMidiNote,
 } from "./mappingOverrides.js";
 import { mergeDrumHits } from "./mergeDrumHits.js";
+import { prepareCover } from "./prepareCover.js";
 import { detectSourceKind } from "./sourceKind.js";
 import type {
 	GeneratePackageInput,
@@ -111,6 +112,11 @@ export async function generatePackage(
 				})
 			: null;
 
+		const coverResult = await prepareCover({
+			coverImagePath: input.coverImagePath,
+			outputDir: input.outDir,
+		});
+
 		return {
 			sourceKind: source.kind,
 			sourcePath: source.filePath,
@@ -125,8 +131,9 @@ export async function generatePackage(
 				chart: notesChartPath,
 				songIni: songIniPath,
 				songOgg: audioResult?.outputPath,
+				albumJpg: coverResult.ok ? coverResult.outputPath : undefined,
 			},
-			issues: source.issues,
+			issues: [...source.issues, ...coverResult.issues],
 		};
 	} catch (error) {
 		throw toProjectServiceError(error, "GENERATE_PACKAGE_FAILED");

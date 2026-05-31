@@ -7,7 +7,6 @@ import {
 	Output,
 	ViewChild,
 } from "@angular/core";
-import type { NormalizationPreview } from "@chdg/project/browser";
 import type { ChartPreviewData } from "../../../services/desktop-bridge.service";
 import { formatTime } from "../../../services/desktop-preview-model";
 import type { WaveformOverview } from "../../../services/desktop-waveform-overview";
@@ -176,7 +175,6 @@ export class PreviewChartStageComponent {
 	@ViewChild("chartSvg") private readonly chartSvg?: ElementRef<SVGSVGElement>;
 	@Input() waveformOverview: WaveformOverview | null = null;
 	@Input() chartData: ChartPreviewData | null = null;
-	@Input() normalizationPreview: NormalizationPreview | undefined;
 	@Input() currentTime = 0;
 	@Input() duration = 0;
 	@Input() previewOffsetMs = 0;
@@ -202,8 +200,6 @@ export class PreviewChartStageComponent {
 	allNotes(): PreviewNote[] {
 		return adaptChartPreviewDataToPreviewNotes(
 			this.chartData,
-			this.normalizationPreview,
-			this.duration,
 			this.previewOffsetMs,
 		);
 	}

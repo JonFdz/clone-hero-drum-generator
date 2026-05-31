@@ -62,6 +62,7 @@ export type ChdgProjectFile = {
 			chart?: string;
 			songIni?: string;
 			songOgg?: string;
+			albumJpg?: string;
 		};
 		lastResultSummary?: unknown;
 	};

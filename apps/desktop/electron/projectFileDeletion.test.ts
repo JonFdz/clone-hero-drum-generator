@@ -31,7 +31,7 @@ describe("projectFileDeletion", () => {
 				new Set([filePath]),
 				emptyRecents,
 			),
-		).resolves.toBe(filePath);
+		).resolves.toEqual({ filePath, exists: true });
 	});
 
 	it("allows .chdg files from Electron recents", async () => {
@@ -43,7 +43,7 @@ describe("projectFileDeletion", () => {
 					{ path: filePath, name: "Recent", lastOpenedAt: "now" },
 				]),
 			),
-		).resolves.toBe(filePath);
+		).resolves.toEqual({ filePath, exists: true });
 	});
 
 	it("rejects non-.chdg files", async () => {
@@ -75,6 +75,13 @@ describe("projectFileDeletion", () => {
 				emptyRecents,
 			),
 		).rejects.toMatchObject({ code: "PROJECT_DELETE_NOT_FILE" });
+	});
+
+	it("allows trusted missing .chdg files so recents can be cleaned", async () => {
+		const filePath = join(tempDir, "missing.chdg");
+		await expect(
+			resolveDeletableProjectFilePath(filePath, new Set([filePath]), emptyRecents),
+		).resolves.toEqual({ filePath, exists: false });
 	});
 
 	it("rejects untrusted .chdg files", async () => {

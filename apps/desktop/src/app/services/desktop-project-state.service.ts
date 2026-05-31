@@ -1,8 +1,10 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
 import type {
 	ChdgOutputStatus,
+	ChdgProjectFile,
 	DesktopSettings,
 	RecentProject,
+	ProjectMappingOverrides,
 } from "@chdg/project/browser";
 import {
 	DesktopBridgeService,
@@ -92,20 +94,24 @@ export class DesktopProjectStateService {
 		}
 	}
 
-	async saveProject(payload: ProjectStatePayload): Promise<string | null> {
+	async saveProject(payload: ProjectStatePayload): Promise<{ filePath: string; payload: ProjectStatePayload } | null> {
 		try {
 			const envelope = await this.bridge.saveProject(payload);
 			if (!envelope.ok) {
 				console.error("Save project failed:", envelope.error.message);
 				return null;
 			}
+			const savedPayload = projectFileToPayload(
+				envelope.data.filePath,
+				envelope.data.project,
+			);
 			this.patch({
 				projectFilePath: envelope.data.filePath,
-				projectName: payload.projectName,
+				projectName: savedPayload.projectName,
 				dirty: false,
 			});
 			await this.loadRecentProjects();
-			return envelope.data.filePath;
+			return { filePath: envelope.data.filePath, payload: savedPayload };
 		} catch (error) {
 			console.error("Save project error:", error);
 			return null;
@@ -121,9 +127,13 @@ export class DesktopProjectStateService {
 				console.error("Save project as failed:", envelope.error.message);
 				return null;
 			}
+			const savedPayload = projectFileToPayload(
+				envelope.data.filePath,
+				envelope.data.project,
+			);
 			this.patch({
 				projectFilePath: envelope.data.filePath,
-				projectName: payload.projectName,
+				projectName: savedPayload.projectName,
 				dirty: false,
 			});
 			await this.loadRecentProjects();
@@ -294,5 +304,29 @@ function missingPathWarning(
 		kind,
 		path: payload[kind],
 		message: `Missing ${kind}: ${payload[kind] ?? "unknown"}`,
+	};
+}
+
+
+function projectFileToPayload(
+	projectFilePath: string,
+	project: ChdgProjectFile,
+): ProjectStatePayload {
+	return {
+		projectName: project.project.name,
+		projectFilePath,
+		sourcePath: project.paths.sourcePath,
+		audioPath: project.paths.audioPath,
+		outputDir: project.paths.outputDir,
+		cover: project.cover,
+		sourceKind: project.source?.sourceKind,
+		selectedTracks: project.selection.selectedTracks,
+		metadata: project.metadata,
+		offsetMs: project.generation.offsetMs,
+		generationStatus: project.generation.status,
+		lastGeneratedAt: project.generation.lastGeneratedAt,
+		outputFiles: project.generation.outputFiles,
+		mappingOverrides: project.mappingOverrides as ProjectMappingOverrides | undefined,
+		analysis: project.analysis,
 	};
 }

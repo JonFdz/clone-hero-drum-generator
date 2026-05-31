@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type {
-	NormalizationHitPreview,
-	NormalizationPreview,
-} from "@chdg/project/browser";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
 	buildWaveformBars,
@@ -42,8 +38,6 @@ describe("desktop-preview-model", () => {
 					{ tick: 100, lane: 1, seconds: 2 },
 				],
 			},
-			undefined,
-			10,
 			1.05,
 			0,
 		);
@@ -65,9 +59,7 @@ describe("desktop-preview-model", () => {
 					{ tick: 192, lane: 41, seconds: 1 },
 				],
 			},
-			undefined,
 			0,
-			10,
 			0,
 		);
 		expect(notes).toHaveLength(1);
@@ -88,9 +80,7 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				noteEvents: [{ tick: 192, lane: 66, seconds: 1 }],
 			},
-			undefined,
 			0,
-			10,
 			0,
 		);
 		expect(notes).toHaveLength(0);
@@ -109,9 +99,7 @@ describe("desktop-preview-model", () => {
 					{ tick: 3, lane: 3, seconds: 2.0 },
 				],
 			},
-			undefined,
 			1.0,
-			10,
 			0,
 		);
 		expect(notes.find((n) => n.lane === "yellow")?.yPercent).toBe(
@@ -138,66 +126,21 @@ describe("desktop-preview-model", () => {
 					{ tick: 3, lane: 3, seconds: 5.0 },
 				],
 			},
-			undefined,
 			1.0,
-			10,
 			0,
 		);
 		expect(notes.map((n) => n.lane)).toEqual(["red", "yellow"]);
 	});
 
-	it("scales fallback timing by audio duration", () => {
-		const notes = deriveHighwayNotes(
-			null,
-			makeNormalizationPreview([
-				{ tick: 0, piece: "kick", velocity: 100, source: midiSource() },
-				{ tick: 100, piece: "kick", velocity: 100, source: midiSource() },
-			]),
-			8,
-			10,
-			0,
-		);
-		expect(notes.find((n) => n.atSeconds === 10)?.yPercent).toBeGreaterThan(
-			HIGHWAY_HIT_LINE_PERCENT,
-		);
+	it("does not derive generated highway notes from normalization fallback", () => {
+		const notes = deriveHighwayNotes(null, 8, 0);
+		expect(notes).toEqual([]);
 	});
 
-	it("returns honest limitation copy for normalization fallback", () => {
-		expect(
-			deriveHighwayLimitations(
-				null,
-				makeNormalizationPreview([
-					{ tick: 0, piece: "kick", velocity: 100, source: midiSource() },
-				]),
-			)[0],
-		).toBe(
-			"Using normalization fallback data; timing is approximate and modifier data may be incomplete.",
-		);
-	});
 
 	it("returns limited state when no highway data", () => {
-		expect(deriveHighwayLimitations(null, undefined)[0]).toContain(
-			"No generated chart",
+		expect(deriveHighwayLimitations(null)[0]).toContain(
+			"No generated notes.chart",
 		);
 	});
 });
-
-function makeNormalizationPreview(
-	firstHits: NormalizationHitPreview[],
-): NormalizationPreview {
-	return {
-		sourceKind: "midi",
-		sourcePath: "/tmp/demo.mid",
-		selectedTrack: 0,
-		selectedTracks: [0],
-		hitCount: firstHits.length,
-		pieceSummary: { kick: firstHits.length },
-		firstHits,
-		issues: [],
-		mappingCandidates: [],
-	};
-}
-
-function midiSource() {
-	return { midiNote: 36, trackIndex: 0, trackName: "Test", channel: 9 };
-}

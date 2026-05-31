@@ -1,4 +1,3 @@
-import type { NormalizationPreview } from "@chdg/project/browser";
 import type { ChartPreviewData } from "./desktop-bridge.service";
 
 export type TimelineNote = {
@@ -92,8 +91,6 @@ export function effectiveNoteTime(
 
 export function deriveTimelineNotes(
 	chartData: ChartPreviewData | null,
-	normalization: NormalizationPreview | undefined,
-	durationSeconds: number,
 	currentTimeSeconds: number,
 	previewOffsetMs = 0,
 ): TimelineNote[] {
@@ -109,33 +106,12 @@ export function deriveTimelineNotes(
 		});
 	}
 
-	if (
-		!normalization ||
-		normalization.firstHits.length === 0 ||
-		durationSeconds <= 0
-	) {
-		return [];
-	}
-
-	const maxTick = Math.max(...normalization.firstHits.map((h) => h.tick), 1);
-	return normalization.firstHits.map((h) => {
-		const atSeconds = effectiveNoteTime(
-			(h.tick / maxTick) * durationSeconds,
-			previewOffsetMs,
-		);
-		return {
-			atSeconds,
-			lane: h.piece,
-			highlighted: Math.abs(atSeconds - currentTimeSeconds) <= tolerance,
-		};
-	});
+	return [];
 }
 
 export function deriveHighwayNotes(
 	chartData: ChartPreviewData | null,
-	normalization: NormalizationPreview | undefined,
 	currentTimeSeconds: number,
-	durationSeconds: number,
 	previewOffsetMs = 0,
 	lookbehindSeconds = 0.25,
 	lookaheadSeconds = 3,
@@ -189,52 +165,11 @@ export function deriveHighwayNotes(
 			.slice(0, 5000);
 	}
 
-	if (
-		!normalization ||
-		normalization.firstHits.length === 0 ||
-		!Number.isFinite(durationSeconds) ||
-		durationSeconds <= 0
-	) {
-		return [];
-	}
-
-	const maxTick = Math.max(...normalization.firstHits.map((h) => h.tick), 1);
-	const fallbackNotes: HighwayNote[] = [];
-	for (const hit of normalization.firstHits) {
-		const atSeconds = effectiveNoteTime(
-			(hit.tick / maxTick) * durationSeconds,
-			previewOffsetMs,
-		);
-		const lane = pieceToHighwayLane(hit.piece);
-		if (!lane) continue;
-		const yPercent = highwayYPercent(
-			atSeconds,
-			currentTimeSeconds,
-			lookbehindSeconds,
-			lookaheadSeconds,
-		);
-		const visible = yPercent >= 0 && yPercent <= 100;
-		if (!visible) continue;
-		fallbackNotes.push({
-			id: `${hit.tick}-${lane}`,
-			lane,
-			atSeconds,
-			yPercent,
-			visible,
-			cymbal:
-				hit.piece === "crash" ||
-				hit.piece === "ride" ||
-				hit.piece === "hihat_open" ||
-				hit.piece === "hihat_closed",
-			open: hit.piece === "hihat_open",
-		});
-	}
-	return fallbackNotes;
+	return [];
 }
 
 export function deriveHighwayLimitations(
 	chartData: ChartPreviewData | null,
-	normalization: NormalizationPreview | undefined,
 ): string[] {
 	if (chartData && chartData.noteEvents.length > 0) {
 		return [
@@ -242,12 +177,7 @@ export function deriveHighwayLimitations(
 			"Open hi-hat state may be unavailable in chart-only preview data.",
 		];
 	}
-	if (normalization?.firstHits?.length) {
-		return [
-			"Using normalization fallback data; timing is approximate and modifier data may be incomplete.",
-		];
-	}
-	return ["No generated chart or preview hit data available for highway."];
+	return ["No generated notes.chart data available for highway."];
 }
 
 export function highwayYPercent(
@@ -270,26 +200,4 @@ export function highwayYPercent(
 		(100 - HIGHWAY_HIT_LINE_PERCENT) *
 			(elapsedAhead / Math.max(lookaheadSeconds, 0.01))
 	);
-}
-
-function pieceToHighwayLane(piece: string): HighwayLane | null {
-	switch (piece) {
-		case "kick":
-			return "kick";
-		case "snare":
-		case "sidestick":
-			return "red";
-		case "hihat_open":
-		case "hihat_closed":
-		case "tom_high":
-			return "yellow";
-		case "ride":
-		case "tom_mid":
-			return "blue";
-		case "crash":
-		case "tom_floor":
-			return "green";
-		default:
-			return null;
-	}
 }

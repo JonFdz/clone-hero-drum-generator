@@ -1,4 +1,4 @@
-import { access, readFile, writeFile, mkdir } from "node:fs/promises";
+import { access, readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import type { ChdgProjectAnalysisCache, ChdgProjectFile } from "@chdg/project";
 import { validateProjectFile, createProjectFile } from "@chdg/project";
@@ -123,7 +123,7 @@ export function buildProjectFileFromState(
 			| "needs-regenerate"
 			| "failed";
 		lastGeneratedAt?: string;
-		outputFiles?: { chart?: string; songIni?: string; songOgg?: string };
+		outputFiles?: { chart?: string; songIni?: string; songOgg?: string; albumJpg?: string };
 		mappingOverrides?: ProjectMappingOverrides;
 		analysis?: ChdgProjectAnalysisCache;
 	},
@@ -203,4 +203,67 @@ export function getDefaultProjectFilePath(projectName: string): string {
 
 export function getDefaultOutputDir(projectFilePath: string): string {
 	return path.join(path.dirname(projectFilePath), "output");
+}
+
+
+export type ManagedProjectRenameResult = {
+	filePath: string;
+	outputDir?: string;
+	renamed: boolean;
+};
+
+export async function renameManagedProjectTarget(input: {
+	currentFilePath: string;
+	oldProjectName: string;
+	newProjectName: string;
+	projectLocation: string;
+	outputDir?: string;
+}): Promise<ManagedProjectRenameResult> {
+	const currentFilePath = path.resolve(input.currentFilePath);
+	const currentFolder = path.dirname(currentFilePath);
+	const projectLocation = path.resolve(input.projectLocation);
+	const oldName = sanitizeProjectName(input.oldProjectName);
+	const newName = sanitizeProjectName(input.newProjectName);
+
+	if (oldName === newName) {
+		return { filePath: currentFilePath, outputDir: input.outputDir, renamed: false };
+	}
+
+	if (!isAutoCreatedProjectPath(currentFilePath, oldName, projectLocation)) {
+		return { filePath: currentFilePath, outputDir: input.outputDir, renamed: false };
+	}
+
+	const targetFolder = path.join(projectLocation, newName);
+	const targetFilePath = path.join(targetFolder, `${newName}.chdg`);
+	try {
+		await access(targetFolder);
+		throw new Error("PROJECT_RENAME_TARGET_EXISTS");
+	} catch (error) {
+		if (error instanceof Error && error.message === "PROJECT_RENAME_TARGET_EXISTS") {
+			throw error;
+		}
+	}
+
+	const oldDefaultOutputDir = getDefaultOutputDir(currentFilePath);
+	const nextOutputDir =
+		input.outputDir && path.resolve(input.outputDir) === path.resolve(oldDefaultOutputDir)
+			? getDefaultOutputDir(targetFilePath)
+			: input.outputDir;
+
+	await rename(currentFolder, targetFolder);
+	await rename(path.join(targetFolder, `${oldName}.chdg`), targetFilePath);
+	return { filePath: targetFilePath, outputDir: nextOutputDir, renamed: true };
+}
+
+export function isAutoCreatedProjectPath(
+	filePath: string,
+	projectName: string,
+	projectLocation: string,
+): boolean {
+	const safeName = sanitizeProjectName(projectName);
+	const resolvedFile = path.resolve(filePath);
+	const resolvedLocation = path.resolve(projectLocation);
+	const expectedFolder = path.join(resolvedLocation, safeName);
+	const expectedFile = path.join(expectedFolder, `${safeName}.chdg`);
+	return resolvedFile === expectedFile;
 }

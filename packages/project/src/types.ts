@@ -94,6 +94,7 @@ export type GeneratePackageInput = SongMetadataInput & {
 	audioSource?: string;
 	offsetMs?: number;
 	mappingOverrides?: ProjectMappingOverrides;
+	coverImagePath?: string;
 };
 
 export type GeneratePackageResult = {
@@ -110,6 +111,7 @@ export type GeneratePackageResult = {
 		chart: string;
 		songIni: string;
 		songOgg?: string;
+		albumJpg?: string;
 	};
 	issues: ProjectIssue[];
 };

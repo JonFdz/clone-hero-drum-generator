@@ -2,62 +2,62 @@
 
 ## Process
 
-- [ ] Accepted OpenSpec is transferred to Engram before implementation.
-- [ ] Engram is treated as the source of truth after transfer.
-- [ ] Required files are verified before implementation.
+- [x] Accepted OpenSpec is transferred to Engram before implementation.
+- [x] Engram is treated as the source of truth after transfer.
+- [x] Required files are verified before implementation.
 - [ ] Missing files cause a stop/report, not assumptions.
 - [ ] Ambiguities are raised before implementation.
-- [ ] Final review is external by Jon/ChatGPT.
+- [x] Final review is external by Jon/ChatGPT.
 
 ## P0 — Preview
 
-- [ ] Preview uses generated `notes.chart`.
-- [ ] Preview uses generated `song.ogg`.
-- [ ] Preview does not use `.chdg` `analysis.normalizationPreview` for generated playback.
-- [ ] `normalizationPreview.firstHits` is not stretched across duration.
-- [ ] Missing generated output shows clear empty state.
-- [ ] Missing/unreadable `notes.chart` shows clear chart error.
-- [ ] Missing/unreadable `song.ogg` shows clear audio error.
-- [ ] Chart load failures are not swallowed silently.
-- [ ] Tests cover generated-output-only behavior.
+- [x] Preview uses generated `notes.chart`.
+- [x] Preview uses generated `song.ogg`.
+- [x] Preview does not use `.chdg` `analysis.normalizationPreview` for generated playback.
+- [x] `normalizationPreview.firstHits` is not stretched across duration.
+- [x] Missing generated output shows clear empty state.
+- [x] Missing/unreadable `notes.chart` shows clear chart error.
+- [x] Missing/unreadable `song.ogg` shows clear audio error.
+- [x] Chart load failures are not swallowed silently.
+- [x] Tests cover generated-output-only behavior.
 
 ## P1 — Cover
 
-- [ ] Project cover attempts to generate `album.jpg` in output.
-- [ ] JPG/JPEG input is handled.
-- [ ] Unsupported/failed cover conversion emits warning.
-- [ ] Cover failure does not block generation.
-- [ ] Generate result/UI exposes cover warning.
-- [ ] Tests cover cover success and warning-only failure.
+- [x] Project cover attempts to generate `album.jpg` in output.
+- [x] JPG/JPEG input is handled.
+- [x] Unsupported/failed cover conversion emits warning.
+- [x] Cover failure does not block generation.
+- [x] Generate result/UI exposes cover warning.
+- [x] Tests cover cover success and warning-only failure.
 
 ## P2 — Rename
 
-- [ ] CHDG auto-created project folders can be detected.
-- [ ] Renaming project updates folder/file when safe.
-- [ ] `projectFilePath` is updated.
-- [ ] default `outputDir` is updated.
-- [ ] recents are updated.
-- [ ] custom paths are not renamed.
-- [ ] conflicts are handled safely.
+- [x] CHDG auto-created project folders can be detected.
+- [x] Renaming project updates folder/file when safe.
+- [x] `projectFilePath` is updated.
+- [x] default `outputDir` is updated.
+- [x] recents are updated.
+- [x] custom paths are not renamed.
+- [x] conflicts are handled safely.
 
 ## P3 — Delete
 
-- [ ] `.chdg` deletion remains path-safe.
+- [x] `.chdg` deletion remains path-safe.
 - [ ] safe auto-created folder deletion is implemented or clearly scoped.
-- [ ] arbitrary directories are never deleted.
-- [ ] missing project files are handled gracefully where appropriate.
-- [ ] recents cleanup works.
-- [ ] failure messages are actionable.
+- [x] arbitrary directories are never deleted.
+- [x] missing project files are handled gracefully where appropriate.
+- [x] recents cleanup works.
+- [x] failure messages are actionable.
 
 ## Validation commands
 
 - [ ] `pnpm -r build`
 - [ ] `pnpm build`
-- [ ] `pnpm typecheck`
-- [ ] `pnpm test`
+- [x] `pnpm typecheck` *(partial: packages passed; desktop ng build abort trap in local environment)*
+- [x] `pnpm test`
 - [ ] `pnpm --filter @chdg/project build`
 - [ ] `pnpm --filter @chdg/desktop build`
-- [ ] `pnpm chdg --help`
+- [x] `pnpm chdg --help`
 
 ## Manual validation
 
@@ -69,3 +69,13 @@
 - [ ] Rename auto-created project: folder/file paths update safely.
 - [ ] Rename custom-path project: folder is not renamed.
 - [ ] Delete project: safe deletion and recents cleanup behave correctly.
+
+## Agent validation notes
+
+- `pnpm test` passed: 57 files / 446 tests.
+- `pnpm --filter @chdg/project typecheck` passed.
+- `pnpm --filter @chdg/desktop exec tsc -p tsconfig.electron.json --noEmit` passed.
+- `pnpm typecheck` reached package checks successfully, then desktop `ng build --configuration development` aborted with `Abort trap: 6` under local Node v25.9.0.
+- Build commands were not intentionally run separately because AGENTS.md says never build after changes; `pnpm typecheck` invokes desktop build internally.
+- `pnpm chdg --help` passed when rerun outside sandbox; sandbox run failed with tsx IPC `EPERM`.
+- Manual desktop validation is still pending local app run by Jon/ChatGPT.
