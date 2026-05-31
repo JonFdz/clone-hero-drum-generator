@@ -193,7 +193,8 @@ function sectionNameFromUnknown(value: unknown): string | undefined {
 }
 
 function isUsableSectionName(name: string | undefined): name is string {
-	return Boolean(name && name.length <= 120 && !/^-?\d+(?:\.\d+)?$/.test(name));
+	const cleaned = cleanSectionName(name);
+	return Boolean(cleaned && cleaned.length <= 120 && !/^-?\d+(?:\.\d+)?$/.test(cleaned));
 }
 
 function arrayFromUnknown(value: unknown): unknown[] {
@@ -266,15 +267,28 @@ function dedupeTimeSignatures(events: TimeSignatureEvent[]): TimeSignatureEvent[
 
 function dedupeSections(sections: SongSection[]): SongSection[] {
 	const seen = new Set<string>();
-	return sections
-		.filter((section) => section.name.trim().length > 0)
-		.filter((section) => {
-			const key = `${section.tick}:${section.name}`;
-			if (seen.has(key)) return false;
+	const normalized: SongSection[] = [];
+	for (const section of sections) {
+		const tick = Math.max(0, Math.trunc(section.tick));
+		const name = cleanSectionName(section.name);
+		if (!isUsableSectionName(name)) continue;
+		const key = `${tick}:${sectionNameKey(name)}`;
+		if (!seen.has(key)) {
 			seen.add(key);
-			return true;
-		})
-		.sort((a, b) => a.tick - b.tick || a.name.localeCompare(b.name));
+			normalized.push({ tick, name });
+		}
+	}
+	return normalized.sort(
+		(a, b) => a.tick - b.tick || sectionNameKey(a.name).localeCompare(sectionNameKey(b.name)),
+	);
+}
+
+function cleanSectionName(name: string | undefined): string {
+	return name?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+function sectionNameKey(name: string): string {
+	return cleanSectionName(name).toLocaleLowerCase();
 }
 
 function findObjectsByKey(value: unknown, targetKey: string): XmlNode[] {
