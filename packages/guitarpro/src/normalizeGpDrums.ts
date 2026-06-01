@@ -10,10 +10,14 @@ import { extractGpifFromFile } from "./extractGpif.js";
 import { inspectGpifXml } from "./inspectGpif.js";
 import {
 	DEFAULT_GPIF_DRUM_VELOCITY,
-	mapGpifDrumArticulation,
 	mapGpifDynamicToVelocity,
-	mapGpifMidiDrumNumber,
 } from "./gpifDrumMapping.js";
+import {
+	resolveGpifArticulation,
+	type GpifArticulationMetadata,
+	type GpifArticulationResolution,
+	type GpifMappingOverrides,
+} from "./gpifArticulationResolver.js";
 import { buildGpifTimeline } from "./gpifTimeline.js";
 
 const TEXT_KEY = "#text";
@@ -31,13 +35,19 @@ type GpifSource = {
 	kind: "gpif";
 	trackIndex: number;
 	trackName?: string;
+	articulationKey?: string;
 	rawArticulation?: string;
+	noteName?: string;
+	inputMidiNumbers?: number[];
+	outputMidiNumber?: number;
+	resolvedVia?: string;
 	measureIndex?: number;
 	beatIndex?: number;
 	noteIndex?: number;
 };
 
 export type GpUnknownArticulation = {
+	key?: string;
 	rawArticulation: string;
 	count: number;
 	measureIndex?: number;
@@ -55,12 +65,19 @@ export type GpDrumNormalizationResult = {
 	timeSignatures: TimeSignatureEvent[];
 	sections: SongSection[];
 	unknownArticulations: GpUnknownArticulation[];
+	mappingSources: GpifMappingSource[];
 	warnings: string[];
 	unhandled: string[];
 };
 
 export type NormalizeGpDrumsOptions = {
 	trackIndex: number;
+	mappingOverrides?: GpifMappingOverrides;
+};
+
+export type GpifMappingSource = GpifArticulationResolution & {
+	count: number;
+	firstTick?: number;
 };
 
 export async function normalizeGpDrums(
@@ -71,12 +88,13 @@ export async function normalizeGpDrums(
 	return normalizeGpDrumsXml(extraction.xml, {
 		filePath,
 		trackIndex: options.trackIndex,
+		mappingOverrides: options.mappingOverrides,
 	});
 }
 
 export function normalizeGpDrumsXml(
 	xml: string,
-	options: { filePath?: string; trackIndex: number },
+	options: { filePath?: string; trackIndex: number; mappingOverrides?: GpifMappingOverrides },
 ): GpDrumNormalizationResult {
 	const root = parseGpifXml(xml);
 	const inspection = inspectGpifXml(xml, { filePath: options.filePath });
@@ -140,6 +158,7 @@ export function normalizeGpDrumsXml(
 
 	const hits: DrumHit[] = [];
 	const unknowns = new Map<string, GpUnknownArticulation>();
+	const mappingSources = new Map<string, GpifMappingSource>();
 	let fallbackMeasureStartTick = 0;
 
 	selectedBars.forEach(({ bar, masterBarIndex }) => {
@@ -187,29 +206,37 @@ export function normalizeGpDrumsXml(
 				}
 
 				notes.forEach((note, noteIndex) => {
-					const midiNumber = extractMidiNumber(note);
-					const rawValues = articulationValues(note);
-					const rawArticulation =
-						rawValues.join(" / ") ||
-						(midiNumber !== undefined ? `MIDI ${midiNumber}` : "(unknown)");
-					const textMapping = mapGpifDrumArticulation(rawValues);
-					const midiMapping =
-						midiNumber !== undefined ? mapGpifMidiDrumNumber(midiNumber) : {};
-					const mapping = textMapping.piece ? textMapping : midiMapping;
-					if (mapping.warning) warnings.add(mapping.warning);
+					const tick = beatTick + (extractTickOffset(note, resolution) ?? 0);
+					const metadata = extractArticulationMetadata(note, {
+						trackId: track.id,
+						trackIndex: options.trackIndex,
+						trackName: track.name,
+					});
+					const resolutionResult = resolveGpifArticulation(
+						metadata,
+						options.mappingOverrides,
+					);
+					recordMappingSource(mappingSources, resolutionResult, tick);
 
-					if (!mapping.piece) {
-						recordUnknown(unknowns, rawArticulation, {
-							measureIndex: masterBarIndex,
-							beatIndex,
-							noteIndex,
-						});
+					if (
+						resolutionResult.action !== "map" ||
+						!resolutionResult.automaticPiece ||
+						resolutionResult.automaticPiece === "unknown"
+					) {
+						if (resolutionResult.action === "unknown") {
+							recordUnknown(unknowns, resolutionResult.sourceValue, {
+								key: resolutionResult.key,
+								measureIndex: masterBarIndex,
+								beatIndex,
+								noteIndex,
+							});
+						}
 						return;
 					}
 
 					hits.push({
-						tick: beatTick + (extractTickOffset(note, resolution) ?? 0),
-						piece: mapping.piece,
+						tick,
+						piece: resolutionResult.automaticPiece,
 						velocity:
 							extractVelocity(note) ??
 							extractVelocity(beat) ??
@@ -220,7 +247,12 @@ export function normalizeGpDrumsXml(
 							kind: "gpif",
 							trackIndex: options.trackIndex,
 							trackName: track.name,
-							rawArticulation,
+							articulationKey: resolutionResult.key,
+							rawArticulation: resolutionResult.sourceValue,
+							noteName: resolutionResult.noteName,
+							inputMidiNumbers: resolutionResult.inputMidiNumbers,
+							outputMidiNumber: resolutionResult.outputMidiNumber,
+							resolvedVia: resolutionResult.resolvedVia,
 							measureIndex: masterBarIndex,
 							beatIndex,
 							noteIndex,
@@ -262,6 +294,9 @@ export function normalizeGpDrumsXml(
 		sections: timeline.sections,
 		unknownArticulations: Array.from(unknowns.values()).sort((a, b) =>
 			a.rawArticulation.localeCompare(b.rawArticulation),
+		),
+		mappingSources: Array.from(mappingSources.values()).sort((a, b) =>
+			a.key.localeCompare(b.key),
 		),
 		warnings: Array.from(warnings).sort(),
 		unhandled: Array.from(unhandled).sort(),
@@ -576,11 +611,96 @@ function extractVelocity(node: XmlNode): number | undefined {
 	return mapGpifDynamicToVelocity(dynamic);
 }
 
+function extractArticulationMetadata(
+	note: XmlNode,
+	track: Pick<GpifArticulationMetadata, "trackId" | "trackIndex" | "trackName">,
+): GpifArticulationMetadata {
+	const rawValues = articulationValues(note);
+	const name = firstValueInObject(note, [
+		"Name",
+		"name",
+		"DisplayName",
+		"displayName",
+		"Articulation",
+		"articulation",
+		"Type",
+		"type",
+	]) ?? rawValues[0];
+	return {
+		...track,
+		id: firstValueInObject(note, ["@_id", "id", "Id", "ID"]),
+		name,
+		inputMidiNumbers: extractInputMidiNumbers(note),
+		outputMidiNumber: extractOutputMidiNumber(note),
+		element: firstNestedValue(note, ["Element", "element"]),
+		instrument: firstNestedValue(note, ["Instrument", "instrument", "InstrumentName", "instrumentName"]),
+	};
+}
+
 function extractMidiNumber(note: XmlNode): number | undefined {
 	return (
 		findNamedPropertyNumber(note, "Midi") ??
 		firstNumberInObject(note, ["Midi", "midi", "MidiNumber", "midiNumber"])
 	);
+}
+
+function extractOutputMidiNumber(note: XmlNode): number | undefined {
+	return (
+		findNamedPropertyNumber(note, "OutputMidiNumber") ??
+		findNamedPropertyNumber(note, "OutputMidi") ??
+		firstNumberInObject(note, [
+			"OutputMidiNumber",
+			"outputMidiNumber",
+			"OutputMidi",
+			"outputMidi",
+		])
+	);
+}
+
+function extractInputMidiNumbers(note: XmlNode): number[] | undefined {
+	const values = new Set<number>();
+	collectNumbersByKey(
+		note,
+		/^(inputmidinumbers|inputmidinumber|inputmidi|midi|midinumber)$/i,
+		values,
+	);
+	const legacyMidi = extractMidiNumber(note);
+	if (legacyMidi !== undefined) values.add(legacyMidi);
+	const outputMidi = extractOutputMidiNumber(note);
+	if (outputMidi !== undefined) values.delete(outputMidi);
+	const result = Array.from(values).sort((a, b) => a - b);
+	return result.length > 0 ? result : undefined;
+}
+
+function collectNumbersByKey(
+	value: unknown,
+	keyPattern: RegExp,
+	out: Set<number>,
+): void {
+	if (Array.isArray(value)) {
+		for (const item of value) collectNumbersByKey(item, keyPattern, out);
+	} else if (isObject(value)) {
+		for (const [key, child] of Object.entries(value)) {
+			if (keyPattern.test(key)) {
+				for (const number of numbersFromUnknown(child)) out.add(number);
+			}
+			collectNumbersByKey(child, keyPattern, out);
+		}
+	}
+}
+
+function numbersFromUnknown(value: unknown): number[] {
+	if (typeof value === "number") return Number.isFinite(value) ? [value] : [];
+	const text = textFromUnknown(value);
+	if (text) {
+		return text
+			.split(/[\s,;]+/)
+			.map((part) => Number(part))
+			.filter((number) => Number.isInteger(number));
+	}
+	if (Array.isArray(value)) return value.flatMap(numbersFromUnknown);
+	if (isObject(value)) return Object.values(value).flatMap(numbersFromUnknown);
+	return [];
 }
 
 function articulationValues(note: XmlNode): string[] {
@@ -621,7 +741,7 @@ function recordUnknown(
 	rawArticulation: string,
 	location: Pick<
 		GpUnknownArticulation,
-		"measureIndex" | "beatIndex" | "noteIndex"
+		"key" | "measureIndex" | "beatIndex" | "noteIndex"
 	>,
 ): void {
 	const existing = unknowns.get(rawArticulation);
@@ -630,6 +750,26 @@ function recordUnknown(
 	} else {
 		unknowns.set(rawArticulation, { rawArticulation, count: 1, ...location });
 	}
+}
+
+function recordMappingSource(
+	sources: Map<string, GpifMappingSource>,
+	resolution: GpifArticulationResolution,
+	tick: number,
+): void {
+	const existing = sources.get(resolution.key);
+	if (existing) {
+		existing.count += 1;
+		if (existing.firstTick === undefined || tick < existing.firstTick) {
+			existing.firstTick = tick;
+		}
+		return;
+	}
+	sources.set(resolution.key, {
+		...resolution,
+		count: 1,
+		firstTick: tick,
+	});
 }
 
 function detectUnsupportedTimingStructures(root: unknown): string[] {

@@ -10,6 +10,7 @@ import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
 import {
 	applyProjectMappingOverrides,
 	buildMappingCandidates,
+	hasOverrideForGpifArticulationKey,
 	hasPieceOverrideForGpifArticulation,
 	hasPieceOverrideForMidiNote,
 } from "./mappingOverrides.js";
@@ -19,6 +20,23 @@ import { detectSourceKind } from "./sourceKind.js";
 import type { NormalizationPreview, ProjectIssue } from "./types.js";
 
 const generalMidiDrums = generalMidiDrumsUntyped as MidiDrumPieceMap;
+
+type GpifNormalizationResultWithMapping = Awaited<ReturnType<typeof normalizeGpDrums>> & {
+	mappingSources?: NormalizationPreview["mappingCandidates"];
+	unknownArticulations: Array<
+		Awaited<ReturnType<typeof normalizeGpDrums>>["unknownArticulations"][number] & {
+			key?: string;
+		}
+	>;
+};
+
+const normalizeGpDrumsWithMapping = normalizeGpDrums as unknown as (
+	filePath: string,
+	options: {
+		trackIndex: number;
+		mappingOverrides?: NormalizeSelectionInput["mappingOverrides"];
+	},
+) => Promise<GpifNormalizationResultWithMapping>;
 
 export async function normalizeSelection(
 	input: NormalizeSelectionInput,
@@ -70,7 +88,10 @@ export async function normalizeSelection(
 
 		const results = await Promise.all(
 			requestedTracks.map((trackIndex) =>
-				normalizeGpDrums(input.sourcePath, { trackIndex }),
+				normalizeGpDrumsWithMapping(input.sourcePath, {
+					trackIndex,
+					mappingOverrides: input.mappingOverrides,
+				}),
 			),
 		);
 		const selectedTracks = results.map((result) => result.trackIndex);
@@ -91,6 +112,10 @@ export async function normalizeSelection(
 						!hasPieceOverrideForGpifArticulation(
 							input.mappingOverrides,
 							item.rawArticulation,
+						) &&
+						!hasOverrideForGpifArticulationKey(
+							input.mappingOverrides,
+							(item as typeof item & { key?: string }).key,
 						),
 				)
 				.map((item) =>
@@ -110,7 +135,11 @@ export async function normalizeSelection(
 			),
 		]);
 		const rawHits = results.flatMap((result) => result.hits);
-		const mappingCandidates = buildMappingCandidates(rawHits);
+		const mappingCandidates = mergeMappingCandidates(
+			results.flatMap((result) => result.mappingSources ?? []),
+			buildMappingCandidates(rawHits),
+		);
+		const mappingCoverage = combineMappingCoverage([], mappingCandidates);
 
 		return toPreview({
 			sourceKind,
@@ -121,6 +150,7 @@ export async function normalizeSelection(
 				input.mappingOverrides,
 			),
 			mappingCandidates,
+			mappingCoverage,
 			sourceIssues,
 			includeMergeSummary: selectedTracks.length > 1,
 		});

@@ -15,6 +15,9 @@ export type SourceReviewMappingRow = {
 	sourceValue?: string;
 	label?: string;
 	noteName?: string;
+	inputMidiNumbers?: number[];
+	outputMidiNumber?: number;
+	resolvedVia?: string;
 	action?: "map" | "candidate" | "ignore" | "unknown";
 	automaticPiece?: string;
 	suggestedPiece?: string;
@@ -114,6 +117,7 @@ export function stableMappingFingerprint(
 	overrides: ProjectMappingOverrides | undefined,
 ): string {
 	return stableStringify({
+		gpifArticulationResolverVersion: "0.1.0",
 		mappingAtlasVersion: MIDI_DRUM_NOTE_ATLAS_VERSION,
 		overrides: overrides ?? {},
 	});

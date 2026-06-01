@@ -4,7 +4,12 @@ export type GpifDrumHitSource = {
   kind: "gpif";
   trackIndex: number;
   trackName?: string;
+  articulationKey?: string;
   rawArticulation?: string;
+  noteName?: string;
+  inputMidiNumbers?: number[];
+  outputMidiNumber?: number;
+  resolvedVia?: string;
   measureIndex?: number;
   beatIndex?: number;
   noteIndex?: number;
