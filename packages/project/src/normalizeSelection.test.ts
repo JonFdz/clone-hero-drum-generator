@@ -236,6 +236,89 @@ describe("normalizeSelection", () => {
 		).toBeUndefined();
 	});
 
+	it("derives GPIF mapping coverage event counts from mapping candidates", async () => {
+		mocks.normalizeGpDrums.mockResolvedValue({
+			trackIndex: 3,
+			hits: [
+				gpifHit({
+					tick: 0,
+					piece: "kick",
+					trackIndex: 3,
+					rawArticulation: "Kick",
+					articulationKey: "gpif:3:kick:no-output:no-input",
+				}),
+				gpifHit({
+					tick: 120,
+					piece: "kick",
+					trackIndex: 3,
+					rawArticulation: "Kick",
+					articulationKey: "gpif:3:kick:no-output:no-input",
+				}),
+			],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [{ key: "gpif:3:mystery-effect:no-output:no-input", rawArticulation: "Mystery Effect", count: 1 }],
+			mappingSources: [
+				{
+					key: "gpif:3:kick:no-output:no-input",
+					sourceKind: "gpif",
+					sourceValue: "Kick",
+					action: "map",
+					automaticPiece: "kick",
+					confidence: "high",
+					count: 2,
+					firstTick: 0,
+				},
+				{
+					key: "gpif:3:pedal-hi-hat:44:no-input",
+					sourceKind: "gpif",
+					sourceValue: "Pedal Hi-Hat",
+					action: "candidate",
+					suggestedPiece: "hihat_closed",
+					confidence: "medium",
+					count: 1,
+					firstTick: 240,
+				},
+				{
+					key: "gpif:3:tambourine:54:no-input",
+					sourceKind: "gpif",
+					sourceValue: "Tambourine",
+					action: "ignore",
+					confidence: "high",
+					count: 1,
+					firstTick: 360,
+				},
+				{
+					key: "gpif:3:mystery-effect:no-output:no-input",
+					sourceKind: "gpif",
+					sourceValue: "Mystery Effect",
+					action: "unknown",
+					automaticPiece: "unknown",
+					confidence: "low",
+					count: 1,
+					firstTick: 480,
+				},
+			],
+		});
+
+		const result = await normalizeSelection({
+			sourcePath: "demo.gp",
+			trackIndex: 3,
+		});
+
+		expect(result.mappingCoverage).toMatchObject({
+			totalEventCount: 5,
+			mappedEventCount: 2,
+			candidateEventCount: 1,
+			ignoredEventCount: 1,
+			unknownEventCount: 1,
+			mappedSourceCount: 1,
+			candidateSourceCount: 1,
+			ignoredSourceCount: 1,
+			unknownSourceCount: 1,
+		});
+	});
+
 	it("returns merged MIDI preview for multiple tracks", async () => {
 		mocks.normalizeDrumsFromFile
 			.mockResolvedValueOnce({
@@ -390,12 +473,19 @@ function gpifHit(input: {
 	tick: number;
 	piece: DrumHit["piece"];
 	trackIndex: number;
+	rawArticulation?: string;
+	articulationKey?: string;
 }): DrumHit {
 	return {
 		tick: input.tick,
 		piece: input.piece,
 		velocity: 100,
 		durationTicks: 0,
-		source: { kind: "gpif", trackIndex: input.trackIndex },
+		source: {
+			kind: "gpif",
+			trackIndex: input.trackIndex,
+			articulationKey: input.articulationKey,
+			rawArticulation: input.rawArticulation,
+		},
 	};
 }

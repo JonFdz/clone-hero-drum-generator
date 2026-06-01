@@ -10,6 +10,7 @@ import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
 import {
 	applyProjectMappingOverrides,
 	buildMappingCandidates,
+	hasOverrideForGpifArticulationKey,
 	hasPieceOverrideForGpifArticulation,
 	hasPieceOverrideForMidiNote,
 } from "./mappingOverrides.js";
@@ -70,7 +71,10 @@ export async function normalizeSelection(
 
 		const results = await Promise.all(
 			requestedTracks.map((trackIndex) =>
-				normalizeGpDrums(input.sourcePath, { trackIndex }),
+				normalizeGpDrums(input.sourcePath, {
+					trackIndex,
+					mappingOverrides: input.mappingOverrides,
+				}),
 			),
 		);
 		const selectedTracks = results.map((result) => result.trackIndex);
@@ -91,6 +95,10 @@ export async function normalizeSelection(
 						!hasPieceOverrideForGpifArticulation(
 							input.mappingOverrides,
 							item.rawArticulation,
+						) &&
+						!hasOverrideForGpifArticulationKey(
+							input.mappingOverrides,
+							(item as typeof item & { key?: string }).key,
 						),
 				)
 				.map((item) =>
@@ -110,7 +118,11 @@ export async function normalizeSelection(
 			),
 		]);
 		const rawHits = results.flatMap((result) => result.hits);
-		const mappingCandidates = buildMappingCandidates(rawHits);
+		const mappingCandidates = mergeMappingCandidates(
+			results.flatMap((result) => result.mappingSources ?? []),
+			buildMappingCandidates(rawHits),
+		);
+		const mappingCoverage = combineMappingCoverage([], mappingCandidates);
 
 		return toPreview({
 			sourceKind,
@@ -121,6 +133,7 @@ export async function normalizeSelection(
 				input.mappingOverrides,
 			),
 			mappingCandidates,
+			mappingCoverage,
 			sourceIssues,
 			includeMergeSummary: selectedTracks.length > 1,
 		});
@@ -271,12 +284,31 @@ function combineMappingCoverage(
 		ignoredSourceCount: 0,
 		unknownSourceCount: 0,
 	};
-	for (const item of items) {
-		summary.totalEventCount += item.totalEventCount;
-		summary.mappedEventCount += item.mappedEventCount;
-		summary.candidateEventCount += item.candidateEventCount;
-		summary.ignoredEventCount += item.ignoredEventCount;
-		summary.unknownEventCount += item.unknownEventCount;
+	if (items.length > 0) {
+		for (const item of items) {
+			summary.totalEventCount += item.totalEventCount;
+			summary.mappedEventCount += item.mappedEventCount;
+			summary.candidateEventCount += item.candidateEventCount;
+			summary.ignoredEventCount += item.ignoredEventCount;
+			summary.unknownEventCount += item.unknownEventCount;
+		}
+	} else {
+		for (const candidate of candidates) {
+			const count = candidate.count ?? 0;
+			summary.totalEventCount += count;
+			if (candidate.action === "candidate") {
+				summary.candidateEventCount += count;
+			} else if (candidate.action === "ignore") {
+				summary.ignoredEventCount += count;
+			} else if (
+				candidate.action === "unknown" ||
+				candidate.automaticPiece === "unknown"
+			) {
+				summary.unknownEventCount += count;
+			} else {
+				summary.mappedEventCount += count;
+			}
+		}
 	}
 	for (const candidate of candidates) {
 		if (candidate.action === "candidate") sourceKeys.candidate.add(candidate.key);

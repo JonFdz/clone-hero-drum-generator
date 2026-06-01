@@ -23,6 +23,9 @@ export type MappingCandidate = {
 	sourceValue: string;
 	label?: string;
 	noteName?: string;
+	inputMidiNumbers?: number[];
+	outputMidiNumber?: number;
+	resolvedVia?: string;
 	action?: "map" | "candidate" | "ignore" | "unknown";
 	automaticPiece?: DrumHit["piece"];
 	suggestedPiece?: Exclude<DrumPiece, "unknown">;
@@ -37,6 +40,12 @@ export type MappingCandidate = {
 export function buildMappingOverrideKeyFromHit(hit: DrumHit): string | undefined {
 	if ("midiNote" in hit.source) {
 		return buildMidiOverrideKey(hit.source.midiNote);
+	}
+	const gpifSource = hit.source as typeof hit.source & {
+		articulationKey?: string;
+	};
+	if (gpifSource.articulationKey?.trim()) {
+		return gpifSource.articulationKey;
 	}
 	const raw = hit.source.rawArticulation?.trim();
 	if (raw) {
@@ -106,12 +115,22 @@ export function buildMappingCandidates(hits: DrumHit[]): MappingCandidate[] {
 			});
 			continue;
 		}
-		const raw = hit.source.rawArticulation?.trim();
+		const gpifSource = hit.source as typeof hit.source & {
+			noteName?: string;
+			inputMidiNumbers?: number[];
+			outputMidiNumber?: number;
+			resolvedVia?: string;
+		};
+		const raw = gpifSource.rawArticulation?.trim();
 		byKey.set(key, {
 			key,
 			sourceKind: "gpif",
 			sourceValue: raw ?? key.replace("gpif:", ""),
 			label: raw,
+			noteName: gpifSource.noteName,
+			inputMidiNumbers: gpifSource.inputMidiNumbers,
+			outputMidiNumber: gpifSource.outputMidiNumber,
+			resolvedVia: gpifSource.resolvedVia,
 			action: hit.piece === "unknown" ? "unknown" : "map",
 			automaticPiece: hit.piece,
 			count: 1,
@@ -135,6 +154,13 @@ export function hasPieceOverrideForGpifArticulation(
 ): boolean {
 	const key = buildGpifOverrideKey(rawArticulation);
 	return overrides?.[key]?.target.kind === "piece";
+}
+
+export function hasOverrideForGpifArticulationKey(
+	overrides: ProjectMappingOverrides | undefined,
+	key: string | undefined,
+): boolean {
+	return Boolean(key && overrides?.[key]);
 }
 
 export function validateMappingOverrides(

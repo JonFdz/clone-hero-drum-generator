@@ -84,7 +84,7 @@ const syntheticGpif = `<?xml version="1.0" encoding="UTF-8"?>
             <Beat><Duration>Quarter</Duration><Notes><Note><Name>Kick</Name></Note></Notes></Beat>
             <Beat><Duration>Quarter</Duration><Notes><Note><Name>Closed Hi-Hat</Name><Velocity>88</Velocity></Note></Notes></Beat>
             <Beat><Duration>Quarter</Duration><Notes><Note><Name>Open Hi-Hat</Name><Dynamic>ff</Dynamic></Note></Notes></Beat>
-            <Beat><Duration>Quarter</Duration><Notes><Note><Name>Mystery Splash</Name></Note></Notes></Beat>
+            <Beat><Duration>Quarter</Duration><Notes><Note><Name>Mystery Effect</Name></Note></Notes></Beat>
           </Beats>
         </Voice>
       </Voices>
@@ -208,8 +208,99 @@ describe("normalizeGpDrumsXml", () => {
 		const result = normalizeGpDrumsXml(syntheticGpif, { trackIndex: 1 });
 
 		expect(result.unknownArticulations).toEqual([
-			expect.objectContaining({ rawArticulation: "Mystery Splash", count: 1 }),
+			expect.objectContaining({ rawArticulation: "Mystery Effect", count: 1 }),
 		]);
+	});
+
+	it("uses GPIF OutputMidiNumber before internal input MIDI numbers", () => {
+		const xml = `<GPIF><Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks><Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Name>Hi-Hat (half)</Name><InputMidiNumbers>92</InputMidiNumbers><OutputMidiNumber>46</OutputMidiNumber></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars></GPIF>`;
+		const result = normalizeGpDrumsXml(xml, { trackIndex: 0 });
+
+		expect(result.hits).toContainEqual(
+			expect.objectContaining({
+				piece: "hihat_open",
+				source: expect.objectContaining({
+					inputMidiNumbers: [92],
+					outputMidiNumber: 46,
+					resolvedVia: "output-midi-number",
+				}),
+			}),
+		);
+		expect(result.unknownArticulations).toEqual([]);
+		expect(result.mappingSources[0]).toMatchObject({
+			action: "map",
+			automaticPiece: "hihat_open",
+			resolvedVia: "output-midi-number",
+		});
+	});
+
+	it("resolves notes that reference external GPIF articulation definitions", () => {
+		const xml = `<GPIF>
+			<InstrumentSet>
+				<Elements>
+					<Element id="hh-half">
+						<Name>Hi-Hat (half)</Name>
+						<InputMidiNumbers>92</InputMidiNumbers>
+						<OutputMidiNumber>46</OutputMidiNumber>
+					</Element>
+				</Elements>
+			</InstrumentSet>
+			<Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks>
+			<Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Element ref="hh-half" /></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars>
+		</GPIF>`;
+		const result = normalizeGpDrumsXml(xml, { trackIndex: 0 });
+
+		expect(result.hits).toContainEqual(
+			expect.objectContaining({
+				piece: "hihat_open",
+				source: expect.objectContaining({
+					noteName: "Hi-Hat (half)",
+					inputMidiNumbers: [92],
+					outputMidiNumber: 46,
+					resolvedVia: "output-midi-number",
+				}),
+			}),
+		);
+		expect(result.unknownArticulations).toEqual([]);
+	});
+
+	it("keeps candidate articulations out of hits unless overridden", () => {
+		const xml = `<GPIF><Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks><Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Name>Pedal Hi-Hat</Name><OutputMidiNumber>44</OutputMidiNumber></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars></GPIF>`;
+		const initial = normalizeGpDrumsXml(xml, { trackIndex: 0 });
+		const key = initial.mappingSources[0].key;
+
+		expect(initial.hits).toEqual([]);
+		expect(initial.mappingSources[0]).toMatchObject({
+			action: "candidate",
+			suggestedPiece: "hihat_closed",
+		});
+
+		const overridden = normalizeGpDrumsXml(xml, {
+			trackIndex: 0,
+			mappingOverrides: {
+				[key]: { target: { kind: "piece", piece: "hihat_closed" } },
+			},
+		});
+
+		expect(overridden.hits).toContainEqual(
+			expect.objectContaining({ piece: "hihat_closed" }),
+		);
+	});
+
+	it("honors ignore overrides for GPIF articulations", () => {
+		const xml = `<GPIF><Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks><Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Name>Kick</Name></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars></GPIF>`;
+		const initial = normalizeGpDrumsXml(xml, { trackIndex: 0 });
+		const key = initial.mappingSources[0].key;
+		const result = normalizeGpDrumsXml(xml, {
+			trackIndex: 0,
+			mappingOverrides: { [key]: { target: { kind: "ignore" } } },
+		});
+
+		expect(result.hits).toEqual([]);
+		expect(result.mappingSources[0]).toMatchObject({
+			action: "ignore",
+			resolvedVia: "override",
+		});
 	});
 
 	it("uses stable default velocity and documented dynamic mapping", () => {
