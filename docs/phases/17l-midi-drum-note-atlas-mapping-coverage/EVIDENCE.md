@@ -4,11 +4,11 @@
 
 | Command | Result | Notes |
 |---|---:|---|
-| `pnpm test` | Pass | 57 files, 463 tests |
+| `pnpm test` | Pass | 57 files, 469 tests |
 | `pnpm --filter @chdg/mappings test` | Pass | 3 files, 19 tests |
-| `pnpm --filter @chdg/midi test` | Pass | 4 files, 49 tests |
+| `pnpm --filter @chdg/midi test` | Pass | 4 files, 50 tests |
 | `pnpm --filter @chdg/project test` | Pass | 9 files, 74 tests |
-| `pnpm exec vitest run apps/desktop/src/app/services/source-review-model.test.ts` | Pass | 1 file, 11 tests |
+| `pnpm exec vitest run apps/desktop/src/app/services/source-review-model.test.ts` | Pass | 1 file, 16 tests |
 | `pnpm --filter @chdg/mappings typecheck` | Pass | `tsc -p tsconfig.json --noEmit` |
 | `pnpm --filter @chdg/midi typecheck` | Pass | `tsc -p tsconfig.json --noEmit` |
 | `pnpm --filter @chdg/project typecheck` | Pass | `tsc -p tsconfig.json --noEmit` |
@@ -17,7 +17,7 @@
 
 ## Manual validation
 
-Not fully executed in this agent environment. Covered with focused automated fixtures for atlas resolution, MIDI normalization behavior, project coverage persistence/model, and Source Review cache/UI model.
+Not fully executed in this agent environment. Covered with focused automated fixtures for atlas resolution, MIDI normalization behavior, project coverage persistence/model, Source Review cache/UI model, and follow-up mapping attention semantics.
 
 ### MIDI with safe GM notes
 
@@ -53,3 +53,11 @@ Not fully executed in this agent environment. Covered with focused automated fix
 
 - Expected: atlas version participates in Source Review normalization cache/fingerprint.
 - Result: Pass via `source-review-model.test.ts`.
+
+
+## Follow-up semantic validation
+
+- Candidate and ignored-known mapping rows are no longer counted as unknowns.
+- Source Review attention distinguishes unresolved unknowns, unresolved candidates, ignored known percussion, and ready states.
+- Piece/ignore overrides resolve candidate and unknown pending attention.
+- Candidate and ignored percussion remain excluded from strong drum-track selection evidence in Phase 17L.

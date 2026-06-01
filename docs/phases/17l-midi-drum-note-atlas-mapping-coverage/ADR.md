@@ -53,3 +53,8 @@ Rejected because users need to know what CHDG saw and skipped.
 ### Implement full GPIF articulation mapping now
 
 Rejected for scope. The model should be future-ready, but the full GPIF articulation phase is deferred.
+
+
+## Follow-up decision: Candidate track-selection evidence
+
+Candidate and ignored percussion do not create hits and do not count as strong drum-track selection evidence in Phase 17L. Safe auto-mapped notes remain the primary selection signal. A future phase may add weak candidate-based track-selection evidence if needed, but this PR keeps the conservative atlas behavior consistent across normalization and track selection.

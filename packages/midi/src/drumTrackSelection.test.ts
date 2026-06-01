@@ -248,7 +248,19 @@ describe("classifyDrumTracks", () => {
     expect(strong).toEqual([1]);
     expect(weak).toEqual([2]);
   });
+
+	it("does not use candidates or ignored percussion as strong track-selection evidence in Phase 17L", () => {
+		const candidateOnly = fakeTrack({
+			name: "Percussion",
+			channel: 9,
+			notes: [...makeNotes(44, 12), ...makeNotes(54, 12)],
+		});
+
+		expect(scoreDrumTrack(candidateOnly, testMap)).toBeLessThan(45);
+		expect(classifyDrumTracks([candidateOnly], testMap).strong).toEqual([]);
+	});
 });
+
 
 describe("selectDrumTrack", () => {
   it("selects explicit index", () => {

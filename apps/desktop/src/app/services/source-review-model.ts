@@ -9,6 +9,27 @@ import type {
 import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
 import { chooseDefaultTracks } from "./desktop-generate-model";
 
+export type SourceReviewMappingRow = {
+	key: string;
+	action?: "map" | "candidate" | "ignore" | "unknown";
+	automaticPiece?: string;
+	suggestedPiece?: string;
+};
+
+export type SourceReviewMappingCounts = {
+	unknown: number;
+	candidates: number;
+	ignoredKnown: number;
+	unresolvedUnknown: number;
+	unresolvedCandidates: number;
+};
+
+export type SourceReviewMappingAttention =
+	| "manual-mapping-needed"
+	| "review-recommended"
+	| "known-percussion-ignored"
+	| "ready";
+
 export type SourceReviewCacheValidation =
 	| {
 			valid: true;
@@ -135,19 +156,91 @@ export function createAnalysisCache(input: {
 	};
 }
 
+export function hasPieceOverride(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): boolean {
+	return overrides[row.key]?.target.kind === "piece";
+}
+
+export function hasIgnoreOverride(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): boolean {
+	return overrides[row.key]?.target.kind === "ignore";
+}
+
+export function isUnresolvedUnknown(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): boolean {
+	if (hasPieceOverride(row, overrides) || hasIgnoreOverride(row, overrides)) {
+		return false;
+	}
+	if (row.action) return row.action === "unknown";
+	return row.automaticPiece === "unknown" || !row.automaticPiece;
+}
+
+export function isUnresolvedCandidate(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): boolean {
+	if (hasPieceOverride(row, overrides) || hasIgnoreOverride(row, overrides)) {
+		return false;
+	}
+	return row.action === "candidate";
+}
+
+export function mappingReviewCounts(input: {
+	rows: SourceReviewMappingRow[];
+	overrides: ProjectMappingOverrides;
+}): SourceReviewMappingCounts {
+	return input.rows.reduce<SourceReviewMappingCounts>(
+		(counts, row) => {
+			if (row.action === "unknown" || (!row.action && (row.automaticPiece === "unknown" || !row.automaticPiece))) {
+				counts.unknown += 1;
+			}
+			if (row.action === "candidate") counts.candidates += 1;
+			if (row.action === "ignore") counts.ignoredKnown += 1;
+			if (isUnresolvedUnknown(row, input.overrides)) counts.unresolvedUnknown += 1;
+			if (isUnresolvedCandidate(row, input.overrides)) counts.unresolvedCandidates += 1;
+			return counts;
+		},
+		{
+			unknown: 0,
+			candidates: 0,
+			ignoredKnown: 0,
+			unresolvedUnknown: 0,
+			unresolvedCandidates: 0,
+		},
+	);
+}
+
+export function mappingAttentionState(input: {
+	rows: SourceReviewMappingRow[];
+	overrides: ProjectMappingOverrides;
+}): SourceReviewMappingAttention {
+	const counts = mappingReviewCounts(input);
+	if (counts.unresolvedUnknown > 0) return "manual-mapping-needed";
+	if (counts.unresolvedCandidates > 0) return "review-recommended";
+	if (counts.ignoredKnown > 0) return "known-percussion-ignored";
+	return "ready";
+}
+
 export function shouldExpandMappingReview(input: {
 	normalizationPreview?: NormalizationPreview;
 	overrides: ProjectMappingOverrides;
 	manualReviewRecommended?: boolean;
 	profileError?: boolean;
 }): boolean {
+	const rows = input.normalizationPreview?.mappingCandidates ?? [];
+	const counts = mappingReviewCounts({ rows, overrides: input.overrides });
 	return Boolean(
 		input.manualReviewRecommended ||
 			input.profileError ||
 			Object.keys(input.overrides).length > 0 ||
-			(input.normalizationPreview?.mappingCandidates ?? []).some(
-				(candidate) => candidate.automaticPiece === "unknown",
-			),
+			counts.unresolvedUnknown > 0 ||
+			counts.unresolvedCandidates > 0,
 	);
 }
 
