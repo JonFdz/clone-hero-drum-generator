@@ -1,3 +1,4 @@
+import atlas from "@chdg/mappings/data/general-midi-drums.json" with { type: "json" };
 import { describe, expect, it } from "vitest";
 import type { MidiTrack } from "./readMidi.js";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
@@ -7,12 +8,7 @@ import {
   selectDrumTrack,
 } from "./drumTrackSelection.js";
 
-const testMap: MidiDrumPieceMap = {
-  "36": "kick",
-  "38": "snare",
-  "42": "hihat_closed",
-  "49": "crash",
-};
+const testMap = atlas as MidiDrumPieceMap;
 
 function fakeTrack(overrides: Partial<MidiTrack> = {}): MidiTrack {
   return {

@@ -151,29 +151,51 @@ async function normalizeGenerateSource(
 			(requestedTracks ?? [undefined]).map((trackIndex) =>
 				normalizeDrumsFromFile(input.sourcePath, generalMidiDrums, {
 					trackIndex,
+					mappingOverrides: input.mappingOverrides,
 				}),
 			),
 		);
 		const selectedTracks = results.map((result) => result.track.index);
-		const sourceIssues = results.flatMap((result) =>
-			result.unknownNotes.filter(
+		const sourceIssues = results.flatMap((result) => {
+			const issues: ProjectIssue[] = [];
+			const candidateNotes = (result.candidateNotes ?? []).filter(
 				(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
-			).length > 0
-				? [
-						issue(
-							"warning",
-							"UNKNOWN_MIDI_NOTES",
-							"Unknown MIDI notes without mapping overrides were skipped during generation.",
-							{
-								trackIndex: result.track.index,
-								notes: result.unknownNotes.filter(
-									(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
-								),
-							},
-						),
-					]
-				: [],
-		);
+			);
+			if (candidateNotes.length > 0) {
+				issues.push(
+					issue(
+						"info",
+						"MIDI_MAPPING_CANDIDATES",
+						"MIDI mapping candidates were skipped by default during generation.",
+						{ trackIndex: result.track.index, notes: candidateNotes },
+					),
+				);
+			}
+			if ((result.ignoredNotes ?? []).length > 0) {
+				issues.push(
+					issue(
+						"info",
+						"MIDI_KNOWN_PERCUSSION_IGNORED",
+						"Known auxiliary MIDI percussion was ignored without charting.",
+						{ trackIndex: result.track.index, notes: result.ignoredNotes ?? [] },
+					),
+				);
+			}
+			const unknownNotes = result.unknownNotes.filter(
+				(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
+			);
+			if (unknownNotes.length > 0) {
+				issues.push(
+					issue(
+						"warning",
+						"UNKNOWN_MIDI_NOTES",
+						"Unknown MIDI notes without mapping overrides were skipped during generation.",
+						{ trackIndex: result.track.index, notes: unknownNotes },
+					),
+				);
+			}
+			return issues;
+		});
 		const merged = mergeDrumHits(
 			applyProjectMappingOverrides(
 				results.flatMap((result) => result.hits),

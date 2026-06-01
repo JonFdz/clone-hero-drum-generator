@@ -1,14 +1,10 @@
+import atlas from "@chdg/mappings/data/general-midi-drums.json" with { type: "json" };
 import { describe, expect, it } from "vitest";
 import type { MidiNote } from "./readMidi.js";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
 import { computeNoteStats } from "./inspectMidi.js";
 
-const testMap: MidiDrumPieceMap = {
-  "36": "kick",
-  "38": "snare",
-  "42": "hihat_closed",
-  "49": "crash",
-};
+const testMap = atlas as MidiDrumPieceMap;
 
 function makeNote(midi: number, velocity: number): MidiNote {
   return { midi, velocity, ticks: 0, durationTicks: 0 };

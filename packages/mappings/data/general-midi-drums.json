@@ -1,22 +1,588 @@
-{
-  "35": "kick",
-  "36": "kick",
-  "37": "snare",
-  "38": "snare",
-  "40": "snare",
-  "41": "tom_floor",
-  "43": "tom_floor",
-  "45": "tom_mid",
-  "47": "tom_mid",
-  "48": "tom_high",
-  "50": "tom_high",
-  "42": "hihat_closed",
-  "44": "hihat_closed",
-  "46": "hihat_open",
-  "49": "crash",
-  "55": "crash",
-  "57": "crash",
-  "51": "ride",
-  "53": "ride",
-  "59": "ride"
-}
+[
+  {
+    "note": 27,
+    "name": "High Q",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gs",
+    "reason": "Digital/effect percussion, not a drum lane."
+  },
+  {
+    "note": 28,
+    "name": "Slap",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "digital",
+    "source": "gs",
+    "reason": "Could be snare/rim-like in some sources.",
+    "piece": "snare"
+  },
+  {
+    "note": 29,
+    "name": "Scratch Push",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gs",
+    "reason": "Scratch/effect."
+  },
+  {
+    "note": 30,
+    "name": "Scratch Pull",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gs",
+    "reason": "Scratch/effect."
+  },
+  {
+    "note": 31,
+    "name": "Sticks",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "snare",
+    "source": "gs",
+    "reason": "Stick clicks may be rim/snare-like but should not auto-map.",
+    "piece": "snare"
+  },
+  {
+    "note": 32,
+    "name": "Square Click",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "digital",
+    "source": "gs",
+    "reason": "Click can be rim-like or metronomic; review needed.",
+    "piece": "snare"
+  },
+  {
+    "note": 33,
+    "name": "Metronome Click",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "metronome",
+    "source": "gs",
+    "reason": "Metronome should not be charted."
+  },
+  {
+    "note": 34,
+    "name": "Metronome Bell",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "metronome",
+    "source": "gs",
+    "reason": "Metronome should not be charted."
+  },
+  {
+    "note": 35,
+    "name": "Acoustic Bass Drum",
+    "action": "map",
+    "confidence": "high",
+    "family": "kick",
+    "source": "gm",
+    "reason": "Standard kick drum.",
+    "piece": "kick"
+  },
+  {
+    "note": 36,
+    "name": "Bass Drum 1",
+    "action": "map",
+    "confidence": "high",
+    "family": "kick",
+    "source": "gm",
+    "reason": "Standard kick drum.",
+    "piece": "kick"
+  },
+  {
+    "note": 37,
+    "name": "Side Stick",
+    "action": "map",
+    "confidence": "high",
+    "family": "snare",
+    "source": "gm",
+    "reason": "Rim/side-stick belongs to snare lane in CHDG.",
+    "piece": "snare"
+  },
+  {
+    "note": 38,
+    "name": "Acoustic Snare",
+    "action": "map",
+    "confidence": "high",
+    "family": "snare",
+    "source": "gm",
+    "reason": "Standard snare.",
+    "piece": "snare"
+  },
+  {
+    "note": 39,
+    "name": "Hand Clap",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "snare",
+    "source": "gm",
+    "reason": "Often layered with snare, but may be auxiliary percussion.",
+    "piece": "snare"
+  },
+  {
+    "note": 40,
+    "name": "Electric Snare",
+    "action": "map",
+    "confidence": "high",
+    "family": "snare",
+    "source": "gm",
+    "reason": "Standard snare/rimshot-like drum sound.",
+    "piece": "snare"
+  },
+  {
+    "note": 41,
+    "name": "Low Floor Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard floor tom.",
+    "piece": "tom_floor"
+  },
+  {
+    "note": 42,
+    "name": "Closed Hi-Hat",
+    "action": "map",
+    "confidence": "high",
+    "family": "hihat",
+    "source": "gm",
+    "reason": "Standard closed hi-hat hand note.",
+    "piece": "hihat_closed"
+  },
+  {
+    "note": 43,
+    "name": "High Floor Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard floor tom.",
+    "piece": "tom_floor"
+  },
+  {
+    "note": 44,
+    "name": "Pedal Hi-Hat",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "hihat",
+    "source": "gm",
+    "reason": "Foot hi-hat/chick may not represent a playable hand note and can over-densify charts.",
+    "piece": "hihat_closed"
+  },
+  {
+    "note": 45,
+    "name": "Low Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard low/mid tom.",
+    "piece": "tom_mid"
+  },
+  {
+    "note": 46,
+    "name": "Open Hi-Hat",
+    "action": "map",
+    "confidence": "high",
+    "family": "hihat",
+    "source": "gm",
+    "reason": "Standard open hi-hat hand note.",
+    "piece": "hihat_open"
+  },
+  {
+    "note": 47,
+    "name": "Low-Mid Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard mid tom.",
+    "piece": "tom_mid"
+  },
+  {
+    "note": 48,
+    "name": "Hi-Mid Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard high/mid tom.",
+    "piece": "tom_high"
+  },
+  {
+    "note": 49,
+    "name": "Crash Cymbal 1",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Standard crash.",
+    "piece": "crash"
+  },
+  {
+    "note": 50,
+    "name": "High Tom",
+    "action": "map",
+    "confidence": "high",
+    "family": "tom",
+    "source": "gm",
+    "reason": "Standard high tom.",
+    "piece": "tom_high"
+  },
+  {
+    "note": 51,
+    "name": "Ride Cymbal 1",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Standard ride.",
+    "piece": "ride"
+  },
+  {
+    "note": 52,
+    "name": "Chinese Cymbal",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "No separate china lane; crash is closest CH drum lane.",
+    "piece": "crash"
+  },
+  {
+    "note": 53,
+    "name": "Ride Bell",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Ride bell belongs to ride lane.",
+    "piece": "ride"
+  },
+  {
+    "note": 54,
+    "name": "Tambourine",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion, not a default CH drum lane."
+  },
+  {
+    "note": 55,
+    "name": "Splash Cymbal",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Splash reduces to crash lane.",
+    "piece": "crash"
+  },
+  {
+    "note": 56,
+    "name": "Cowbell",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "No natural lane; may be important in some songs."
+  },
+  {
+    "note": 57,
+    "name": "Crash Cymbal 2",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Standard crash.",
+    "piece": "crash"
+  },
+  {
+    "note": 58,
+    "name": "Vibraslap",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion / effect."
+  },
+  {
+    "note": 59,
+    "name": "Ride Cymbal 2",
+    "action": "map",
+    "confidence": "high",
+    "family": "cymbal",
+    "source": "gm",
+    "reason": "Standard ride.",
+    "piece": "ride"
+  },
+  {
+    "note": 60,
+    "name": "High Bongo",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be reduced to high tom if musically important.",
+    "piece": "tom_high"
+  },
+  {
+    "note": 61,
+    "name": "Low Bongo",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be reduced to mid tom if musically important.",
+    "piece": "tom_mid"
+  },
+  {
+    "note": 62,
+    "name": "Mute High Conga",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be reduced to high tom if musically important.",
+    "piece": "tom_high"
+  },
+  {
+    "note": 63,
+    "name": "Open High Conga",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be reduced to mid tom if musically important.",
+    "piece": "tom_mid"
+  },
+  {
+    "note": 64,
+    "name": "Low Conga",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be reduced to floor tom if musically important.",
+    "piece": "tom_floor"
+  },
+  {
+    "note": 65,
+    "name": "High Timbale",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Can behave like a tom in some arrangements.",
+    "piece": "tom_high"
+  },
+  {
+    "note": 66,
+    "name": "Low Timbale",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Can behave like a tom in some arrangements.",
+    "piece": "tom_mid"
+  },
+  {
+    "note": 67,
+    "name": "High Agogo",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion, no natural CH lane."
+  },
+  {
+    "note": 68,
+    "name": "Low Agogo",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion, no natural CH lane."
+  },
+  {
+    "note": 69,
+    "name": "Cabasa",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 70,
+    "name": "Maracas",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 71,
+    "name": "Short Whistle",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gm",
+    "reason": "Whistle/effect, not drum lane."
+  },
+  {
+    "note": 72,
+    "name": "Long Whistle",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gm",
+    "reason": "Whistle/effect, not drum lane."
+  },
+  {
+    "note": 73,
+    "name": "Short Guiro",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 74,
+    "name": "Long Guiro",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 75,
+    "name": "Claves",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be rim/click-like, but not safe to auto-map.",
+    "piece": "snare"
+  },
+  {
+    "note": 76,
+    "name": "High Wood Block",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be rim/click-like, but not safe to auto-map.",
+    "piece": "snare"
+  },
+  {
+    "note": 77,
+    "name": "Low Wood Block",
+    "action": "candidate",
+    "confidence": "low",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Could be rim/click-like, but not safe to auto-map.",
+    "piece": "snare"
+  },
+  {
+    "note": 78,
+    "name": "Mute Cuica",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion/effect."
+  },
+  {
+    "note": 79,
+    "name": "Open Cuica",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion/effect."
+  },
+  {
+    "note": 80,
+    "name": "Mute Triangle",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 81,
+    "name": "Open Triangle",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 82,
+    "name": "Shaker",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm2",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 83,
+    "name": "Jingle Bell",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm2",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 84,
+    "name": "Bell Tree",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "fx",
+    "source": "gm2",
+    "reason": "Effect/percussion sweep."
+  },
+  {
+    "note": 85,
+    "name": "Castanets",
+    "action": "ignore",
+    "confidence": "high",
+    "family": "aux-percussion",
+    "source": "gm2",
+    "reason": "Auxiliary percussion."
+  },
+  {
+    "note": 86,
+    "name": "Mute Surdo",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "aux-percussion",
+    "source": "gm2",
+    "reason": "Large drum can reduce to floor tom if musically important.",
+    "piece": "tom_floor"
+  },
+  {
+    "note": 87,
+    "name": "Open Surdo",
+    "action": "candidate",
+    "confidence": "medium",
+    "family": "aux-percussion",
+    "source": "gm2",
+    "reason": "Large drum can reduce to floor tom if musically important.",
+    "piece": "tom_floor"
+  }
+]

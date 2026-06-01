@@ -63,6 +63,19 @@ export type MultiTrackMergeSummary = {
 	issues: ProjectIssue[];
 };
 
+export type MappingCoverageSummary = {
+	atlasVersion: string;
+	totalEventCount: number;
+	mappedEventCount: number;
+	candidateEventCount: number;
+	ignoredEventCount: number;
+	unknownEventCount: number;
+	mappedSourceCount: number;
+	candidateSourceCount: number;
+	ignoredSourceCount: number;
+	unknownSourceCount: number;
+};
+
 export type NormalizationPreview = {
 	sourceKind: SourceKind;
 	sourcePath: string;
@@ -73,6 +86,7 @@ export type NormalizationPreview = {
 	firstHits: NormalizationHitPreview[];
 	mergeSummary?: MultiTrackMergeSummary;
 	mappingCandidates: MappingCandidate[];
+	mappingCoverage?: MappingCoverageSummary;
 	issues: ProjectIssue[];
 };
 

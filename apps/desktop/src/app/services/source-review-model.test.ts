@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SourceInspectionResult } from "@chdg/project/browser";
+import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
 import {
 	createAnalysisCache,
 	hasStaleGpifTrackNoteCounts,
@@ -62,6 +63,7 @@ describe("source-review-model", () => {
 			"midi:40": { sourceKind: "midi", key: "midi:40", target: { kind: "ignore" } },
 		});
 		expect(left).toBe(right);
+		expect(left).toContain(MIDI_DRUM_NOTE_ATLAS_VERSION);
 	});
 
 	it("validates matching complete cache", () => {
@@ -75,6 +77,33 @@ describe("source-review-model", () => {
 		});
 		expect(cache.schemaVersion).toBe(2);
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] }).valid).toBe(true);
+	});
+
+
+	it("invalidates cached normalization when atlas version changes", () => {
+		const sourceFingerprint = { path: "/tmp/demo.mid", sizeBytes: 1, mtimeMs: 2 };
+		const cache = createAnalysisCache({
+			sourceFingerprint,
+			mappingFingerprint: stableMappingFingerprint({}),
+			selectedTracks: [3],
+			inspection,
+			normalizationPreview: {
+				...normalizationPreview,
+				mappingCoverage: {
+					atlasVersion: "0.0.9",
+					totalEventCount: 1,
+					mappedEventCount: 1,
+					candidateEventCount: 0,
+					ignoredEventCount: 0,
+					unknownEventCount: 0,
+					mappedSourceCount: 1,
+					candidateSourceCount: 0,
+					ignoredSourceCount: 0,
+					unknownSourceCount: 0,
+				},
+			},
+		});
+		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: stableMappingFingerprint({}), selectedTracks: [3] })).toEqual({ valid: false, reason: "mapping" });
 	});
 
 	it("invalidates stale GPIF v1 caches when selected track note counts are missing", () => {

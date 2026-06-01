@@ -6,6 +6,7 @@ import type {
 	SourceInspectionResult,
 	TrackCandidate,
 } from "@chdg/project/browser";
+import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
 import { chooseDefaultTracks } from "./desktop-generate-model";
 
 export type SourceReviewCacheValidation =
@@ -43,7 +44,10 @@ export function selectedTracksKey(selectedTracks: number[]): string {
 export function stableMappingFingerprint(
 	overrides: ProjectMappingOverrides | undefined,
 ): string {
-	return stableStringify(overrides ?? {});
+	return stableStringify({
+		mappingAtlasVersion: MIDI_DRUM_NOTE_ATLAS_VERSION,
+		overrides: overrides ?? {},
+	});
 }
 
 export function validateSourceReviewCache(input: {
@@ -60,6 +64,11 @@ export function validateSourceReviewCache(input: {
 	}
 	if (hasStaleGpifTrackNoteCounts(cache, selectedTracks)) {
 		return { valid: false, reason: "inspection" };
+	}
+	if (cache.normalizationPreview?.mappingCoverage?.atlasVersion !== undefined &&
+		cache.normalizationPreview.mappingCoverage.atlasVersion !== MIDI_DRUM_NOTE_ATLAS_VERSION
+	) {
+		return { valid: false, reason: "mapping" };
 	}
 	if (cache.mappingFingerprint !== mappingFingerprint) {
 		return cache.inspection

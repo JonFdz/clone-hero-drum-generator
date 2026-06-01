@@ -29,3 +29,5 @@ export type {
 	ValidationSeverity,
 	ValidationSummary,
 } from "./validation.js";
+
+export { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/mappings";

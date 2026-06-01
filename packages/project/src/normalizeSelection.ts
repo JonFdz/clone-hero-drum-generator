@@ -5,6 +5,7 @@ import generalMidiDrumsUntyped from "@chdg/mappings/data/general-midi-drums.json
 };
 import type { DrumHit } from "@chdg/core";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
+import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/mappings";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
 import {
 	applyProjectMappingOverrides,
@@ -32,40 +33,30 @@ export async function normalizeSelection(
 				(requestedTracks ?? [undefined]).map((trackIndex) =>
 					normalizeDrumsFromFile(input.sourcePath, generalMidiDrums, {
 						trackIndex,
+						mappingOverrides: input.mappingOverrides,
 					}),
 				),
 			);
 			const selectedTracks = results.map((result) => result.track.index);
-			const sourceIssues = results.flatMap((result) =>
-				result.unknownNotes.filter(
-					(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
-				).length > 0
-					? [
-							issue(
-								"warning",
-								"UNKNOWN_MIDI_NOTES",
-								"Unknown MIDI notes without mapping overrides were found during normalization.",
-								{
-									trackIndex: result.track.index,
-									notes: result.unknownNotes.filter(
-										(note) => !hasPieceOverrideForMidiNote(input.mappingOverrides, note),
-									),
-								},
-							),
-						]
-					: [],
-			);
+			const sourceIssues = results.flatMap((result) => buildMidiMappingIssues(result, input.mappingOverrides));
 			const rawHits = results.flatMap((result) => result.hits);
-			const mappingCandidates = buildMappingCandidates(rawHits);
+			const mappingCandidates = mergeMappingCandidates(
+				results.flatMap((result) => result.mappingSources ?? []),
+				buildMappingCandidates(rawHits),
+			);
+			const mappingCoverage = combineMappingCoverage(
+				results
+					.map((result) => result.mappingCoverage)
+					.filter((item): item is NonNullable<typeof item> => Boolean(item)),
+				mappingCandidates,
+			);
 			return toPreview({
 				sourceKind,
 				sourcePath: input.sourcePath,
 				selectedTracks,
-				hits: applyProjectMappingOverrides(
-					rawHits,
-					input.mappingOverrides,
-				),
+				hits: applyProjectMappingOverrides(rawHits, input.mappingOverrides),
 				mappingCandidates,
+				mappingCoverage,
 				sourceIssues,
 				includeMergeSummary: selectedTracks.length > 1,
 			});
@@ -163,6 +154,7 @@ function toPreview(input: {
 	selectedTracks: number[];
 	hits: DrumHit[];
 	mappingCandidates: NormalizationPreview["mappingCandidates"];
+	mappingCoverage?: NormalizationPreview["mappingCoverage"];
 	sourceIssues: ProjectIssue[];
 	includeMergeSummary: boolean;
 }): NormalizationPreview {
@@ -180,6 +172,7 @@ function toPreview(input: {
 			? { ...merged.summary, issues: merged.summary.issues }
 			: undefined,
 		mappingCandidates: input.mappingCandidates,
+		mappingCoverage: input.mappingCoverage,
 		issues,
 	};
 }
@@ -199,4 +192,110 @@ function toHitPreview(hit: DrumHit): NormalizationPreview["firstHits"][number] {
 		velocity: hit.velocity,
 		source: hit.source,
 	};
+}
+
+
+function buildMidiMappingIssues(
+	result: Awaited<ReturnType<typeof normalizeDrumsFromFile>>,
+	overrides: Parameters<typeof hasPieceOverrideForMidiNote>[0],
+): ProjectIssue[] {
+	const issues: ProjectIssue[] = [];
+	const candidateNotes = (result.candidateNotes ?? []).filter(
+		(note) => !hasPieceOverrideForMidiNote(overrides, note),
+	);
+	if (candidateNotes.length > 0) {
+		issues.push(
+			issue(
+				"info",
+				"MIDI_MAPPING_CANDIDATES",
+				"MIDI mapping candidates were skipped by default and are available for review.",
+				{ trackIndex: result.track.index, notes: candidateNotes },
+			),
+		);
+	}
+	if ((result.ignoredNotes ?? []).length > 0) {
+		issues.push(
+			issue(
+				"info",
+				"MIDI_KNOWN_PERCUSSION_IGNORED",
+				"Known auxiliary MIDI percussion was ignored without charting.",
+				{ trackIndex: result.track.index, notes: result.ignoredNotes ?? [] },
+			),
+		);
+	}
+	const unknownNotes = result.unknownNotes.filter(
+		(note) => !hasPieceOverrideForMidiNote(overrides, note),
+	);
+	if (unknownNotes.length > 0) {
+		issues.push(
+			issue(
+				"warning",
+				"UNKNOWN_MIDI_NOTES",
+				"Unknown MIDI notes without mapping overrides were skipped during normalization.",
+				{ trackIndex: result.track.index, notes: unknownNotes },
+			),
+		);
+	}
+	return issues;
+}
+
+function mergeMappingCandidates(
+	primary: NormalizationPreview["mappingCandidates"],
+	fallback: NormalizationPreview["mappingCandidates"],
+): NormalizationPreview["mappingCandidates"] {
+	const rows = new Map<string, NormalizationPreview["mappingCandidates"][number]>();
+	for (const item of fallback) rows.set(item.key, item);
+	for (const item of primary) rows.set(item.key, item);
+	return Array.from(rows.values()).sort((a, b) => a.key.localeCompare(b.key));
+}
+
+function combineMappingCoverage(
+	items: NonNullable<NormalizationPreview["mappingCoverage"]>[],
+	candidates: NormalizationPreview["mappingCandidates"],
+): NormalizationPreview["mappingCoverage"] {
+	const sourceKeys = {
+		map: new Set<string>(),
+		candidate: new Set<string>(),
+		ignore: new Set<string>(),
+		unknown: new Set<string>(),
+	};
+	const summary = {
+		atlasVersion: MIDI_DRUM_NOTE_ATLAS_VERSION,
+		totalEventCount: 0,
+		mappedEventCount: 0,
+		candidateEventCount: 0,
+		ignoredEventCount: 0,
+		unknownEventCount: 0,
+		mappedSourceCount: 0,
+		candidateSourceCount: 0,
+		ignoredSourceCount: 0,
+		unknownSourceCount: 0,
+	};
+	for (const item of items) {
+		summary.totalEventCount += item.totalEventCount;
+		summary.mappedEventCount += item.mappedEventCount;
+		summary.candidateEventCount += item.candidateEventCount;
+		summary.ignoredEventCount += item.ignoredEventCount;
+		summary.unknownEventCount += item.unknownEventCount;
+	}
+	for (const candidate of candidates) {
+		if (candidate.action === "candidate") sourceKeys.candidate.add(candidate.key);
+		else if (candidate.action === "ignore") sourceKeys.ignore.add(candidate.key);
+		else if (candidate.action === "unknown" || candidate.automaticPiece === "unknown") sourceKeys.unknown.add(candidate.key);
+		else sourceKeys.map.add(candidate.key);
+	}
+	return {
+		...summary,
+		mappedSourceCount: sourceKeys.map.size || sumSourceCounts(items, "mappedSourceCount"),
+		candidateSourceCount: sourceKeys.candidate.size || sumSourceCounts(items, "candidateSourceCount"),
+		ignoredSourceCount: sourceKeys.ignore.size || sumSourceCounts(items, "ignoredSourceCount"),
+		unknownSourceCount: sourceKeys.unknown.size || sumSourceCounts(items, "unknownSourceCount"),
+	};
+}
+
+function sumSourceCounts(
+	items: NonNullable<NormalizationPreview["mappingCoverage"]>[],
+	key: "mappedSourceCount" | "candidateSourceCount" | "ignoredSourceCount" | "unknownSourceCount",
+): number {
+	return items.reduce((sum, item) => sum + item[key], 0);
 }
