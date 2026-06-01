@@ -19,10 +19,17 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
 import { SourceReviewOrchestratorService } from "../../services/source-review-orchestrator.service";
 import { formatTrackNoteCount } from "../../services/track-note-count";
 import {
+	MAPPING_REVIEW_FILTERS,
+	buildMappingReviewRowView,
+	deriveDefaultMappingFilter,
+	filterMappingReviewRows,
 	mappingAttentionState,
 	mappingReviewCounts,
+	mappingReviewFilterCount,
 	shouldExpandMappingReview,
 	sourceSectionsLabel,
+	type MappingReviewFilter,
+	type MappingReviewRowView,
 } from "../../services/source-review-model";
 
 const PIECES = [
@@ -182,30 +189,50 @@ type DisplayIssue = ProjectIssue & {
 					</div>
 				</div>
 				@if (mappingOpen()) {
-					<div class="table-frame mapping-frame">
-						<table class="mapping-table">
-							<thead><tr><th>Source Kind</th><th>Source Value</th><th>Detected Meaning</th><th>Current Mapping</th><th>Override</th><th>Status</th></tr></thead>
-							<tbody>
-								@for (row of mappingRows(); track row.key) {
-									<tr>
-										<td><span class="source-kind-mini" [class.gpif]="row.sourceKind === 'gpif'">{{ row.sourceKind.toUpperCase() }}</span></td>
-										<td>{{ mappingSourceValue(row) }}</td>
-										<td>{{ mappingDetectedMeaning(row) }}</td>
-										<td><span class="mapping-piece-pill" [class.unmapped]="mappingCurrentMapping(row) === 'Unmapped'">{{ mappingCurrentMapping(row) }}</span></td>
-										<td>
-											<select [ngModel]="overrideLabel(row.key)" (ngModelChange)="setOverride(row, $event)">
-												<option value="">Keep Current</option>
-												<option value="ignore">Ignore</option>
-												@for (piece of pieces; track piece) {
-													<option [value]="piece">Map to {{ pieceLabel(piece) }}</option>
-												}
-											</select>
-										</td>
-										<td><span class="mapping-status" [class.override]="mappingStatusLabelForRow(row) === 'Override'" [class.ignore]="mappingStatusLabelForRow(row) === 'Ignore'" [class.unmapped]="mappingStatusLabelForRow(row) === 'Unmapped'">{{ mappingStatusLabelForRow(row) }}</span></td>
-									</tr>
+					<div class="mapping-review-panel">
+						<div class="mapping-copy-stack">
+							<p>Candidates are skipped by default. Apply a suggestion only if the sound is important for the playable drum chart.</p>
+							@if (ignoredKnownCount() > 0) { <p>Known ignored percussion is recognized but not charted by default.</p> }
+							@if (unknownCount() > 0) { <p>Unknown notes were skipped because CHDG does not know what drum lane they represent.</p> }
+						</div>
+						<div class="mapping-filter-row" aria-label="Mapping review filters">
+							@for (filter of mappingFilters; track filter.id) {
+								<button class="filter-chip" type="button" [class.active]="mappingFilter() === filter.id" (click)="setMappingFilter(filter.id)">{{ filter.label }} <span>{{ mappingFilterCount(filter.id) }}</span></button>
+							}
+						</div>
+						@if (mappingRows().length === 0) {
+							<p class="mapping-empty">No mapping sources detected for the selected track.</p>
+						} @else if (filteredMappingRows().length === 0) {
+							<p class="mapping-empty">{{ mappingEmptyFilterMessage() }}</p>
+						} @else {
+							<div class="mapping-row-list">
+								@for (row of filteredMappingRows(); track row.key) {
+									<article class="mapping-review-row" [ngClass]="row.kind">
+										<div class="mapping-row-identity">
+											<strong>{{ row.primaryLabel }}</strong>
+											<span>{{ row.metaLabel }}</span>
+										</div>
+										<div class="mapping-row-decision">
+											<p class="mapping-current">{{ row.currentMappingLabel }}</p>
+											@if (row.suggestedPieceLabel) { <p class="mapping-detail">Suggested: {{ row.suggestedPieceLabel }}</p> }
+											@if (row.confidence || row.reason) { <p class="mapping-detail subtle">@if (row.confidence) { <span>Confidence: {{ row.confidence }}</span> } @if (row.reason) { <span>{{ row.reason }}</span> }</p> }
+											@if (row.overrideLabel) { <p class="mapping-detail override-copy">{{ row.overrideLabel }}</p> }
+										</div>
+										<div class="mapping-row-control">
+											<span class="mapping-status" [ngClass]="row.badgeTone">{{ row.badgeLabel }}</span>
+											<div class="mapping-row-actions">
+												@if (row.hasOverride) { <button class="button secondary small" type="button" (click)="resetOverride(row)">Reset override</button> }
+												@if (!row.hasOverride && row.action === 'candidate' && row.suggestedPiece) { <button class="button secondary small" type="button" (click)="applySuggestion(row)">Apply suggestion</button> }
+												@if (!row.hasOverride && row.action === 'ignore') { <span class="mapping-static-action">Keep ignored</span> }
+												@if (!row.hasOverride && row.action === 'map') { <span class="mapping-static-action">Keep default</span> }
+												<label class="mapping-piece-select"><span>{{ row.action === 'map' && !row.hasOverride ? 'Override' : 'Map to' }}</span><select aria-label="Map source to piece" [ngModel]="pieceOverrideValue(row.key)" (ngModelChange)="mapRow(row, $event)"><option value="">Choose piece…</option>@for (piece of pieces; track piece) { <option [value]="piece">{{ pieceLabel(piece) }}</option> }</select></label>
+												@if (showIgnoreAction(row)) { <button class="button secondary small ignore-action" [class.quiet]="row.action === 'map' && !row.hasOverride" type="button" (click)="ignoreRow(row)">Ignore</button> }
+											</div>
+										</div>
+									</article>
 								}
-							</tbody>
-						</table>
+							</div>
+						}
 					</div>
 					<div class="mapping-details-grid">
 						<section class="mini-card overrides-summary"><h3>Active Overrides Summary</h3><div class="override-metrics"><span><strong>{{ overrideCount() }}</strong>Total Overrides</span><span><strong>{{ changedMappingCount() }}</strong>Mappings Changed</span><span><strong>{{ ignoredCount() }}</strong>Ignored Sources</span><span><strong>{{ unknownCount() }}</strong>Unknown Sources</span></div><p>Overrides are applied during generation. They do not modify the source files.</p></section>
@@ -365,17 +392,40 @@ type DisplayIssue = ProjectIssue & {
 		.review-badge.warning { color: var(--color-warning); }
 		.accordion-actions { align-items: center; display: flex; gap: .7rem; }
 		.chevron-button { background: transparent; border: 0; color: var(--color-text-soft); min-height: 2rem; min-width: 2rem; padding: .2rem; }
-		.mapping-frame { margin-top: .85rem; }
-		.mapping-table select { max-width: 15rem; min-height: 2.15rem; min-width: 11rem; padding: .35rem .65rem; width: 100%; }
-		.source-kind-mini { align-items: center; display: inline-flex; gap: .35rem; font-weight: 800; }
-		.source-kind-mini::before { color: var(--color-accent-soft); content: "♪"; font-size: 1.05rem; }
-		.source-kind-mini.gpif::before { border: 1px solid var(--color-accent-soft); border-radius: 999px; content: "GP"; font-size: .52rem; padding: .12rem .18rem; }
-		.mapping-piece-pill { background: rgba(151,83,229,.13); border: 1px solid rgba(151,83,229,.28); color: var(--color-accent-soft); }
-		.mapping-piece-pill.unmapped { color: var(--color-muted); }
+		.mapping-review-panel { display: grid; gap: .85rem; margin-top: .85rem; }
+		.mapping-copy-stack { display: grid; gap: .25rem; }
+		.mapping-copy-stack p { color: var(--color-text-soft); font-size: .84rem; margin: 0; }
+		.mapping-filter-row { display: flex; flex-wrap: wrap; gap: .45rem; }
+		.filter-chip { background: rgba(255,255,255,.035); border: 1px solid rgba(197,209,225,.1); border-radius: 999px; color: var(--color-text-soft); font-size: .78rem; min-height: 2rem; padding: .35rem .7rem; }
+		.filter-chip span { color: var(--color-muted); margin-left: .25rem; }
+		.filter-chip.active { background: rgba(151,83,229,.2); border-color: rgba(151,83,229,.38); color: var(--color-accent-soft); }
+		.mapping-empty { background: rgba(255,255,255,.025); border: 1px solid rgba(197,209,225,.08); border-radius: .58rem; color: var(--color-muted); margin: 0; padding: .8rem; }
+		.mapping-row-list { display: grid; gap: .5rem; }
+		.mapping-review-row { align-items: center; background: rgba(255,255,255,.025); border: 1px solid rgba(197,209,225,.09); border-radius: .7rem; display: grid; gap: .75rem; grid-template-columns: minmax(13rem, .95fr) minmax(15rem, 1.35fr) minmax(18rem, auto); padding: .62rem .7rem; }
+		.mapping-review-row.candidate { border-color: rgba(246,180,80,.18); }
+		.mapping-review-row.unknown { border-color: rgba(255,107,122,.26); }
+		.mapping-review-row.override { border-color: rgba(151,83,229,.34); }
+		.mapping-review-row.ignored-known { opacity: .9; }
+		.mapping-row-identity, .mapping-row-decision, .mapping-row-control { min-width: 0; }
+		.mapping-row-identity { display: grid; gap: .18rem; }
+		.mapping-row-identity strong { color: var(--color-text); font-size: .9rem; line-height: 1.2; }
+		.mapping-row-identity span { color: var(--color-muted); font-size: .74rem; line-height: 1.25; }
+		.mapping-row-decision { display: grid; gap: .16rem; }
+		.mapping-row-control { align-items: end; display: grid; gap: .42rem; justify-items: end; }
+		.mapping-current, .mapping-detail { color: var(--color-text-soft); font-size: .8rem; line-height: 1.25; margin: 0; }
+		.mapping-detail.subtle { color: var(--color-muted); display: grid; gap: .1rem; }
+		.mapping-detail.override-copy { color: var(--color-accent-soft); }
+		.mapping-row-actions { align-items: center; display: flex; flex-wrap: wrap; gap: .38rem; justify-content: end; }
+		.mapping-static-action { background: rgba(148,163,184,.1); border: 1px solid rgba(148,163,184,.14); border-radius: .4rem; color: var(--color-muted); font-size: .74rem; font-weight: 800; padding: .34rem .55rem; }
+		.mapping-piece-select { align-items: center; color: var(--color-muted); display: inline-flex; font-size: .74rem; gap: .35rem; }
+		.mapping-piece-select select { min-height: 2.05rem; min-width: 8.8rem; padding: .3rem .58rem; }
+		.ignore-action.quiet { background: transparent; border-color: rgba(148,163,184,.14); color: var(--color-muted); }
 		.mapping-status { background: rgba(148,163,184,.1); color: var(--color-text-soft); }
-		.mapping-status.override { background: rgba(101,222,119,.13); color: var(--color-success); }
-		.mapping-status.ignore { background: rgba(148,163,184,.12); color: var(--color-text-soft); }
-		.mapping-status.unmapped { background: rgba(246,180,80,.13); color: var(--color-warning); }
+		.mapping-status.success { background: rgba(101,222,119,.12); color: var(--color-success); }
+		.mapping-status.review { background: rgba(246,180,80,.14); color: var(--color-warning); }
+		.mapping-status.info { background: rgba(148,163,184,.12); color: var(--color-muted); }
+		.mapping-status.warning { background: rgba(255,107,122,.14); color: var(--color-danger); }
+		.mapping-status.accent { background: rgba(151,83,229,.16); color: var(--color-accent-soft); }
 		.mapping-details-grid { display: grid; gap: .85rem; grid-template-columns: 1fr 1fr; margin-top: .85rem; }
 		.mini-card h3 { font-size: .95rem; margin: 0 0 .75rem; }
 		.override-metrics { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -409,7 +459,7 @@ type DisplayIssue = ProjectIssue & {
 		.continue-button { min-width: 24rem; }
 		.sr-only { clip: rect(0,0,0,0); border: 0; height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; width: 1px; }
 		@media (max-width: 1420px) { :host { max-width: none; width: 100%; } .selected-source-card { grid-template-columns: 4.9rem minmax(14rem, 1fr) minmax(13rem, .65fr); } .source-card-side { grid-column: 2 / -1; grid-template-columns: 1fr auto; align-items: center; } }
-		@media (max-width: 1180px) { .summary-grid, .mapping-details-grid, .issues-panel { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: 1fr; } .piece-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); } .selected-source-card { grid-template-columns: 4.9rem minmax(0, 1fr); } .source-meta, .source-card-side { grid-column: 2; grid-template-columns: 1fr; justify-items: start; } .source-actions { justify-content: start; } }
+		@media (max-width: 1180px) { .summary-grid, .mapping-details-grid, .issues-panel, .mapping-review-row { grid-template-columns: 1fr; } .mapping-row-control { align-items: start; justify-items: start; } .mapping-row-actions { justify-content: start; } .summary-grid { grid-template-columns: 1fr; } .piece-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); } .selected-source-card { grid-template-columns: 4.9rem minmax(0, 1fr); } .source-meta, .source-card-side { grid-column: 2; grid-template-columns: 1fr; justify-items: start; } .source-actions { justify-content: start; } }
 		@media (max-width: 760px) { .source-review-header, .source-review-actions, .accordion-header { align-items: stretch; flex-direction: column; } .piece-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .continue-button, .back-button { min-width: 0; width: 100%; } .profile-card { grid-template-columns: 1fr; } }
 
 	`,
@@ -424,7 +474,9 @@ export class SourceReviewPageComponent implements OnInit {
 	readonly state = this.generateState.state;
 	readonly status = this.orchestrator.status;
 	readonly pieces = PIECES;
+	readonly mappingFilters = MAPPING_REVIEW_FILTERS;
 	mappingUserOpen = false;
+	selectedMappingFilter?: MappingReviewFilter;
 	issuesUserOpen = false;
 	jsonOpen = false;
 	profiles: MappingOverrideProfile[] = [];
@@ -493,6 +545,46 @@ export class SourceReviewPageComponent implements OnInit {
 		);
 	}
 
+	mappingReviewRows(): MappingReviewRowView[] {
+		return this.mappingRows().map((row) =>
+			buildMappingReviewRowView(row, this.state().mappingOverrides),
+		);
+	}
+
+	filteredMappingRows(): MappingReviewRowView[] {
+		return filterMappingReviewRows(
+			this.mappingRows(),
+			this.state().mappingOverrides,
+			this.mappingFilter(),
+		);
+	}
+
+	mappingFilter(): MappingReviewFilter {
+		return this.selectedMappingFilter ?? deriveDefaultMappingFilter({
+			rows: this.mappingRows(),
+			overrides: this.state().mappingOverrides,
+		});
+	}
+
+	setMappingFilter(filter: MappingReviewFilter): void {
+		this.selectedMappingFilter = filter;
+	}
+
+
+	mappingEmptyFilterMessage(): string {
+		return this.mappingFilter() === "needs-review"
+			? "All mapping decisions are resolved."
+			: "No rows match this filter.";
+	}
+
+	mappingFilterCount(filter: MappingReviewFilter): number {
+		return mappingReviewFilterCount({
+			rows: this.mappingRows(),
+			overrides: this.state().mappingOverrides,
+			filter,
+		});
+	}
+
 	trackRows(): TrackCandidate[] {
 		const selected = new Set(this.state().selectedTracks);
 		return [...(this.state().inspection?.tracks ?? [])].sort((left, right) => {
@@ -508,6 +600,11 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	mappingNeedsAttention(): boolean {
+		const state = this.mappingAttentionState();
+		return state === "manual-mapping-needed" || state === "review-recommended";
+	}
+
+	mappingShouldOpen(): boolean {
 		return shouldExpandMappingReview({
 			normalizationPreview: this.state().normalizationPreview,
 			overrides: this.state().mappingOverrides,
@@ -515,11 +612,11 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	mappingOpen(): boolean {
-		return this.mappingNeedsAttention() || this.mappingUserOpen;
+		return this.mappingShouldOpen() || this.mappingUserOpen;
 	}
 
 	toggleMappingReview(): void {
-		if (this.mappingOpen() && !this.mappingNeedsAttention()) {
+		if (this.mappingOpen() && !this.mappingShouldOpen()) {
 			this.mappingUserOpen = false;
 			return;
 		}
@@ -527,7 +624,7 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	mappingActionLabel(): string {
-		return this.mappingOpen() && !this.mappingNeedsAttention()
+		return this.mappingOpen() && !this.mappingShouldOpen()
 			? "Hide Mapping"
 			: "Review Mapping";
 	}
@@ -622,7 +719,7 @@ export class SourceReviewPageComponent implements OnInit {
 		return override.target.kind === "ignore" ? "ignore" : override.target.piece;
 	}
 
-	async setOverride(row: MappingRow, value: string): Promise<void> {
+	async setOverride(row: MappingRow | MappingReviewRowView, value: string): Promise<void> {
 		const current = { ...this.state().mappingOverrides };
 		if (!value) {
 			delete current[row.key];
@@ -633,12 +730,12 @@ export class SourceReviewPageComponent implements OnInit {
 		current[row.key] =
 			value === "ignore"
 				? {
-						sourceKind: row.sourceKind,
+						sourceKind: row.sourceKind ?? this.mappingSourceKind(row),
 						key: row.key,
 						target: { kind: "ignore" as const },
 					}
 				: {
-						sourceKind: row.sourceKind,
+						sourceKind: row.sourceKind ?? this.mappingSourceKind(row),
 						key: row.key,
 						target: {
 							kind: "piece" as const,
@@ -647,6 +744,34 @@ export class SourceReviewPageComponent implements OnInit {
 					};
 		this.generateState.setMappingOverrides(current as ProjectMappingOverrides);
 		await this.orchestrator.mappingChanged();
+	}
+
+	async applySuggestion(row: MappingReviewRowView): Promise<void> {
+		if (!row.suggestedPiece) return;
+		await this.setOverride(row, row.suggestedPiece);
+	}
+
+	async ignoreRow(row: MappingReviewRowView): Promise<void> {
+		await this.setOverride(row, "ignore");
+	}
+
+	async mapRow(row: MappingReviewRowView, piece: string): Promise<void> {
+		if (!piece) return;
+		await this.setOverride(row, piece);
+	}
+
+	async resetOverride(row: MappingReviewRowView): Promise<void> {
+		await this.setOverride(row, "");
+	}
+
+	pieceOverrideValue(key: string): string {
+		const override = this.state().mappingOverrides[key];
+		return override?.target.kind === "piece" ? override.target.piece : "";
+	}
+
+	showIgnoreAction(row: MappingReviewRowView): boolean {
+		if (row.action === "ignore" && !row.hasOverride) return false;
+		return this.overrideLabel(row.key) !== "ignore";
 	}
 
 	async loadProfiles(): Promise<void> {
@@ -768,11 +893,30 @@ export class SourceReviewPageComponent implements OnInit {
 		return this.mappingReviewCounts().ignoredKnown;
 	}
 
-	mappingSourceValue(row: MappingRow): string {
-		const value = row.label ?? row.sourceValue;
-		return row.sourceKind === "gpif" && /^MIDI\s+\d+/i.test(value)
+
+	mappingSourceKind(row: MappingRow | MappingReviewRowView): "midi" | "gpif" {
+		return row.sourceKind ?? (row.key.startsWith("gpif:") ? "gpif" : "midi");
+	}
+
+	mappingSourceKindLabel(row: MappingRow | MappingReviewRowView): string {
+		return this.mappingSourceKind(row).toUpperCase();
+	}
+
+	mappingSourceValue(row: MappingRow | MappingReviewRowView): string {
+		const value = row.label ?? row.noteName ?? row.sourceValue ?? row.key;
+		return this.mappingSourceKind(row) === "gpif" && /^MIDI\s+\d+/i.test(value)
 			? `GPIF articulation (${value})`
 			: value;
+	}
+
+
+	mappingNoteName(row: MappingRow | MappingReviewRowView): string | undefined {
+		const name = row.noteName ?? row.label;
+		return name && name !== row.sourceValue ? name : undefined;
+	}
+
+	mappingCountLabel(row: MappingRow | MappingReviewRowView): string {
+		return row.count === undefined ? "0 hits" : `${this.formatNumber(row.count)} ${row.count === 1 ? "hit" : "hits"}`;
 	}
 
 	isMappingIssue(issue: ProjectIssue): boolean {
@@ -893,7 +1037,18 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	pieceLabel(piece: string): string {
-		return piece
+		const labels: Record<string, string> = {
+			kick: "Kick",
+			snare: "Snare",
+			hihat_closed: "Closed Hi-Hat",
+			hihat_open: "Open Hi-Hat",
+			crash: "Crash",
+			ride: "Ride",
+			tom_high: "High Tom",
+			tom_mid: "Mid Tom",
+			tom_floor: "Floor Tom",
+		};
+		return labels[piece] ?? piece
 			.replace(/_/g, " ")
 			.replace(/\b\w/g, (char) => char.toUpperCase());
 	}
