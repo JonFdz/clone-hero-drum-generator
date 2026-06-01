@@ -1,3 +1,4 @@
+import atlas from "@chdg/mappings/data/general-midi-drums.json" with { type: "json" };
 import { describe, expect, it } from "vitest";
 import type { MidiTrack } from "./readMidi.js";
 import type { MidiDrumPieceMap } from "@chdg/mappings";
@@ -7,12 +8,7 @@ import {
   selectDrumTrack,
 } from "./drumTrackSelection.js";
 
-const testMap: MidiDrumPieceMap = {
-  "36": "kick",
-  "38": "snare",
-  "42": "hihat_closed",
-  "49": "crash",
-};
+const testMap = atlas as MidiDrumPieceMap;
 
 function fakeTrack(overrides: Partial<MidiTrack> = {}): MidiTrack {
   return {
@@ -252,7 +248,19 @@ describe("classifyDrumTracks", () => {
     expect(strong).toEqual([1]);
     expect(weak).toEqual([2]);
   });
+
+	it("does not use candidates or ignored percussion as strong track-selection evidence in Phase 17L", () => {
+		const candidateOnly = fakeTrack({
+			name: "Percussion",
+			channel: 9,
+			notes: [...makeNotes(44, 12), ...makeNotes(54, 12)],
+		});
+
+		expect(scoreDrumTrack(candidateOnly, testMap)).toBeLessThan(45);
+		expect(classifyDrumTracks([candidateOnly], testMap).strong).toEqual([]);
+	});
 });
+
 
 describe("selectDrumTrack", () => {
   it("selects explicit index", () => {

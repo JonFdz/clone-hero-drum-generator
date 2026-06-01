@@ -22,9 +22,16 @@ export type MappingCandidate = {
 	sourceKind: MappingCandidateSourceKind;
 	sourceValue: string;
 	label?: string;
-	automaticPiece: DrumHit["piece"];
+	noteName?: string;
+	action?: "map" | "candidate" | "ignore" | "unknown";
+	automaticPiece?: DrumHit["piece"];
+	suggestedPiece?: Exclude<DrumPiece, "unknown">;
+	confidence?: "high" | "medium" | "low";
+	family?: string;
+	source?: string;
 	count: number;
 	firstTick?: number;
+	reason?: string;
 };
 
 export function buildMappingOverrideKeyFromHit(hit: DrumHit): string | undefined {
@@ -92,6 +99,7 @@ export function buildMappingCandidates(hits: DrumHit[]): MappingCandidate[] {
 				sourceKind: "midi",
 				sourceValue: String(hit.source.midiNote),
 				label: `Note ${hit.source.midiNote}`,
+				action: hit.piece === "unknown" ? "unknown" : "map",
 				automaticPiece: hit.piece,
 				count: 1,
 				firstTick: hit.tick,
@@ -104,6 +112,7 @@ export function buildMappingCandidates(hits: DrumHit[]): MappingCandidate[] {
 			sourceKind: "gpif",
 			sourceValue: raw ?? key.replace("gpif:", ""),
 			label: raw,
+			action: hit.piece === "unknown" ? "unknown" : "map",
 			automaticPiece: hit.piece,
 			count: 1,
 			firstTick: hit.tick,

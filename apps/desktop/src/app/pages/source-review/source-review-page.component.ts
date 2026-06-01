@@ -19,6 +19,8 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
 import { SourceReviewOrchestratorService } from "../../services/source-review-orchestrator.service";
 import { formatTrackNoteCount } from "../../services/track-note-count";
 import {
+	mappingAttentionState,
+	mappingReviewCounts,
 	shouldExpandMappingReview,
 	sourceSectionsLabel,
 } from "../../services/source-review-model";
@@ -168,9 +170,10 @@ type DisplayIssue = ProjectIssue & {
 					<div class="accordion-copy">
 						<div class="accordion-title-row">
 							<h2>Mapping Review</h2>
-							<span class="review-badge" [class.warning]="mappingNeedsAttention()"><span aria-hidden="true">{{ mappingNeedsAttention() ? '△' : '✓' }}</span>{{ mappingStatusLabel() }}</span>
+							<span class="review-badge" [class.warning]="mappingNeedsAttention()"><span aria-hidden="true">{{ mappingNeedsAttention() ? '△' : mappingStatusLabel() === 'Known percussion ignored' ? 'i' : '✓' }}</span>{{ mappingStatusLabel() }}</span>
 						</div>
 						<p>{{ mappingSummary() }}</p>
+						@if (mappingCoverageSummary()) { <p class="profile-line">{{ mappingCoverageSummary() }}</p> }
 						<p class="profile-line">Profile: None</p>
 					</div>
 					<div class="accordion-actions">
@@ -552,19 +555,43 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	mappingSummary(): string {
+		const coverage = this.state().normalizationPreview?.mappingCoverage;
+		const overrides = this.overrideCount();
+		const pending = this.mappingReviewCounts();
+		const pendingLabel =
+			pending.unresolvedCandidates > 0 || pending.unresolvedUnknown > 0
+				? ` · Pending review: ${this.formatNumber(pending.unresolvedCandidates)} candidates · ${this.formatNumber(pending.unresolvedUnknown)} unknown`
+				: "";
+		if (coverage) {
+			return `Mapped events ${this.formatNumber(coverage.mappedEventCount)} · Candidate events ${this.formatNumber(coverage.candidateEventCount)} · Ignored known events ${this.formatNumber(coverage.ignoredEventCount)} · Unknown events ${this.formatNumber(coverage.unknownEventCount)} · ${overrides} overrides${pendingLabel}`;
+		}
 		const rows = this.mappingRows();
 		const unknown = this.unknownCount();
-		const overrides = this.overrideCount();
-		return `${rows.length - unknown} mapped sources · ${unknown} unknown · ${overrides} overrides`;
+		return `${rows.length - unknown} mapped sources · ${unknown} unknown · ${overrides} overrides${pendingLabel}`;
+	}
+
+	mappingCoverageSummary(): string | undefined {
+		const coverage = this.state().normalizationPreview?.mappingCoverage;
+		if (!coverage) return undefined;
+		return `Atlas ${coverage.atlasVersion} · Sources: ${coverage.mappedSourceCount} mapped, ${coverage.candidateSourceCount} candidates, ${coverage.ignoredSourceCount} ignored known, ${coverage.unknownSourceCount} unknown`;
 	}
 
 	mappingStatusLabel(): string {
-		return this.mappingNeedsAttention()
-			? "Manual review recommended"
-			: "Automatic mapping ready";
+		switch (this.mappingAttentionState()) {
+			case "manual-mapping-needed":
+				return "Manual mapping needed";
+			case "review-recommended":
+				return "Review recommended";
+			case "known-percussion-ignored":
+				return "Known percussion ignored";
+			default:
+				return "Automatic mapping ready";
+		}
 	}
 
 	mappingDetectedMeaning(row: MappingRow): string {
+		if (row.action === "candidate") return row.suggestedPiece ? `${this.pieceLabel(row.suggestedPiece)} candidate` : "Candidate";
+		if (row.action === "ignore") return row.label ?? "Known ignored percussion";
 		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unknown";
 		return this.pieceLabel(row.automaticPiece);
 	}
@@ -573,6 +600,8 @@ export class SourceReviewPageComponent implements OnInit {
 		const override = this.state().mappingOverrides[row.key];
 		if (override?.target.kind === "ignore") return "Ignored";
 		if (override?.target.kind === "piece") return this.pieceLabel(override.target.piece);
+		if (row.action === "candidate") return row.suggestedPiece ? `Review: ${this.pieceLabel(row.suggestedPiece)}` : "Review candidate";
+		if (row.action === "ignore") return "Ignored known";
 		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unmapped";
 		return this.pieceLabel(row.automaticPiece);
 	}
@@ -581,6 +610,8 @@ export class SourceReviewPageComponent implements OnInit {
 		const override = this.state().mappingOverrides[row.key];
 		if (override?.target.kind === "ignore") return "Ignore";
 		if (override?.target.kind === "piece") return "Override";
+		if (row.action === "candidate") return "Candidate";
+		if (row.action === "ignore") return "Ignore";
 		if (!row.automaticPiece || row.automaticPiece === "unknown") return "Unmapped";
 		return "Default";
 	}
@@ -713,10 +744,28 @@ export class SourceReviewPageComponent implements OnInit {
 		const info = this.issueSeverityCounts().info;
 		return info > 0 ? `No blocking issues · ${info} info messages` : undefined;
 	}
+	mappingReviewCounts(): ReturnType<typeof mappingReviewCounts> {
+		return mappingReviewCounts({
+			rows: this.mappingRows(),
+			overrides: this.state().mappingOverrides,
+		});
+	}
+
+	mappingAttentionState(): ReturnType<typeof mappingAttentionState> {
+		return mappingAttentionState({
+			rows: this.mappingRows(),
+			overrides: this.state().mappingOverrides,
+		});
+	}
+
 	unknownCount(): number {
-		return this.mappingRows().filter(
-			(row) => row.automaticPiece === "unknown" || !row.automaticPiece,
-		).length;
+		return this.mappingReviewCounts().unknown;
+	}
+	candidateCount(): number {
+		return this.mappingReviewCounts().candidates;
+	}
+	ignoredKnownCount(): number {
+		return this.mappingReviewCounts().ignoredKnown;
 	}
 
 	mappingSourceValue(row: MappingRow): string {

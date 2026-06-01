@@ -8,7 +8,12 @@ export type MappingRow = {
 	sourceKind: "midi" | "gpif";
 	sourceValue: string;
 	label?: string;
+	action?: "map" | "candidate" | "ignore" | "unknown";
 	automaticPiece?: string;
+	suggestedPiece?: string;
+	confidence?: string;
+	family?: string;
+	reason?: string;
 	count?: number;
 	status: "default" | "override" | "existing-override";
 };
@@ -24,7 +29,12 @@ export function buildMappingRows(
 			sourceKind: candidate.sourceKind,
 			sourceValue: candidate.sourceValue,
 			label: candidate.label,
+			action: candidate.action,
 			automaticPiece: candidate.automaticPiece,
+			suggestedPiece: candidate.suggestedPiece,
+			confidence: candidate.confidence,
+			family: candidate.family,
+			reason: candidate.reason,
 			count: candidate.count,
 			status: overrides[candidate.key] ? "override" : "default",
 		});
