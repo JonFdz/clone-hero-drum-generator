@@ -11,9 +11,55 @@ import { chooseDefaultTracks } from "./desktop-generate-model";
 
 export type SourceReviewMappingRow = {
 	key: string;
+	sourceKind?: "midi" | "gpif";
+	sourceValue?: string;
+	label?: string;
+	noteName?: string;
 	action?: "map" | "candidate" | "ignore" | "unknown";
 	automaticPiece?: string;
 	suggestedPiece?: string;
+	confidence?: string;
+	family?: string;
+	reason?: string;
+	count?: number;
+	firstTick?: number;
+};
+
+export type MappingReviewFilter =
+	| "needs-review"
+	| "candidates"
+	| "unknown"
+	| "ignored-known"
+	| "auto-mapped"
+	| "overrides"
+	| "all";
+
+export type MappingReviewRowKind =
+	| "auto-mapped"
+	| "candidate"
+	| "ignored-known"
+	| "unknown"
+	| "override";
+
+export type MappingReviewBadgeTone =
+	| "success"
+	| "review"
+	| "info"
+	| "warning"
+	| "accent"
+	| "neutral";
+
+export type MappingReviewRowView = SourceReviewMappingRow & {
+	kind: MappingReviewRowKind;
+	badgeLabel: string;
+	badgeTone: MappingReviewBadgeTone;
+	currentMappingLabel: string;
+	automaticMappingLabel?: string;
+	suggestedPieceLabel?: string;
+	hasOverride: boolean;
+	overrideLabel?: string;
+	unresolved: boolean;
+	unresolvedType?: "candidate" | "unknown";
 };
 
 export type SourceReviewMappingCounts = {
@@ -154,6 +200,190 @@ export function createAnalysisCache(input: {
 			? { normalizationPreview: input.normalizationPreview }
 			: {}),
 	};
+}
+
+export const MAPPING_REVIEW_FILTERS: ReadonlyArray<{ id: MappingReviewFilter; label: string }> = [
+	{ id: "needs-review", label: "Needs review" },
+	{ id: "candidates", label: "Candidates" },
+	{ id: "unknown", label: "Unknown" },
+	{ id: "ignored-known", label: "Ignored known" },
+	{ id: "auto-mapped", label: "Auto-mapped" },
+	{ id: "overrides", label: "Overrides" },
+	{ id: "all", label: "All" },
+];
+
+export function classifyMappingRow(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): MappingReviewRowKind {
+	if (overrides[row.key]) return "override";
+	if (row.action === "unknown") return "unknown";
+	if (row.action === "candidate") return "candidate";
+	if (row.action === "ignore") return "ignored-known";
+	if (row.action === "map") return "auto-mapped";
+	return row.automaticPiece === "unknown" || !row.automaticPiece
+		? "unknown"
+		: "auto-mapped";
+}
+
+export function buildMappingReviewRowView(
+	row: SourceReviewMappingRow,
+	overrides: ProjectMappingOverrides,
+): MappingReviewRowView {
+	const override = overrides[row.key];
+	const kind = classifyMappingRow(row, overrides);
+	const unresolvedUnknown = isUnresolvedUnknown(row, overrides);
+	const unresolvedCandidate = isUnresolvedCandidate(row, overrides);
+	const automaticMappingLabel = mappingPieceLabel(row.automaticPiece);
+	const suggestedPieceLabel = mappingPieceLabel(row.suggestedPiece);
+	const overrideLabel = override
+		? override.target.kind === "ignore"
+			? "Ignored by project override"
+			: `Mapped by project override: ${mappingPieceLabel(override.target.piece)}`
+		: undefined;
+	return {
+		...row,
+		kind,
+		badgeLabel: mappingReviewBadgeLabel(kind, override),
+		badgeTone: mappingReviewBadgeTone(kind),
+		currentMappingLabel: currentMappingLabel(row, override),
+		automaticMappingLabel,
+		suggestedPieceLabel,
+		hasOverride: Boolean(override),
+		overrideLabel,
+		unresolved: unresolvedUnknown || unresolvedCandidate,
+		unresolvedType: unresolvedUnknown
+			? "unknown"
+			: unresolvedCandidate
+				? "candidate"
+				: undefined,
+	};
+}
+
+export function buildMappingReviewRows(
+	rows: SourceReviewMappingRow[],
+	overrides: ProjectMappingOverrides,
+): MappingReviewRowView[] {
+	return rows.map((row) => buildMappingReviewRowView(row, overrides));
+}
+
+export function filterMappingReviewRows(
+	rows: SourceReviewMappingRow[],
+	overrides: ProjectMappingOverrides,
+	filter: MappingReviewFilter,
+): MappingReviewRowView[] {
+	const views = buildMappingReviewRows(rows, overrides);
+	return views.filter((row) => {
+		switch (filter) {
+			case "needs-review":
+				return row.unresolved;
+			case "candidates":
+				return row.action === "candidate";
+			case "unknown":
+				return row.action === "unknown" || (!row.action && (row.automaticPiece === "unknown" || !row.automaticPiece));
+			case "ignored-known":
+				return row.action === "ignore";
+			case "auto-mapped":
+				return row.kind === "auto-mapped";
+			case "overrides":
+				return row.hasOverride;
+			case "all":
+				return true;
+		}
+	});
+}
+
+export function deriveDefaultMappingFilter(input: {
+	rows: SourceReviewMappingRow[];
+	overrides: ProjectMappingOverrides;
+}): MappingReviewFilter {
+	const counts = mappingReviewCounts(input);
+	return counts.unresolvedCandidates > 0 || counts.unresolvedUnknown > 0
+		? "needs-review"
+		: "all";
+}
+
+export function mappingReviewFilterCount(input: {
+	rows: SourceReviewMappingRow[];
+	overrides: ProjectMappingOverrides;
+	filter: MappingReviewFilter;
+}): number {
+	return filterMappingReviewRows(
+		input.rows,
+		input.overrides,
+		input.filter,
+	).length;
+}
+
+function mappingReviewBadgeLabel(
+	kind: MappingReviewRowKind,
+	override: ProjectMappingOverrides[string] | undefined,
+): string {
+	if (override?.target.kind === "piece") return "Mapped override";
+	if (override?.target.kind === "ignore") return "Ignored override";
+	switch (kind) {
+		case "auto-mapped":
+			return "Auto-mapped";
+		case "candidate":
+			return "Candidate";
+		case "ignored-known":
+			return "Ignored known";
+		case "unknown":
+			return "Unknown";
+		case "override":
+			return "Override";
+	}
+}
+
+function mappingReviewBadgeTone(kind: MappingReviewRowKind): MappingReviewBadgeTone {
+	switch (kind) {
+		case "auto-mapped":
+			return "success";
+		case "candidate":
+			return "review";
+		case "ignored-known":
+			return "info";
+		case "unknown":
+			return "warning";
+		case "override":
+			return "accent";
+	}
+}
+
+function currentMappingLabel(
+	row: SourceReviewMappingRow,
+	override: ProjectMappingOverrides[string] | undefined,
+): string {
+	if (override?.target.kind === "ignore") return "Ignored by project override";
+	if (override?.target.kind === "piece") return `Mapped to ${mappingPieceLabel(override.target.piece)}`;
+	if (row.action === "candidate") {
+		return row.suggestedPiece
+			? `Skipped by default · Suggests ${mappingPieceLabel(row.suggestedPiece)}`
+			: "Skipped by default · No default lane";
+	}
+	if (row.action === "ignore") return "Known percussion ignored by default";
+	if (row.action === "unknown" || !row.automaticPiece || row.automaticPiece === "unknown") {
+		return "Skipped · Unknown lane";
+	}
+	return `Default mapping: ${mappingPieceLabel(row.automaticPiece)}`;
+}
+
+function mappingPieceLabel(piece: string | undefined): string | undefined {
+	if (!piece || piece === "unknown") return undefined;
+	const labels: Record<string, string> = {
+		kick: "Kick",
+		snare: "Snare",
+		hihat_closed: "Closed Hi-Hat",
+		hihat_open: "Open Hi-Hat",
+		crash: "Crash",
+		ride: "Ride",
+		tom_high: "High Tom",
+		tom_mid: "Mid Tom",
+		tom_floor: "Floor Tom",
+	};
+	return labels[piece] ?? piece
+		.replace(/_/g, " ")
+		.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export function hasPieceOverride(

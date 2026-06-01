@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { SourceInspectionResult } from "@chdg/project/browser";
 import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
 import {
+	buildMappingReviewRowView,
+	classifyMappingRow,
 	createAnalysisCache,
+	deriveDefaultMappingFilter,
+	filterMappingReviewRows,
 	hasStaleGpifTrackNoteCounts,
 	mappingAttentionState,
 	mappingReviewCounts,
@@ -352,6 +356,127 @@ describe("source-review-model", () => {
 				unresolvedUnknown: 0,
 			});
 			expect(mappingAttentionState({ rows, overrides })).toBe("ready");
+		});
+	});
+
+	describe("Phase 17M mapping review helpers", () => {
+		const rows = [
+			{
+				key: "midi:36",
+				sourceKind: "midi" as const,
+				sourceValue: "36",
+				label: "Bass Drum 1",
+				action: "map" as const,
+				automaticPiece: "kick" as const,
+				count: 4,
+				firstTick: 0,
+			},
+			{
+				key: "midi:44",
+				sourceKind: "midi" as const,
+				sourceValue: "44",
+				label: "Pedal Hi-Hat",
+				action: "candidate" as const,
+				suggestedPiece: "hihat_closed" as const,
+				confidence: "medium" as const,
+				reason: "Foot hi-hat can over-densify charts.",
+				count: 2,
+				firstTick: 480,
+			},
+			{
+				key: "midi:54",
+				sourceKind: "midi" as const,
+				sourceValue: "54",
+				label: "Tambourine",
+				action: "ignore" as const,
+				automaticPiece: "unknown" as const,
+				count: 1,
+			},
+			{
+				key: "midi:92",
+				sourceKind: "midi" as const,
+				sourceValue: "92",
+				action: "unknown" as const,
+				automaticPiece: "unknown" as const,
+				count: 3,
+			},
+		];
+
+		it("classifies rows with override precedence", () => {
+			expect(classifyMappingRow(rows[0], {})).toBe("auto-mapped");
+			expect(classifyMappingRow(rows[1], {})).toBe("candidate");
+			expect(classifyMappingRow(rows[2], {})).toBe("ignored-known");
+			expect(classifyMappingRow(rows[3], {})).toBe("unknown");
+			expect(
+				classifyMappingRow(rows[1], {
+					"midi:44": {
+						sourceKind: "midi",
+						key: "midi:44",
+						target: { kind: "piece", piece: "hihat_closed" },
+					},
+				}),
+			).toBe("override");
+		});
+
+		it("filters needs-review to unresolved candidates and unknowns only", () => {
+			expect(
+				filterMappingReviewRows(rows, {}, "needs-review").map((row) => row.key),
+			).toEqual(["midi:44", "midi:92"]);
+			expect(
+				filterMappingReviewRows(rows, {}, "ignored-known").map((row) => row.key),
+			).toEqual(["midi:54"]);
+			expect(
+				filterMappingReviewRows(rows, {}, "auto-mapped").map((row) => row.key),
+			).toEqual(["midi:36"]);
+		});
+
+		it("excludes override-resolved candidates and unknowns from needs-review", () => {
+			const overrides = {
+				"midi:44": {
+					sourceKind: "midi" as const,
+					key: "midi:44",
+					target: { kind: "piece" as const, piece: "hihat_closed" as const },
+				},
+				"midi:92": {
+					sourceKind: "midi" as const,
+					key: "midi:92",
+					target: { kind: "ignore" as const },
+				},
+			};
+			expect(filterMappingReviewRows(rows, overrides, "needs-review")).toEqual([]);
+			expect(
+				filterMappingReviewRows(rows, overrides, "overrides").map((row) => row.key),
+			).toEqual(["midi:44", "midi:92"]);
+		});
+
+		it("derives default filter from unresolved review state", () => {
+			expect(deriveDefaultMappingFilter({ rows, overrides: {} })).toBe(
+				"needs-review",
+			);
+			expect(
+				deriveDefaultMappingFilter({
+					rows: [rows[0], rows[2]],
+					overrides: {},
+				}),
+			).toBe("all");
+		});
+
+		it("builds display labels for candidate suggestions and resettable overrides", () => {
+			const candidate = buildMappingReviewRowView(rows[1], {});
+			expect(candidate.badgeLabel).toBe("Candidate");
+			expect(candidate.suggestedPieceLabel).toBe("Closed Hi-Hat");
+			expect(candidate.unresolvedType).toBe("candidate");
+
+			const override = buildMappingReviewRowView(rows[1], {
+				"midi:44": {
+					sourceKind: "midi",
+					key: "midi:44",
+					target: { kind: "piece", piece: "hihat_closed" },
+				},
+			});
+			expect(override.badgeLabel).toBe("Mapped override");
+			expect(override.hasOverride).toBe(true);
+			expect(override.currentMappingLabel).toBe("Mapped to Closed Hi-Hat");
 		});
 	});
 
