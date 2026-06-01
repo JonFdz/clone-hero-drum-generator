@@ -464,6 +464,8 @@ describe("source-review-model", () => {
 		it("builds display labels for candidate suggestions and resettable overrides", () => {
 			const candidate = buildMappingReviewRowView(rows[1], {});
 			expect(candidate.badgeLabel).toBe("Candidate");
+			expect(candidate.primaryLabel).toBe("MIDI 44 · Pedal Hi-Hat");
+			expect(candidate.metaLabel).toBe("Candidate · 2 hits · first tick 480");
 			expect(candidate.suggestedPieceLabel).toBe("Closed Hi-Hat");
 			expect(candidate.unresolvedType).toBe("candidate");
 
@@ -475,8 +477,38 @@ describe("source-review-model", () => {
 				},
 			});
 			expect(override.badgeLabel).toBe("Mapped override");
+			expect(override.primaryLabel).toBe("MIDI 44 · Pedal Hi-Hat");
 			expect(override.hasOverride).toBe(true);
 			expect(override.currentMappingLabel).toBe("Mapped to Closed Hi-Hat");
+		});
+
+		it("formats MIDI and GPIF labels without duplicated source text", () => {
+			expect(
+				buildMappingReviewRowView(
+					{
+						key: "midi:92",
+						sourceKind: "midi",
+						sourceValue: "92",
+						action: "unknown",
+						count: 1,
+					},
+					{},
+				).primaryLabel,
+			).toBe("MIDI 92 · Unknown");
+			expect(
+				buildMappingReviewRowView(
+					{
+						key: "gpif:midi 36",
+						sourceKind: "gpif",
+						sourceValue: "MIDI 36",
+						label: "GPIF articulation (MIDI 36)",
+						action: "map",
+						automaticPiece: "kick",
+						count: 218,
+					},
+					{},
+				).primaryLabel,
+			).toBe("GPIF articulation · MIDI 36");
 		});
 	});
 

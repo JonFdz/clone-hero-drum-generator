@@ -53,6 +53,8 @@ export type MappingReviewRowView = SourceReviewMappingRow & {
 	kind: MappingReviewRowKind;
 	badgeLabel: string;
 	badgeTone: MappingReviewBadgeTone;
+	primaryLabel: string;
+	metaLabel: string;
 	currentMappingLabel: string;
 	automaticMappingLabel?: string;
 	suggestedPieceLabel?: string;
@@ -226,6 +228,59 @@ export function classifyMappingRow(
 		: "auto-mapped";
 }
 
+export function mappingReviewPrimaryLabel(row: SourceReviewMappingRow): string {
+	const sourceKind = row.sourceKind ?? (row.key.startsWith("gpif:") ? "gpif" : "midi");
+	const sourceValue = cleanMappingLabel(row.sourceValue ?? sourceValueFromKey(row.key));
+	const noteName = cleanMappingLabel(row.noteName ?? row.label);
+	if (sourceKind === "gpif") {
+		const detail = noteName && !labelsEquivalent(noteName, sourceValue) ? noteName : sourceValue;
+		return detail ? `GPIF articulation · ${detail}` : "GPIF articulation";
+	}
+	const midiValue = sourceValue.match(/^midi\s+\d+$/i)
+		? sourceValue
+		: /^\d+$/.test(sourceValue)
+			? `MIDI ${sourceValue}`
+			: sourceValue.toLowerCase().startsWith("midi:")
+				? sourceValue.replace(/^midi:/i, "MIDI ")
+				: `MIDI ${sourceValue}`;
+	const detail = noteName && !labelsEquivalent(noteName, midiValue) ? noteName : "Unknown";
+	return `${midiValue} · ${detail}`;
+}
+
+export function mappingReviewMetaLabel(
+	row: SourceReviewMappingRow,
+	kind: MappingReviewRowKind,
+	override: ProjectMappingOverrides[string] | undefined,
+): string {
+	const parts = [
+		mappingReviewBadgeLabel(kind, override),
+		row.count === undefined ? undefined : `${row.count} ${row.count === 1 ? "hit" : "hits"}`,
+		row.firstTick === undefined ? undefined : `first tick ${row.firstTick}`,
+	].filter((part): part is string => Boolean(part));
+	return parts.join(" · ");
+}
+
+function cleanMappingLabel(value: string | undefined): string {
+	if (!value) return "";
+	return value
+		.replace(/^gpif\s+articulation\s*\((.*)\)$/i, "$1")
+		.replace(/^gpif\s+articulation\s*[·:-]?\s*/i, "")
+		.replace(/^\((.*)\)$/i, "$1")
+		.trim();
+}
+
+function labelsEquivalent(left: string, right: string): boolean {
+	const normalize = (value: string) =>
+		value.toLowerCase().replace(/^midi[:\s]*/, "").replace(/[^a-z0-9]+/g, "");
+	return normalize(left) === normalize(right);
+}
+
+function sourceValueFromKey(key: string): string {
+	if (key.startsWith("midi:")) return key.replace(/^midi:/, "MIDI ");
+	if (key.startsWith("gpif:")) return key.replace(/^gpif:/, "");
+	return key;
+}
+
 export function buildMappingReviewRowView(
 	row: SourceReviewMappingRow,
 	overrides: ProjectMappingOverrides,
@@ -246,6 +301,8 @@ export function buildMappingReviewRowView(
 		kind,
 		badgeLabel: mappingReviewBadgeLabel(kind, override),
 		badgeTone: mappingReviewBadgeTone(kind),
+		primaryLabel: mappingReviewPrimaryLabel(row),
+		metaLabel: mappingReviewMetaLabel(row, kind, override),
 		currentMappingLabel: currentMappingLabel(row, override),
 		automaticMappingLabel,
 		suggestedPieceLabel,

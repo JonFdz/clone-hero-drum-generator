@@ -59,3 +59,31 @@ pnpm lint
 ```
 
 Not run: `pnpm --filter @chdg/desktop typecheck` because it invokes `ng build`, and `AGENTS.md` says never build after changes.
+
+## Follow-up pass — PR #67 row density and semantics
+
+### Implementation notes
+
+- Refined Mapping Review rows into a three-zone desktop layout: identity, decision/reasoning, and badge/actions.
+- Added compact primary/meta labels to avoid duplicated source text such as `GPIF GPIF articulation` and repeated note names.
+- Made auto-mapped `Ignore` visually secondary and kept default/override as the baseline interaction.
+- Removed redundant `Ignore` action for default ignored-known rows.
+- Separated open behavior from warning styling: override-only resolved rows can open Mapping Review without showing warning attention.
+
+### Automated validation
+
+```bash
+pnpm exec vitest run apps/desktop/src/app/services/source-review-model.test.ts
+# PASS: 1 file, 22 tests
+
+pnpm exec tsc -p apps/desktop/tsconfig.json --noEmit
+# PASS
+
+pnpm test
+# PASS: 57 files, 475 tests
+
+pnpm lint
+# PASS: workspace lint scripts are placeholders / not configured yet
+```
+
+Manual screenshot validation was not performed in this agent environment.
