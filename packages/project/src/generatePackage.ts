@@ -26,6 +26,7 @@ import { normalizeDrumsFromFile } from "@chdg/midi";
 import { issue, ProjectServiceError, toProjectServiceError } from "./issues.js";
 import {
 	applyProjectMappingOverrides,
+	hasOverrideForGpifArticulationKey,
 	hasPieceOverrideForGpifArticulation,
 	hasPieceOverrideForMidiNote,
 } from "./mappingOverrides.js";
@@ -228,7 +229,10 @@ async function normalizeGenerateSource(
 
 	const results = await Promise.all(
 		requestedTracks.map((trackIndex) =>
-			normalizeGpDrums(input.sourcePath, { trackIndex }),
+			normalizeGpDrums(input.sourcePath, {
+				trackIndex,
+				mappingOverrides: input.mappingOverrides,
+			}),
 		),
 	);
 	const selectedTracks = results.map((result) => result.trackIndex);
@@ -249,6 +253,10 @@ async function normalizeGenerateSource(
 					!hasPieceOverrideForGpifArticulation(
 						input.mappingOverrides,
 						item.rawArticulation,
+					) &&
+					!hasOverrideForGpifArticulationKey(
+						input.mappingOverrides,
+						(item as typeof item & { key?: string }).key,
 					),
 			)
 			.map((item) =>

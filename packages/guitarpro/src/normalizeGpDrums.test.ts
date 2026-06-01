@@ -234,6 +234,36 @@ describe("normalizeGpDrumsXml", () => {
 		});
 	});
 
+	it("resolves notes that reference external GPIF articulation definitions", () => {
+		const xml = `<GPIF>
+			<InstrumentSet>
+				<Elements>
+					<Element id="hh-half">
+						<Name>Hi-Hat (half)</Name>
+						<InputMidiNumbers>92</InputMidiNumbers>
+						<OutputMidiNumber>46</OutputMidiNumber>
+					</Element>
+				</Elements>
+			</InstrumentSet>
+			<Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks>
+			<Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Element ref="hh-half" /></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars>
+		</GPIF>`;
+		const result = normalizeGpDrumsXml(xml, { trackIndex: 0 });
+
+		expect(result.hits).toContainEqual(
+			expect.objectContaining({
+				piece: "hihat_open",
+				source: expect.objectContaining({
+					noteName: "Hi-Hat (half)",
+					inputMidiNumbers: [92],
+					outputMidiNumber: 46,
+					resolvedVia: "output-midi-number",
+				}),
+			}),
+		);
+		expect(result.unknownArticulations).toEqual([]);
+	});
+
 	it("keeps candidate articulations out of hits unless overridden", () => {
 		const xml = `<GPIF><Tracks><Track id="drums"><Name>Drums</Name><InstrumentName>Drumkit</InstrumentName></Track></Tracks><Bars><Bar><Track>drums</Track><Voices><Voice><Beats><Beat><Notes><Note><Name>Pedal Hi-Hat</Name><OutputMidiNumber>44</OutputMidiNumber></Note></Notes></Beat></Beats></Voice></Voices></Bar></Bars></GPIF>`;
 		const initial = normalizeGpDrumsXml(xml, { trackIndex: 0 });

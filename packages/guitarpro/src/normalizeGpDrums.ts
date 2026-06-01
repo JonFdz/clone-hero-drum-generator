@@ -128,6 +128,12 @@ export function normalizeGpDrumsXml(
 	const tracks = findObjectsByKey(root, "Track");
 	const trackNode = tracks[options.trackIndex];
 	const trackRefs = trackReferenceValues(trackNode, options.trackIndex);
+	const trackMetadata = {
+		trackId: track.id,
+		trackIndex: options.trackIndex,
+		trackName: track.name,
+	};
+	const articulationDefinitions = buildArticulationDefinitionIndex(root);
 	const globalVoices = objectMapById(findObjectsByKey(root, "Voice"));
 	const globalBeats = objectMapById(findObjectsByKey(root, "Beat"));
 	const globalNotes = objectMapById(findObjectsByKey(root, "Note"));
@@ -207,11 +213,11 @@ export function normalizeGpDrumsXml(
 
 				notes.forEach((note, noteIndex) => {
 					const tick = beatTick + (extractTickOffset(note, resolution) ?? 0);
-					const metadata = extractArticulationMetadata(note, {
-						trackId: track.id,
-						trackIndex: options.trackIndex,
-						trackName: track.name,
-					});
+					const metadata = extractArticulationMetadata(
+						note,
+						trackMetadata,
+						articulationDefinitions,
+					);
 					const resolutionResult = resolveGpifArticulation(
 						metadata,
 						options.mappingOverrides,
@@ -614,9 +620,47 @@ function extractVelocity(node: XmlNode): number | undefined {
 function extractArticulationMetadata(
 	note: XmlNode,
 	track: Pick<GpifArticulationMetadata, "trackId" | "trackIndex" | "trackName">,
+	definitions: Map<string, GpifArticulationMetadata>,
 ): GpifArticulationMetadata {
 	const rawValues = articulationValues(note);
-	const name = firstValueInObject(note, [
+	const noteLocal = extractLocalArticulationMetadata(note);
+	const referenced = articulationReferenceValues(note)
+		.map((ref) => definitions.get(ref))
+		.find((item): item is GpifArticulationMetadata => item !== undefined);
+	return mergeArticulationMetadata({
+		id: noteLocal.id ?? referenced?.id,
+		name: noteLocal.name ?? referenced?.name ?? rawValues[0],
+		inputMidiNumbers:
+			noteLocal.inputMidiNumbers ?? referenced?.inputMidiNumbers,
+		outputMidiNumber:
+			noteLocal.outputMidiNumber ?? referenced?.outputMidiNumber,
+		element: noteLocal.element ?? referenced?.element,
+		instrument: noteLocal.instrument ?? referenced?.instrument,
+		trackId: track.trackId,
+		trackIndex: track.trackIndex,
+		trackName: track.trackName,
+	});
+}
+
+function buildArticulationDefinitionIndex(
+	root: unknown,
+): Map<string, GpifArticulationMetadata> {
+	const definitions = new Map<string, GpifArticulationMetadata>();
+	for (const node of [
+		...findObjectsByKey(root, "Element"),
+		...findObjectsByKey(root, "Articulation"),
+	]) {
+		if (isReferenceOnly(node)) continue;
+		const metadata = extractLocalArticulationMetadata(node);
+		const ids = articulationDefinitionIds(node);
+		if (ids.length === 0 || !hasUsefulArticulationMetadata(metadata)) continue;
+		for (const id of ids) definitions.set(id, metadata);
+	}
+	return definitions;
+}
+
+function extractLocalArticulationMetadata(node: XmlNode): GpifArticulationMetadata {
+	const name = firstValueInObject(node, [
 		"Name",
 		"name",
 		"DisplayName",
@@ -625,16 +669,55 @@ function extractArticulationMetadata(
 		"articulation",
 		"Type",
 		"type",
-	]) ?? rawValues[0];
+	]);
 	return {
-		...track,
-		id: firstValueInObject(note, ["@_id", "id", "Id", "ID"]),
+		id: firstValueInObject(node, ["@_id", "id", "Id", "ID"]),
 		name,
-		inputMidiNumbers: extractInputMidiNumbers(note),
-		outputMidiNumber: extractOutputMidiNumber(note),
-		element: firstNestedValue(note, ["Element", "element"]),
-		instrument: firstNestedValue(note, ["Instrument", "instrument", "InstrumentName", "instrumentName"]),
+		inputMidiNumbers: extractInputMidiNumbers(node),
+		outputMidiNumber: extractOutputMidiNumber(node),
+		element: firstNestedValue(node, ["Element", "element"]),
+		instrument: firstNestedValue(node, ["Instrument", "instrument", "InstrumentName", "instrumentName"]),
 	};
+}
+
+function articulationDefinitionIds(node: XmlNode): string[] {
+	return [
+		firstValueInObject(node, ["@_id", "id", "Id", "ID"]),
+		firstValueInObject(node, ["@_ref", "ref", "Ref", "REF"]),
+		firstValueInObject(node, ["Index", "index", "Key", "key"]),
+	].filter((value): value is string => Boolean(value));
+}
+
+function articulationReferenceValues(note: XmlNode): string[] {
+	const refs = new Set<string>();
+	for (const key of ["Element", "element", "Articulation", "articulation"]) {
+		const value = note[key];
+		for (const ref of referenceValues(value)) refs.add(ref);
+		if (isObject(value)) {
+			for (const id of articulationDefinitionIds(value)) refs.add(id);
+		}
+	}
+	return Array.from(refs);
+}
+
+function mergeArticulationMetadata(
+	metadata: GpifArticulationMetadata,
+): GpifArticulationMetadata {
+	return Object.fromEntries(
+		Object.entries(metadata).filter(([, value]) => value !== undefined),
+	) as GpifArticulationMetadata;
+}
+
+function hasUsefulArticulationMetadata(metadata: GpifArticulationMetadata): boolean {
+	return Boolean(
+		metadata.name ||
+			metadata.inputMidiNumbers?.length ||
+			metadata.outputMidiNumber !== undefined,
+	);
+}
+
+function isReferenceOnly(node: XmlNode): boolean {
+	return Object.keys(node).every(isReferenceKey);
 }
 
 function extractMidiNumber(note: XmlNode): number | undefined {

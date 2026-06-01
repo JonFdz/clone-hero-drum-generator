@@ -21,23 +21,6 @@ import type { NormalizationPreview, ProjectIssue } from "./types.js";
 
 const generalMidiDrums = generalMidiDrumsUntyped as MidiDrumPieceMap;
 
-type GpifNormalizationResultWithMapping = Awaited<ReturnType<typeof normalizeGpDrums>> & {
-	mappingSources?: NormalizationPreview["mappingCandidates"];
-	unknownArticulations: Array<
-		Awaited<ReturnType<typeof normalizeGpDrums>>["unknownArticulations"][number] & {
-			key?: string;
-		}
-	>;
-};
-
-const normalizeGpDrumsWithMapping = normalizeGpDrums as unknown as (
-	filePath: string,
-	options: {
-		trackIndex: number;
-		mappingOverrides?: NormalizeSelectionInput["mappingOverrides"];
-	},
-) => Promise<GpifNormalizationResultWithMapping>;
-
 export async function normalizeSelection(
 	input: NormalizeSelectionInput,
 ): Promise<NormalizationPreview> {
@@ -88,7 +71,7 @@ export async function normalizeSelection(
 
 		const results = await Promise.all(
 			requestedTracks.map((trackIndex) =>
-				normalizeGpDrumsWithMapping(input.sourcePath, {
+				normalizeGpDrums(input.sourcePath, {
 					trackIndex,
 					mappingOverrides: input.mappingOverrides,
 				}),
@@ -301,12 +284,31 @@ function combineMappingCoverage(
 		ignoredSourceCount: 0,
 		unknownSourceCount: 0,
 	};
-	for (const item of items) {
-		summary.totalEventCount += item.totalEventCount;
-		summary.mappedEventCount += item.mappedEventCount;
-		summary.candidateEventCount += item.candidateEventCount;
-		summary.ignoredEventCount += item.ignoredEventCount;
-		summary.unknownEventCount += item.unknownEventCount;
+	if (items.length > 0) {
+		for (const item of items) {
+			summary.totalEventCount += item.totalEventCount;
+			summary.mappedEventCount += item.mappedEventCount;
+			summary.candidateEventCount += item.candidateEventCount;
+			summary.ignoredEventCount += item.ignoredEventCount;
+			summary.unknownEventCount += item.unknownEventCount;
+		}
+	} else {
+		for (const candidate of candidates) {
+			const count = candidate.count ?? 0;
+			summary.totalEventCount += count;
+			if (candidate.action === "candidate") {
+				summary.candidateEventCount += count;
+			} else if (candidate.action === "ignore") {
+				summary.ignoredEventCount += count;
+			} else if (
+				candidate.action === "unknown" ||
+				candidate.automaticPiece === "unknown"
+			) {
+				summary.unknownEventCount += count;
+			} else {
+				summary.mappedEventCount += count;
+			}
+		}
 	}
 	for (const candidate of candidates) {
 		if (candidate.action === "candidate") sourceKeys.candidate.add(candidate.key);

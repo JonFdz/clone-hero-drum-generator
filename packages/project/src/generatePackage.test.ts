@@ -134,12 +134,16 @@ describe("generatePackage", () => {
 			outDir,
 		});
 
-		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(1, "demo.gp", {
-			trackIndex: 3,
-		});
-		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(2, "demo.gp", {
-			trackIndex: 10,
-		});
+		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(
+			1,
+			"demo.gp",
+			expect.objectContaining({ trackIndex: 3 }),
+		);
+		expect(mocks.normalizeGpDrums).toHaveBeenNthCalledWith(
+			2,
+			"demo.gp",
+			expect.objectContaining({ trackIndex: 10 }),
+		);
 		expect(result.selectedTracks).toEqual([3, 10]);
 		expect(result.hitCount).toBe(2);
 		expect(result.mergeSummary?.duplicateHitCount).toBe(1);
@@ -310,6 +314,151 @@ describe("generatePackage", () => {
 				},
 			},
 		});
+		expect(
+			result.issues.find((issue) => issue.code === "UNKNOWN_GPIF_ARTICULATION"),
+		).toBeUndefined();
+	});
+
+	it("passes GPIF mapping overrides so candidate overrides can create generated hits", async () => {
+		const outDir = join(tempDir, "output-gpif-candidate-override");
+		const key = "gpif:3:pedal-hi-hat:44:no-input";
+		mocks.normalizeGpDrums.mockImplementation(async (_sourcePath, options) => ({
+			trackIndex: 3,
+			trackName: "Drums",
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits:
+				options.mappingOverrides?.[key]?.target.kind === "piece"
+					? [
+							{
+								tick: 0,
+								piece: "hihat_closed",
+								velocity: 90,
+								durationTicks: 0,
+								source: {
+									kind: "gpif",
+									trackIndex: 3,
+									articulationKey: key,
+									rawArticulation: "Pedal Hi-Hat",
+								},
+							},
+						]
+					: [],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [],
+			mappingSources: [],
+		}));
+
+		const result = await generatePackage({
+			sourcePath: "demo.gp",
+			trackIndex: 3,
+			outDir,
+			mappingOverrides: {
+				[key]: {
+					sourceKind: "gpif",
+					key,
+					target: { kind: "piece", piece: "hihat_closed" },
+				},
+			},
+		});
+
+		expect(mocks.normalizeGpDrums).toHaveBeenCalledWith("demo.gp", {
+			trackIndex: 3,
+			mappingOverrides: {
+				[key]: {
+					sourceKind: "gpif",
+					key,
+					target: { kind: "piece", piece: "hihat_closed" },
+				},
+			},
+		});
+		expect(result.hitCount).toBe(1);
+		expect(result.mappedNoteCount).toBe(1);
+	});
+
+	it("passes GPIF ignore overrides so mapped articulations can be skipped during generation", async () => {
+		const outDir = join(tempDir, "output-gpif-ignore-override");
+		const key = "gpif:3:kick:no-output:no-input";
+		mocks.normalizeGpDrums.mockImplementation(async (_sourcePath, options) => ({
+			trackIndex: 3,
+			trackName: "Drums",
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits:
+				options.mappingOverrides?.[key]?.target.kind === "ignore"
+					? []
+					: [
+							{
+								tick: 0,
+								piece: "kick",
+								velocity: 90,
+								durationTicks: 0,
+								source: {
+									kind: "gpif",
+									trackIndex: 3,
+									articulationKey: key,
+									rawArticulation: "Kick",
+								},
+							},
+						],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [],
+			mappingSources: [],
+		}));
+
+		const result = await generatePackage({
+			sourcePath: "demo.gp",
+			trackIndex: 3,
+			outDir,
+			mappingOverrides: {
+				[key]: {
+					sourceKind: "gpif",
+					key,
+					target: { kind: "ignore" },
+				},
+			},
+		});
+
+		expect(result.hitCount).toBe(0);
+		expect(result.mappedNoteCount).toBe(0);
+	});
+
+	it("suppresses unknown GPIF warnings when an ignore override exists for the stable key", async () => {
+		const outDir = join(tempDir, "output-gpif-unknown-ignore");
+		const key = "gpif:3:mystery-effect:no-output:no-input";
+		mocks.normalizeGpDrums.mockResolvedValue({
+			trackIndex: 3,
+			trackName: "Drums",
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits: [],
+			warnings: [],
+			unhandled: [],
+			unknownArticulations: [{ key, rawArticulation: "Mystery Effect", count: 1 }],
+			mappingSources: [],
+		});
+
+		const result = await generatePackage({
+			sourcePath: "demo.gp",
+			trackIndex: 3,
+			outDir,
+			mappingOverrides: {
+				[key]: {
+					sourceKind: "gpif",
+					key,
+					target: { kind: "ignore" },
+				},
+			},
+		});
+
 		expect(
 			result.issues.find((issue) => issue.code === "UNKNOWN_GPIF_ARTICULATION"),
 		).toBeUndefined();

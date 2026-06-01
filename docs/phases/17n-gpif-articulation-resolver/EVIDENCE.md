@@ -56,3 +56,65 @@ pnpm lint
 ## Manual GPIF file validation
 
 Not performed with a real external Guitar Pro file in this agent environment. Coverage is synthetic/unit/integration only.
+
+## Follow-up validation — PR #69 review fixes
+
+### Follow-up implementation notes
+
+- `generatePackage` now passes `mappingOverrides` into GPIF normalization, so candidate/unknown/ignored GPIF articulations can be converted to generated hits or ignored before they are skipped.
+- Generate unknown GPIF warnings now check both legacy raw-articulation overrides and stable GPIF articulation keys, including ignore overrides.
+- GPIF mapping coverage now derives event counts from `mappingCandidates.count` when package-level coverage items are absent, preventing all-zero GPIF coverage summaries.
+- Added support for external GPIF articulation definitions referenced by notes. Definitions are indexed from GPIF `Element` / `Articulation` structures and merged with note-local metadata using `note-local > referenced definition > fallback` priority.
+- Removed the `normalizeSelection.ts` local cast by exposing `@chdg/guitarpro` source types through the package `exports.types` entry.
+- Resolver version string remains duplicated intentionally in the desktop browser model with an explanatory comment: importing `@chdg/guitarpro` directly into browser Source Review code would couple the desktop browser model to GPIF parser dependencies just to read a cache fingerprint constant.
+
+### Follow-up tests added
+
+- Generate: GPIF candidate override creates generated hit.
+- Generate: GPIF mapped articulation ignore override skips generated hit.
+- Generate: GPIF unknown ignore override suppresses unknown warning using stable key.
+- Normalize Selection: GPIF mapping coverage event/source counts for mapped/candidate/ignored/unknown rows.
+- GuitarPro normalization: note referencing external articulation definition resolves `Hi-Hat (half)` input 92/output 46 to `hihat_open` via `output-midi-number`.
+
+### Automated validation
+
+```bash
+pnpm exec tsc -p packages/core/tsconfig.json --noEmit
+# passed
+
+pnpm exec tsc -p packages/guitarpro/tsconfig.json --noEmit
+# passed
+
+pnpm exec tsc -p packages/project/tsconfig.json --noEmit
+# passed
+
+pnpm exec tsc -p apps/desktop/tsconfig.json --noEmit
+# passed
+
+pnpm --filter @chdg/guitarpro test
+# 5 test files passed, 51 tests passed
+
+pnpm --filter @chdg/project test
+# 9 test files passed, 78 tests passed
+
+pnpm exec vitest run apps/desktop/src/app/services/source-review-model.test.ts
+# 1 test file passed, 22 tests passed
+
+pnpm test
+# 58 test files passed, 497 tests passed
+
+pnpm lint
+# passed; workspace lint scripts currently report "lint not configured yet"
+```
+
+### External/real-file validation
+
+A real external GPIF/Guitar Pro file was not used in this agent environment. Instead, a realistic fixture was added where a `Note` references an external `Element` definition containing:
+
+```text
+Name: Hi-Hat (half)
+InputMidiNumbers: 92
+OutputMidiNumber: 46
+```
+
+The fixture confirms normalization sees the referenced metadata, resolves via `output-midi-number`, creates `hihat_open`, preserves `source.inputMidiNumbers: [92]` and `source.outputMidiNumber: 46`, and emits no unknown articulation.

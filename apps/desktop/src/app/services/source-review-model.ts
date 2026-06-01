@@ -9,6 +9,12 @@ import type {
 import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
 import { chooseDefaultTracks } from "./desktop-generate-model";
 
+// Keep this browser-side fingerprint constant aligned with
+// GPIF_ARTICULATION_RESOLVER_VERSION in @chdg/guitarpro. Importing the parser
+// package directly here would couple the desktop browser model to GPIF parsing
+// dependencies just to read a cache key.
+const GPIF_ARTICULATION_RESOLVER_FINGERPRINT_VERSION = "0.1.0";
+
 export type SourceReviewMappingRow = {
 	key: string;
 	sourceKind?: "midi" | "gpif";
@@ -117,7 +123,8 @@ export function stableMappingFingerprint(
 	overrides: ProjectMappingOverrides | undefined,
 ): string {
 	return stableStringify({
-		gpifArticulationResolverVersion: "0.1.0",
+		gpifArticulationResolverVersion:
+			GPIF_ARTICULATION_RESOLVER_FINGERPRINT_VERSION,
 		mappingAtlasVersion: MIDI_DRUM_NOTE_ATLAS_VERSION,
 		overrides: overrides ?? {},
 	});
