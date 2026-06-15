@@ -76,6 +76,66 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 							[waveformError]="preview.waveformError()"
 							(seek)="seek($event)"
 						/>
+
+						<section class="card timing-card" *ngIf="preview.chartData()?.timing as timing">
+							<div class="timing-heading">
+								<div>
+									<p class="eyebrow">Generated notes.chart</p>
+									<h2>Timing Diagnostics</h2>
+								</div>
+								<span class="timing-status" [class.warning]="timing.summary.warningCount > 0" [class.danger]="timing.summary.errorCount > 0">
+									{{ timing.summary.label }}
+								</span>
+							</div>
+
+							<div class="timing-facts">
+								<div><span>Resolution</span><strong>{{ timing.resolution }}</strong></div>
+								<div><span>Offset adjustment</span><strong>{{ timing.offsetSeconds * 1000 }} ms</strong></div>
+								<div><span>Tempo events</span><strong>{{ timing.tempos.length }}</strong></div>
+								<div><span>Time signatures</span><strong>{{ timing.timeSignatures.length }}</strong></div>
+							</div>
+
+							<h3>Diagnostics</h3>
+							<ul class="diagnostic-list">
+								<li *ngFor="let diagnostic of timing.diagnostics" [class.warning]="diagnostic.severity === 'warning'" [class.danger]="diagnostic.severity === 'error'">
+									<strong>{{ diagnostic.code }}</strong>
+									<span>{{ diagnostic.message }}</span>
+									<small *ngIf="diagnostic.code === 'SOURCE_COMPARISON_UNAVAILABLE'">Cached source analysis was not recalculated by Preview.</small>
+								</li>
+							</ul>
+
+							<div class="timing-tables">
+								<section>
+									<h3>Tempo Events</h3>
+									<div class="timing-row header"><span>Tick</span><span>Time</span><span>BPM</span></div>
+									<div class="timing-row" *ngFor="let tempo of timing.tempos">
+										<span>{{ tempo.tick }}</span><span>{{ formatDiagnosticTime(tempo.seconds) }}</span><span>{{ tempo.bpm }}</span>
+									</div>
+								</section>
+								<section>
+									<h3>Time Signatures</h3>
+									<div class="timing-row header"><span>Tick</span><span>Time</span><span>Signature</span></div>
+									<div class="timing-row" *ngFor="let signature of timing.timeSignatures">
+										<span>{{ signature.tick }}</span><span>{{ formatDiagnosticTime(signature.seconds) }}</span><span>{{ signature.numerator }}/{{ signature.denominator }}</span>
+									</div>
+								</section>
+								<section>
+									<h3>Generated Sections</h3>
+									<div class="timing-row header"><span>Tick</span><span>Time</span><span>Name</span></div>
+									<div class="timing-row" *ngFor="let section of timing.sections">
+										<span>{{ section.tick }}</span><span>{{ formatDiagnosticTime(section.seconds) }}</span><span>{{ section.name }}</span>
+									</div>
+								</section>
+								<section>
+									<h3>Generated Notes</h3>
+									<div class="note-summary">
+										<span>Count <strong>{{ timing.notes.count }}</strong></span>
+										<span>First <strong>{{ timing.notes.firstTick ?? '—' }} · {{ formatDiagnosticTime(timing.notes.firstSeconds) }}</strong></span>
+										<span>Last <strong>{{ timing.notes.lastTick ?? '—' }} · {{ formatDiagnosticTime(timing.notes.lastSeconds) }}</strong></span>
+									</div>
+								</section>
+							</div>
+						</section>
 					</div>
 
 					<chdg-preview-offset-panel
@@ -115,8 +175,26 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 			.preview-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem); min-width: 0; }
 			.preview-main { display: grid; gap: 1rem; min-width: 0; }
 			chdg-preview-offset-panel { min-width: 0; }
+			.timing-card { display: grid; gap: 1rem; }
+			.timing-heading { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
+			.timing-heading h2, .timing-heading p, .timing-card h3 { margin-bottom: 0; }
+			.timing-status { border: 1px solid rgba(69, 181, 255, 0.35); border-radius: 999px; color: #45b5ff; font-weight: 800; padding: 0.45rem 0.7rem; }
+			.timing-status.warning, .diagnostic-list li.warning { border-color: rgba(246, 180, 80, 0.4); color: var(--color-warning); }
+			.timing-status.danger, .diagnostic-list li.danger { border-color: rgba(255, 107, 122, 0.4); color: var(--color-danger); }
+			.timing-facts { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+			.timing-facts div { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 0.25rem; padding: 0.75rem; }
+			.timing-facts span, .diagnostic-list small { color: var(--color-muted); }
+			.diagnostic-list { display: grid; gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
+			.diagnostic-list li { border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 0.25rem; padding: 0.7rem; }
+			.diagnostic-list li strong { font-size: 0.78rem; }
+			.timing-tables { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+			.timing-tables section { border: 1px solid var(--color-border); border-radius: var(--radius-md); min-width: 0; overflow: hidden; padding: 0.75rem; }
+			.timing-row { display: grid; gap: 0.5rem; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0.4rem 0; }
+			.timing-row.header { border-bottom: 1px solid var(--color-border); color: var(--color-muted); font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
+			.note-summary { display: grid; gap: 0.5rem; }
+			.note-summary span { display: flex; justify-content: space-between; }
 			@media (max-width: 1500px) { .preview-layout { grid-template-columns: 1fr; } }
-			@media (max-width: 760px) { .preview-header { display: grid; } }
+			@media (max-width: 760px) { .preview-header, .timing-heading { display: grid; } .timing-facts, .timing-tables { grid-template-columns: 1fr; } }
 		`,
 	],
 })
@@ -189,6 +267,15 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 	async applyOffset(): Promise<void> {
 		await this.preview.applyOffset();
 		await this.preview.load();
+	}
+
+	formatDiagnosticTime(seconds: number | undefined): string {
+		if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
+			return "Unavailable";
+		}
+		const minutes = Math.floor(seconds / 60);
+		const remaining = seconds - minutes * 60;
+		return `${String(minutes).padStart(2, "0")}:${remaining.toFixed(3).padStart(6, "0")}`;
 	}
 
 	private startPlaybackAnimation(): void {

@@ -10,6 +10,7 @@ import {
 	hasStaleGpifTrackNoteCounts,
 	mappingAttentionState,
 	mappingReviewCounts,
+	resolvePreviewAnalysisCache,
 	selectedTracksKey,
 	sourceFingerprintMatches,
 	shouldExpandMappingReview,
@@ -46,6 +47,66 @@ const normalizationPreview = {
 };
 
 describe("source-review-model", () => {
+	it("rejects stale cached analysis before Preview source comparison", () => {
+		const cache = createAnalysisCache({
+			sourceFingerprint: {
+				path: "/tmp/demo.mid",
+				sizeBytes: 100,
+				mtimeMs: 200,
+			},
+			mappingFingerprint: stableMappingFingerprint({}),
+			selectedTracks: [3],
+			inspection,
+			normalizationPreview,
+		});
+
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint: {
+					path: "/tmp/demo.mid",
+					sizeBytes: 101,
+					mtimeMs: 200,
+				},
+				mappingFingerprint: stableMappingFingerprint({}),
+				selectedTracks: [3],
+			}),
+		).toBeUndefined();
+	});
+
+	it("preserves a fresh Preview cache and rejects mapping-stale analysis", () => {
+		const sourceFingerprint = {
+			path: "/tmp/demo.mid",
+			sizeBytes: 100,
+			mtimeMs: 200,
+		};
+		const mappingFingerprint = stableMappingFingerprint({});
+		const cache = createAnalysisCache({
+			sourceFingerprint,
+			mappingFingerprint,
+			selectedTracks: [3],
+			inspection,
+			normalizationPreview,
+		});
+
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint,
+				mappingFingerprint,
+				selectedTracks: [3],
+			}),
+		).toBe(cache);
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint,
+				mappingFingerprint: "changed",
+				selectedTracks: [3],
+			}),
+		).toBeUndefined();
+	});
+
 	it("selects exactly one strongest default track", () => {
 		expect(strongestDefaultTrack(inspection.tracks)).toEqual([3]);
 	});

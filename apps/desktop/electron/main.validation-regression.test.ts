@@ -34,4 +34,13 @@ describe("electron main payload validation regressions", () => {
 		);
 		expect(source).toContain("return validateMappingOverrides(value);");
 	});
+
+	it("passes only optional cached source analysis into Preview timing comparison", () => {
+		expect(source).toContain(
+			'const analysis = optionalAnalysisCache(value["analysis"]);',
+		);
+		expect(source).toContain(
+			"sourceTimingFromAnalysisCache(analysis)",
+		);
+	});
 });

@@ -70,6 +70,46 @@ export type ChartPreviewData = {
 	limitations: string[];
 	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
 	sectionEvents: ChartPreviewSectionEvent[];
+	timing: {
+		resolution: number;
+		offsetSeconds: number;
+		hasAccurateTiming: boolean;
+		tempos: Array<{
+			tick: number;
+			bpm: number;
+			seconds: number;
+			source: "generated-chart";
+		}>;
+		timeSignatures: Array<{
+			tick: number;
+			numerator: number;
+			denominator: number;
+			seconds: number;
+			source: "generated-chart";
+		}>;
+		sections: ChartPreviewSectionEvent[];
+		notes: {
+			count: number;
+			firstTick?: number;
+			lastTick?: number;
+			firstSeconds?: number;
+			lastSeconds?: number;
+		};
+		diagnostics: Array<{
+			severity: "info" | "warning" | "error";
+			code: string;
+			message: string;
+			details?: Record<string, unknown>;
+		}>;
+		summary: {
+			status: "ok" | "info" | "warning" | "error";
+			label: string;
+			errorCount: number;
+			warningCount: number;
+			infoCount: number;
+			importantMessages: string[];
+		};
+	};
 };
 
 export type ApplyChartOffsetInput = {
@@ -285,6 +325,7 @@ export class DesktopBridgeService {
 	async getChartPreviewData(input: {
 		outputDir?: string;
 		chartPath?: string;
+		analysis?: ChdgProjectAnalysisCache;
 	}): Promise<JsonEnvelope<ChartPreviewData>> {
 		return this.requireBridge().getChartPreviewData(input);
 	}

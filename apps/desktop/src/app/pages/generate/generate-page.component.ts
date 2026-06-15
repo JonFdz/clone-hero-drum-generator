@@ -207,6 +207,17 @@ const severityRank: Record<ValidationItem["severity"], number> = {
             <div><span>Deduped</span><strong>{{ result.deduplicatedCount }}</strong></div>
             <div><span>Tracks</span><strong>{{ result.selectedTracks.length }}</strong></div>
           </div>
+          <section class="timing-summary">
+            <h3>Timing Summary</h3>
+            <strong>{{ result.timing.summary.label }}</strong>
+            @if (result.timing.summary.importantMessages.length > 0) {
+              <ul>
+                @for (message of result.timing.summary.importantMessages; track message) {
+                  <li>{{ message }}</li>
+                }
+              </ul>
+            }
+          </section>
         } @else {
           <div class="empty-state output-empty">
             <span aria-hidden="true">▭</span>
@@ -315,6 +326,9 @@ const severityRank: Record<ValidationItem["severity"], number> = {
     .metrics-grid div { display: grid; gap: var(--space-1, 0.25rem); justify-items: center; }
     .metrics-grid span { color: var(--color-muted); font-size: 0.78rem; }
     .metrics-grid strong { color: var(--color-text); }
+    .timing-summary { border-top: 1px solid var(--color-border); display: grid; gap: var(--space-2); margin-top: var(--space-4); padding-top: var(--space-4); }
+    .timing-summary h3, .timing-summary ul { margin: 0; }
+    .timing-summary li { color: var(--color-warning); }
     .generate-action-bar { align-items: center; background: rgba(20, 27, 36, 0.82); border: 1px solid var(--color-border); border-radius: var(--radius-lg); bottom: 0; display: grid; gap: var(--space-4); grid-template-columns: minmax(12rem, 0.8fr) minmax(12rem, 0.9fr) minmax(12rem, 0.9fr) minmax(16rem, 1.4fr); padding: var(--space-4); position: sticky; z-index: 2; }
     .generate-action-bar .button.primary { width: 100%; }
     @media (max-width: 1180px) {

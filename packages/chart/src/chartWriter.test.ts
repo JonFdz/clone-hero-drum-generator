@@ -123,6 +123,35 @@ describe("writeChart", () => {
     expect(output).toContain("0 = B 195000");
   });
 
+  it("orders SyncTrack events by tick with time signature before tempo at the same tick", () => {
+    const output = writeChart(
+      makeChart({
+        tempos: [
+          { tick: 960, bpm: 150 },
+          { tick: 0, bpm: 120 },
+        ],
+        timeSignatures: [
+          { tick: 960, numerator: 6, denominator: 8 },
+          { tick: 0, numerator: 4, denominator: 4 },
+        ],
+      }),
+    );
+    const syncTrack = output.slice(
+      output.indexOf("[SyncTrack]"),
+      output.indexOf("[Events]"),
+    );
+
+    expect(syncTrack.indexOf("0 = TS 4 2")).toBeLessThan(
+      syncTrack.indexOf("0 = B 120000"),
+    );
+    expect(syncTrack.indexOf("0 = B 120000")).toBeLessThan(
+      syncTrack.indexOf("960 = TS 6 3"),
+    );
+    expect(syncTrack.indexOf("960 = TS 6 3")).toBeLessThan(
+      syncTrack.indexOf("960 = B 150000"),
+    );
+  });
+
   it("writes default offset as zero", () => {
     const chart = makeChart();
     const output = writeChart(chart);

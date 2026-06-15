@@ -25,6 +25,10 @@ import {
 	resetOffsetToSaved,
 	resolveOffsetApplyFlow,
 } from "./offset-preview-state";
+import {
+	resolvePreviewAnalysisCache,
+	stableMappingFingerprint,
+} from "./source-review-model";
 
 @Injectable({ providedIn: "root" })
 export class DesktopPreviewService {
@@ -133,9 +137,27 @@ export class DesktopPreviewService {
 			return;
 		}
 
+		let analysis = undefined;
+		if (state.sourcePath && state.analysisCache) {
+			const sourceFingerprint = await this.bridge.getSourceFingerprint(
+				state.sourcePath,
+			);
+			if (sourceFingerprint.ok) {
+				analysis = resolvePreviewAnalysisCache({
+					cache: state.analysisCache,
+					sourceFingerprint: sourceFingerprint.data,
+					mappingFingerprint: stableMappingFingerprint(
+						state.mappingOverrides,
+					),
+					selectedTracks: state.selectedTracks,
+				});
+			}
+		}
+
 		const chart = await this.bridge.getChartPreviewData({
 			outputDir: state.outputDir,
 			chartPath: state.outputFiles?.chart,
+			analysis,
 		});
 		if (!chart.ok) {
 			this.setUnavailable(`Generated notes.chart unavailable: ${chart.error.message}`);

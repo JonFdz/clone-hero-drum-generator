@@ -171,6 +171,15 @@ export function validateSourceReviewCache(input: {
 	};
 }
 
+export function resolvePreviewAnalysisCache(input: {
+	cache: ChdgProjectAnalysisCache | undefined;
+	sourceFingerprint: ChdgSourceFingerprint;
+	mappingFingerprint: string;
+	selectedTracks: number[];
+}): ChdgProjectAnalysisCache | undefined {
+	return validateSourceReviewCache(input).valid ? input.cache : undefined;
+}
+
 
 export function hasStaleGpifTrackNoteCounts(
 	cache: ChdgProjectAnalysisCache,

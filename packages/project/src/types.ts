@@ -5,6 +5,10 @@ import type {
 	TimeSignatureEvent,
 } from "@chdg/core";
 import type {
+	GeneratedChartTiming,
+	TimingDiagnosticsSummary,
+} from "@chdg/chart";
+import type {
 	MappingCandidate,
 	ProjectMappingOverrides,
 } from "./mappingOverrides.js";
@@ -128,6 +132,9 @@ export type GeneratePackageResult = {
 		albumJpg?: string;
 	};
 	issues: ProjectIssue[];
+	timing: GeneratedChartTiming & {
+		summary: TimingDiagnosticsSummary;
+	};
 };
 
 export type GenerateProgressEvent = {

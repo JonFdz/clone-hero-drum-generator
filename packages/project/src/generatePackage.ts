@@ -1,7 +1,13 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 import { prepareAudio } from "@chdg/audio";
-import { deduplicateBaseNotes, writeChart, writeSongIni } from "@chdg/chart";
+import {
+	deduplicateBaseNotes,
+	parseGeneratedChartTiming,
+	summarizeTimingDiagnostics,
+	writeChart,
+	writeSongIni,
+} from "@chdg/chart";
 import type {
 	CloneHeroDrumNote,
 	DrumChart,
@@ -104,6 +110,7 @@ export async function generatePackage(
 		const songIniPath = join(input.outDir, "song.ini");
 		await writeFile(notesChartPath, chartText);
 		await writeFile(songIniPath, songIniText);
+		const timing = parseGeneratedChartTiming(chartText);
 
 		const audioResult = input.audioSource
 			? await prepareAudio({
@@ -135,6 +142,10 @@ export async function generatePackage(
 				albumJpg: coverResult.ok ? coverResult.outputPath : undefined,
 			},
 			issues: [...source.issues, ...coverResult.issues],
+			timing: {
+				...timing,
+				summary: summarizeTimingDiagnostics(timing.diagnostics),
+			},
 		};
 	} catch (error) {
 		throw toProjectServiceError(error, "GENERATE_PACKAGE_FAILED");
