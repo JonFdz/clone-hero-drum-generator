@@ -49,6 +49,13 @@ export type SourceInspectionResult = {
 	issues: ProjectIssue[];
 };
 
+export type NormalizedSourceTiming = {
+	resolution: number;
+	tempos: TempoEvent[];
+	timeSignatures: TimeSignatureEvent[];
+	sections: SongSection[];
+};
+
 export type NormalizationHitPreview = {
 	tick: number;
 	piece: DrumHit["piece"];
@@ -91,6 +98,7 @@ export type NormalizationPreview = {
 	mergeSummary?: MultiTrackMergeSummary;
 	mappingCandidates: MappingCandidate[];
 	mappingCoverage?: MappingCoverageSummary;
+	normalizedTiming?: NormalizedSourceTiming;
 	issues: ProjectIssue[];
 };
 

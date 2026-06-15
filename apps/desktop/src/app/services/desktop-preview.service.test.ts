@@ -42,14 +42,27 @@ function createService(
 	fingerprintResult:
 		| { ok: true; data: typeof sourceFingerprint }
 		| { ok: false; error: { message: string } },
+	options?: {
+		chartResult?: { ok: true; data: { noteEvents: never[]; timing: object } };
+		audioResult?: { ok: false; error: { message: string } };
+	},
 ) {
-	const getChartPreviewData = vi.fn().mockResolvedValue({
-		ok: false,
-		error: { message: "stop after cache handoff" },
-	});
+	const getChartPreviewData = vi.fn().mockResolvedValue(
+		options?.chartResult ?? {
+			ok: false,
+			error: { message: "stop after cache handoff" },
+		},
+	);
+	const getAudioPreviewSource = vi.fn().mockResolvedValue(
+		options?.audioResult ?? {
+			ok: false,
+			error: { message: "audio unavailable" },
+		},
+	);
 	const bridge = {
 		getSourceFingerprint: vi.fn().mockResolvedValue(fingerprintResult),
 		getChartPreviewData,
+		getAudioPreviewSource,
 	};
 	const generateState = {
 		state: () => ({
@@ -68,6 +81,7 @@ function createService(
 
 	return {
 		getChartPreviewData,
+		getAudioPreviewSource,
 		service: new DesktopPreviewService(
 			bridge as never,
 			generateState as never,
@@ -120,5 +134,32 @@ describe("DesktopPreviewService analysis cache handoff", () => {
 			chartPath: "/tmp/output/notes.chart",
 			analysis: analysisCache,
 		});
+	});
+
+	it("keeps chart timing available when generated audio cannot be loaded", async () => {
+		const chartData = {
+			noteEvents: [],
+			timing: { summary: { label: "Timing: 2 warnings" } },
+		};
+		const { service } = createService(
+			{ ok: true, data: sourceFingerprint },
+			{
+				chartResult: { ok: true, data: chartData },
+				audioResult: {
+					ok: false,
+					error: { message: "song.ogg missing" },
+				},
+			},
+		);
+
+		await service.load();
+
+		expect(service.chartData()).toBe(chartData);
+		expect(service.audioSrc()).toBeNull();
+		expect(service.error()).toBeNull();
+		expect(service.waveformStatus()).toBe("empty");
+		expect(service.waveformError()).toBe(
+			"Audio and waveform unavailable: song.ogg missing",
+		);
 	});
 });

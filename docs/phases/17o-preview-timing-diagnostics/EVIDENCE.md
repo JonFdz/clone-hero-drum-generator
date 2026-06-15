@@ -183,3 +183,75 @@ Document any accepted limitations.
 - Verify Preview visual density and responsive layout in a local desktop run.
 - External review remains intentionally incomplete. PR #71 is open and must not be merged without Jon's explicit approval.
 - The OpenSpec PR task remains unchecked by instruction.
+
+## Follow-up implementation — normalized source timing and audio-independent chart diagnostics
+
+Implemented the two assigned follow-up blockers:
+
+- Added `ChdgProjectAnalysisCache.normalizedTiming` with resolution, tempos, time signatures, and sections from MIDI/GPIF normalization results.
+- `sourceTimingFromAnalysisCache` now prefers well-formed normalized timing, falls back to reliable numeric inspection timing, and safely ignores malformed normalized timing.
+- Fresh MIDI inspection fallback remains supported.
+- Fresh GPIF normalized timing now enables `SOURCE_GENERATED_TEMPO_COUNT_MISMATCH` and `SOURCE_TEMPO_MISSING_IN_GENERATED`.
+- Raw GPIF inspection-only timing remains `SOURCE_COMPARISON_UNAVAILABLE`.
+- Existing stale-cache filtering remains unchanged, and Preview still does not recalculate source analysis.
+- `DesktopPreviewService.load()` now preserves successful chart data when generated audio loading fails.
+- Preview displays Timing Diagnostics without audio, with non-blocking audio/waveform-unavailable copy.
+- Missing `notes.chart` still makes chart timing unavailable.
+- Offset milliseconds are rounded and empty diagnostics have explicit copy.
+
+### Follow-up TDD evidence
+
+| Work unit | Safety net | RED | GREEN / triangulation |
+|---|---|---|---|
+| Normalized source timing cache | Required focused baseline: 6 files, 72 tests passed | 5 files: 6 failed, 58 passed. Failures proved missing normalized timing propagation/cache preference, GPIF mismatch diagnostics, and audio-independent rendering. | Required focused suite: 6 files, 78 tests passed. Additional normalization suite: 1 file, 13 tests passed, covering both MIDI and GPIF normalized timing. |
+| Chart timing without audio | Same 72-test focused baseline | Service cleared `chartData`; Preview lacked no-audio timing rendering/copy. | Service preserves chart data, exposes non-blocking waveform state, and Preview renders timing diagnostics without audio. |
+
+### Follow-up commands and results
+
+```bash
+pnpm exec vitest run packages/chart/src/chartTiming.test.ts apps/desktop/electron/previewData.test.ts apps/desktop/src/app/services/desktop-preview.service.test.ts apps/desktop/src/app/pages/preview/preview-page.component.test.ts apps/desktop/src/app/services/source-review-model.test.ts packages/project/src/generatePackage.test.ts
+# Baseline: 6 files, 72 tests passed.
+# Final: 6 files, 78 tests passed.
+
+pnpm exec vitest run apps/desktop/electron/previewData.test.ts apps/desktop/src/app/services/desktop-preview.service.test.ts apps/desktop/src/app/pages/preview/preview-page.component.test.ts apps/desktop/src/app/services/source-review-model.test.ts packages/project/src/normalizeSelection.test.ts
+# RED: 5 files, 6 failed and 58 passed.
+
+pnpm exec vitest run packages/project/src/normalizeSelection.test.ts
+# 1 file, 13 tests passed.
+
+pnpm test
+# 61 files, 535 tests passed.
+
+pnpm --filter @chdg/project build
+# Passed.
+
+pnpm --filter @chdg/project typecheck
+# Passed.
+
+pnpm --filter @chdg/chart typecheck
+# Passed.
+
+pnpm --filter @chdg/desktop exec tsc -p tsconfig.electron.json --noEmit
+# Passed after rebuilding @chdg/project declarations.
+
+pnpm --filter @chdg/desktop exec ngc -p tsconfig.app.json
+# Passed after rebuilding @chdg/project declarations.
+
+pnpm lint
+# Passed; workspace packages report lint is not configured.
+
+pnpm --filter @chdg/desktop typecheck
+# Blocked: Node.js 25.9.0 / esbuild Angular build aborted with exit 134 (Abort trap: 6).
+
+git diff --check
+# Passed.
+```
+
+### Follow-up limitations
+
+- Transport, waveform, and offset interaction remain unavailable when audio is unavailable; chart timing diagnostics remain readable.
+- No Preview-triggered inspection or normalization was added.
+- No Generate source-comparison expansion was added.
+- Manual desktop interaction/screenshots were not performed in this executor environment.
+- The combined desktop `ng build` typecheck remains blocked by the existing Node.js 25.9.0/esbuild abort; direct Angular and Electron compiler checks pass.
+- External review remains incomplete by instruction.

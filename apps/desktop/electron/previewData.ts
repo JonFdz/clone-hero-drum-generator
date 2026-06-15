@@ -50,8 +50,39 @@ export function sourceTimingFromAnalysisCache(
 	cache: ChdgProjectAnalysisCache | undefined,
 ): SourceTimingSnapshot | undefined {
 	if (!cache) return undefined;
-	const { tempos: cachedTempos, timeSignatures: cachedTimeSignatures, sections: cachedSections } =
-		cache.inspection;
+	const normalized = sourceTimingSnapshot(cache.normalizedTiming, true);
+	if (normalized) return normalized;
+	const inspection = sourceTimingSnapshot(cache.inspection);
+	if (!inspection) return undefined;
+	const hasNoGpifTimingData =
+		cache.inspection.sourceKind === "gpif" &&
+		inspection.resolution === undefined &&
+		inspection.tempos.length === 0 &&
+		inspection.timeSignatures.length === 0 &&
+		inspection.sections.length === 0;
+	return hasNoGpifTimingData ? undefined : inspection;
+}
+
+function sourceTimingSnapshot(input: {
+	resolution?: unknown;
+	tempos?: unknown;
+	timeSignatures?: unknown;
+	sections?: unknown;
+} | undefined, requireResolution = false): SourceTimingSnapshot | undefined {
+	if (!input) return undefined;
+	if (
+		requireResolution &&
+		(typeof input.resolution !== "number" ||
+			!Number.isFinite(input.resolution) ||
+			input.resolution <= 0)
+	) {
+		return undefined;
+	}
+	const {
+		tempos: cachedTempos,
+		timeSignatures: cachedTimeSignatures,
+		sections: cachedSections,
+	} = input;
 	if (
 		!Array.isArray(cachedTempos) ||
 		!Array.isArray(cachedTimeSignatures) ||
@@ -72,19 +103,14 @@ export function sourceTimingFromAnalysisCache(
 		tempos.length !== cachedTempos.length ||
 		timeSignatures.length !== cachedTimeSignatures.length ||
 		sections.length !== cachedSections.length;
-	const hasNoGpifTimingData =
-		cache.inspection.sourceKind === "gpif" &&
-		cache.inspection.resolution === undefined &&
-		tempos.length === 0 &&
-		timeSignatures.length === 0 &&
-		sections.length === 0;
-	if (hasUnusableTimingValues || hasNoGpifTimingData) return undefined;
+	if (hasUnusableTimingValues) return undefined;
 
 	return {
 		resolution:
-			typeof cache.inspection.resolution === "number" &&
-			Number.isFinite(cache.inspection.resolution)
-				? cache.inspection.resolution
+			typeof input.resolution === "number" &&
+			Number.isFinite(input.resolution) &&
+			input.resolution > 0
+				? input.resolution
 				: undefined,
 		tempos,
 		timeSignatures,

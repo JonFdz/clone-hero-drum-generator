@@ -170,13 +170,23 @@ export class DesktopPreviewService {
 			generatedSongOggPath: state.outputFiles?.songOgg,
 		});
 		if (!audio.ok) {
-			this.setUnavailable(`Generated song.ogg unavailable: ${audio.error.message}`);
+			this.setAudioUnavailable(audio.error.message);
 			return;
 		}
 		this.audioSrc.set(audio.data.src);
 		this.sourceKind.set(audio.data.sourceKind);
 		await this.loadWaveform(audio.data.src);
 
+	}
+
+	private setAudioUnavailable(message: string): void {
+		this.audioSrc.set(null);
+		this.sourceKind.set(null);
+		this.waveformOverview.set(null);
+		this.waveformStatus.set("empty");
+		this.waveformError.set(`Audio and waveform unavailable: ${message}`);
+		this.currentTime.set(0);
+		this.duration.set(0);
 	}
 
 	private setUnavailable(message: string): void {

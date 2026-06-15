@@ -146,6 +146,36 @@ describe("source-review-model", () => {
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] }).valid).toBe(true);
 	});
 
+	it("stores normalized timing from the normalization result in the analysis cache", () => {
+		const normalizedTiming = {
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
+		};
+		const cache = createAnalysisCache({
+			sourceFingerprint: { path: "/tmp/demo.gp", sizeBytes: 1, mtimeMs: 2 },
+			mappingFingerprint: "{}",
+			selectedTracks: [3],
+			inspection: {
+				...inspection,
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+			},
+			normalizationPreview: {
+				...normalizationPreview,
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				normalizedTiming,
+			},
+		});
+
+		expect(cache.normalizedTiming).toEqual(normalizedTiming);
+	});
+
 
 	it("invalidates cached normalization when atlas version changes", () => {
 		const sourceFingerprint = { path: "/tmp/demo.mid", sizeBytes: 1, mtimeMs: 2 };

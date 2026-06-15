@@ -245,6 +245,141 @@ describe("sourceTimingFromAnalysisCache", () => {
 		});
 	});
 
+	it("prefers normalized source timing over raw inspection timing", () => {
+		const source = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.gp" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [3],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedAt: "2026-06-14T00:01:00.000Z",
+			normalizedTiming: {
+				resolution: 960,
+				tempos: [
+					{ tick: 0, bpm: 164 },
+					{ tick: 184_320, bpm: 160 },
+				],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 30_720, name: "Verse" }],
+			},
+			inspection: {
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tempos: [{ path: "GPIF.Score.Tempo", value: "147" }],
+				timeSignatures: [],
+				sections: [],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		expect(source).toEqual({
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
+		});
+	});
+
+	it("falls back to reliable inspection timing when normalized timing is malformed", () => {
+		const cache = {
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.mid" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [53],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedTiming: {
+				resolution: 480,
+				tempos: "invalid",
+				timeSignatures: [],
+				sections: [],
+			},
+			inspection: {
+				sourceKind: "midi",
+				sourcePath: "/tmp/demo.mid",
+				resolution: 480,
+				tempos: [{ tick: 0, bpm: 147 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 960, name: "Verse" }],
+				tracks: [],
+				issues: [],
+			},
+		};
+
+		expect(
+			sourceTimingFromAnalysisCache(
+				cache as unknown as Parameters<typeof sourceTimingFromAnalysisCache>[0],
+			),
+		).toEqual({
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 147 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 960, name: "Verse" }],
+		});
+	});
+
+	it("detects missing generated GPIF tempos from normalized cached timing", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 960
+}
+[SyncTrack]
+{
+  0 = TS 4
+  0 = B 164000
+}
+[Events]
+{
+}
+[ExpertDrums]
+{
+  0 = N 0 0
+}
+`,
+			"utf8",
+		);
+		const sourceTiming = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.gp" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [3],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedTiming: {
+				resolution: 960,
+				tempos: [
+					{ tick: 0, bpm: 164 },
+					{ tick: 184_320, bpm: 160 },
+				],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [],
+			},
+			inspection: {
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tempos: [],
+				timeSignatures: [],
+				sections: [],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		const data = await parseChartPreviewData(chartPath, sourceTiming);
+		expect(data.timing.diagnostics.map((item) => item.code)).toEqual(
+			expect.arrayContaining([
+				"SOURCE_GENERATED_TEMPO_COUNT_MISMATCH",
+				"SOURCE_TEMPO_MISSING_IN_GENERATED",
+			]),
+		);
+	});
+
 	it("returns undefined without a cache instead of recalculating source analysis", () => {
 		expect(sourceTimingFromAnalysisCache(undefined)).toBeUndefined();
 	});

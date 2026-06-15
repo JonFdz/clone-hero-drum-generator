@@ -1,4 +1,8 @@
-import type { NormalizationPreview, SourceInspectionResult } from "./types.js";
+import type {
+	NormalizationPreview,
+	NormalizedSourceTiming,
+	SourceInspectionResult,
+} from "./types.js";
 
 export type ChdgOutputStatus =
 	| "not-generated"
@@ -21,6 +25,7 @@ export type ChdgProjectAnalysisCache = {
 	normalizedAt?: string;
 	inspection: SourceInspectionResult;
 	normalizationPreview?: NormalizationPreview;
+	normalizedTiming?: NormalizedSourceTiming;
 };
 
 export type ChdgProjectFile = {

@@ -26,4 +26,14 @@ describe("Preview timing diagnostics UI", () => {
 		expect(source).toContain("SOURCE_COMPARISON_UNAVAILABLE");
 		expect(source).not.toContain("Offset warning");
 	});
+
+	it("keeps timing diagnostics visible without audio and explains the limitation", () => {
+		expect(source).toContain("*ngIf=\"preview.chartData()?.timing as timing\"");
+		expect(source).toContain(
+			"Audio and waveform are unavailable. Timing diagnostics from notes.chart remain available.",
+		);
+		expect(source.lastIndexOf("Timing Diagnostics")).toBeGreaterThan(
+			source.indexOf("<ng-template #missingAudio>"),
+		);
+	});
 });

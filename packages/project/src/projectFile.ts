@@ -173,6 +173,12 @@ export function validateAnalysisCache(
 						normalizationPreview as ChdgProjectAnalysisCache["normalizationPreview"],
 				}
 			: {}),
+		...(input["normalizedTiming"] !== undefined
+			? {
+					normalizedTiming:
+						input["normalizedTiming"] as ChdgProjectAnalysisCache["normalizedTiming"],
+				}
+			: {}),
 	};
 }
 

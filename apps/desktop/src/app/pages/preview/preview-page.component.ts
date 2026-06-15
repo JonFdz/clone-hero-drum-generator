@@ -90,12 +90,13 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 
 							<div class="timing-facts">
 								<div><span>Resolution</span><strong>{{ timing.resolution }}</strong></div>
-								<div><span>Offset adjustment</span><strong>{{ timing.offsetSeconds * 1000 }} ms</strong></div>
+								<div><span>Offset adjustment</span><strong>{{ formatOffsetMilliseconds(timing.offsetSeconds) }} ms</strong></div>
 								<div><span>Tempo events</span><strong>{{ timing.tempos.length }}</strong></div>
 								<div><span>Time signatures</span><strong>{{ timing.timeSignatures.length }}</strong></div>
 							</div>
 
 							<h3>Diagnostics</h3>
+							<p class="empty-diagnostics" *ngIf="timing.diagnostics.length === 0">No timing diagnostics were reported.</p>
 							<ul class="diagnostic-list">
 								<li *ngFor="let diagnostic of timing.diagnostics" [class.warning]="diagnostic.severity === 'warning'" [class.danger]="diagnostic.severity === 'error'">
 									<strong>{{ diagnostic.code }}</strong>
@@ -157,9 +158,70 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 		</ng-template>
 
 		<ng-template #missingAudio>
-			<section class="card">
+			<section class="card message">
 				<h2>No preview audio</h2>
-				<p>No audio available for waveform preview. Generate output or choose project audio before opening Preview.</p>
+				<p>Audio and waveform are unavailable. Timing diagnostics from notes.chart remain available.</p>
+			</section>
+
+			<section class="card timing-card" *ngIf="preview.chartData()?.timing as timing">
+				<div class="timing-heading">
+					<div>
+						<p class="eyebrow">Generated notes.chart</p>
+						<h2>Timing Diagnostics</h2>
+					</div>
+					<span class="timing-status" [class.warning]="timing.summary.warningCount > 0" [class.danger]="timing.summary.errorCount > 0">
+						{{ timing.summary.label }}
+					</span>
+				</div>
+
+				<div class="timing-facts">
+					<div><span>Resolution</span><strong>{{ timing.resolution }}</strong></div>
+					<div><span>Offset adjustment</span><strong>{{ formatOffsetMilliseconds(timing.offsetSeconds) }} ms</strong></div>
+					<div><span>Tempo events</span><strong>{{ timing.tempos.length }}</strong></div>
+					<div><span>Time signatures</span><strong>{{ timing.timeSignatures.length }}</strong></div>
+				</div>
+
+				<h3>Diagnostics</h3>
+				<p class="empty-diagnostics" *ngIf="timing.diagnostics.length === 0">No timing diagnostics were reported.</p>
+				<ul class="diagnostic-list">
+					<li *ngFor="let diagnostic of timing.diagnostics" [class.warning]="diagnostic.severity === 'warning'" [class.danger]="diagnostic.severity === 'error'">
+						<strong>{{ diagnostic.code }}</strong>
+						<span>{{ diagnostic.message }}</span>
+						<small *ngIf="diagnostic.code === 'SOURCE_COMPARISON_UNAVAILABLE'">Cached source analysis was not recalculated by Preview.</small>
+					</li>
+				</ul>
+
+				<div class="timing-tables">
+					<section>
+						<h3>Tempo Events</h3>
+						<div class="timing-row header"><span>Tick</span><span>Time</span><span>BPM</span></div>
+						<div class="timing-row" *ngFor="let tempo of timing.tempos">
+							<span>{{ tempo.tick }}</span><span>{{ formatDiagnosticTime(tempo.seconds) }}</span><span>{{ tempo.bpm }}</span>
+						</div>
+					</section>
+					<section>
+						<h3>Time Signatures</h3>
+						<div class="timing-row header"><span>Tick</span><span>Time</span><span>Signature</span></div>
+						<div class="timing-row" *ngFor="let signature of timing.timeSignatures">
+							<span>{{ signature.tick }}</span><span>{{ formatDiagnosticTime(signature.seconds) }}</span><span>{{ signature.numerator }}/{{ signature.denominator }}</span>
+						</div>
+					</section>
+					<section>
+						<h3>Generated Sections</h3>
+						<div class="timing-row header"><span>Tick</span><span>Time</span><span>Name</span></div>
+						<div class="timing-row" *ngFor="let section of timing.sections">
+							<span>{{ section.tick }}</span><span>{{ formatDiagnosticTime(section.seconds) }}</span><span>{{ section.name }}</span>
+						</div>
+					</section>
+					<section>
+						<h3>Generated Notes</h3>
+						<div class="note-summary">
+							<span>Count <strong>{{ timing.notes.count }}</strong></span>
+							<span>First <strong>{{ timing.notes.firstTick ?? '—' }} · {{ formatDiagnosticTime(timing.notes.firstSeconds) }}</strong></span>
+							<span>Last <strong>{{ timing.notes.lastTick ?? '—' }} · {{ formatDiagnosticTime(timing.notes.lastSeconds) }}</strong></span>
+						</div>
+					</section>
+				</div>
 			</section>
 		</ng-template>
 	`,
@@ -183,7 +245,7 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 			.timing-status.danger, .diagnostic-list li.danger { border-color: rgba(255, 107, 122, 0.4); color: var(--color-danger); }
 			.timing-facts { display: grid; gap: 0.75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 			.timing-facts div { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 0.25rem; padding: 0.75rem; }
-			.timing-facts span, .diagnostic-list small { color: var(--color-muted); }
+			.timing-facts span, .diagnostic-list small, .empty-diagnostics { color: var(--color-muted); }
 			.diagnostic-list { display: grid; gap: 0.5rem; list-style: none; margin: 0; padding: 0; }
 			.diagnostic-list li { border: 1px solid var(--color-border); border-radius: var(--radius-md); display: grid; gap: 0.25rem; padding: 0.7rem; }
 			.diagnostic-list li strong { font-size: 0.78rem; }
@@ -276,6 +338,10 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 		const minutes = Math.floor(seconds / 60);
 		const remaining = seconds - minutes * 60;
 		return `${String(minutes).padStart(2, "0")}:${remaining.toFixed(3).padStart(6, "0")}`;
+	}
+
+	formatOffsetMilliseconds(offsetSeconds: number): number {
+		return Math.round(offsetSeconds * 1000);
 	}
 
 	private startPlaybackAnimation(): void {
