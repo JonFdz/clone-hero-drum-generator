@@ -6,7 +6,8 @@ Implementation agent must update this file with real evidence before opening or 
 
 - Branch: `feat/phase-17o-preview-timing-diagnostics`
 - PR: Not created; prohibited for this executor.
-- Issue: Existing approved Phase 17O issue; external linking remains pending with PR creation.
+- Issue: [#70 — Phase 17O — Preview Timing Diagnostics](https://github.com/JonFdz/clone-hero-drum-generator/issues/70)
+- Pull request: [#71 — feat: add preview timing diagnostics](https://github.com/JonFdz/clone-hero-drum-generator/pull/71)
 
 ## Summary of implementation
 
@@ -180,5 +181,5 @@ Document any accepted limitations.
 ## Reviewer notes
 
 - Verify Preview visual density and responsive layout in a local desktop run.
-- External review and PR creation are intentionally incomplete.
+- External review remains intentionally incomplete. PR #71 is open and must not be merged without Jon's explicit approval.
 - The OpenSpec PR task remains unchecked by instruction.
