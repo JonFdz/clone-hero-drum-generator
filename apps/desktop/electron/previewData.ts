@@ -1,5 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import {
+	compareGeneratedChartTiming,
+	parseGeneratedChartTiming,
+	summarizeTimingDiagnostics,
+	type GeneratedChartTiming,
+	type SourceTimingSnapshot,
+	type TimingDiagnosticsSummary,
+	type ChdgProjectAnalysisCache,
+} from "@chdg/project";
 
 export type AudioPreviewSourceKind = "generated";
 
@@ -27,12 +36,87 @@ export type ChartPreviewData = {
 	limitations: string[];
 	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
 	sectionEvents: ChartPreviewSectionEvent[];
+	timing: GeneratedChartTiming & {
+		summary: TimingDiagnosticsSummary;
+	};
 };
 
 export type ChartPreviewRequest = {
 	outputDir?: string;
 	chartPath?: string;
 };
+
+export function sourceTimingFromAnalysisCache(
+	cache: ChdgProjectAnalysisCache | undefined,
+): SourceTimingSnapshot | undefined {
+	if (!cache) return undefined;
+	const normalized = sourceTimingSnapshot(cache.normalizedTiming, true);
+	if (normalized) return normalized;
+	const inspection = sourceTimingSnapshot(cache.inspection);
+	if (!inspection) return undefined;
+	const hasNoGpifTimingData =
+		cache.inspection.sourceKind === "gpif" &&
+		inspection.resolution === undefined &&
+		inspection.tempos.length === 0 &&
+		inspection.timeSignatures.length === 0 &&
+		inspection.sections.length === 0;
+	return hasNoGpifTimingData ? undefined : inspection;
+}
+
+function sourceTimingSnapshot(input: {
+	resolution?: unknown;
+	tempos?: unknown;
+	timeSignatures?: unknown;
+	sections?: unknown;
+} | undefined, requireResolution = false): SourceTimingSnapshot | undefined {
+	if (!input) return undefined;
+	if (
+		requireResolution &&
+		(typeof input.resolution !== "number" ||
+			!Number.isFinite(input.resolution) ||
+			input.resolution <= 0)
+	) {
+		return undefined;
+	}
+	const {
+		tempos: cachedTempos,
+		timeSignatures: cachedTimeSignatures,
+		sections: cachedSections,
+	} = input;
+	if (
+		!Array.isArray(cachedTempos) ||
+		!Array.isArray(cachedTimeSignatures) ||
+		!Array.isArray(cachedSections)
+	) {
+		return undefined;
+	}
+	const tempos = cachedTempos.flatMap((value) =>
+		isTempo(value) ? [value] : [],
+	);
+	const timeSignatures = cachedTimeSignatures.flatMap((value) =>
+		isTimeSignature(value) ? [value] : [],
+	);
+	const sections = cachedSections.flatMap((value) =>
+		isSongSection(value) ? [value] : [],
+	);
+	const hasUnusableTimingValues =
+		tempos.length !== cachedTempos.length ||
+		timeSignatures.length !== cachedTimeSignatures.length ||
+		sections.length !== cachedSections.length;
+	if (hasUnusableTimingValues) return undefined;
+
+	return {
+		resolution:
+			typeof input.resolution === "number" &&
+			Number.isFinite(input.resolution) &&
+			input.resolution > 0
+				? input.resolution
+				: undefined,
+		tempos,
+		timeSignatures,
+		sections,
+	};
+}
 
 export function resolveChartPreviewPath(input: ChartPreviewRequest): {
 	resolvedOutputDir?: string;
@@ -77,58 +161,51 @@ export function pickAudioPreviewCandidate(input: AudioPreviewRequest): {
 	return { generatedPath };
 }
 
-export async function parseChartPreviewData(chartPath: string): Promise<ChartPreviewData> {
+export async function parseChartPreviewData(
+	chartPath: string,
+	sourceTiming?: SourceTimingSnapshot,
+): Promise<ChartPreviewData> {
 	const text = await readFile(chartPath, "utf8");
-	const resolution = parseResolution(text) ?? 192;
-	const offsetSeconds = parseOffset(text) ?? 0;
-	const tempos = parseTempos(text);
+	const generatedTiming = parseGeneratedChartTiming(text);
+	const sourceDiagnostics = compareGeneratedChartTiming(
+		generatedTiming,
+		sourceTiming,
+	);
+	const diagnostics = [...generatedTiming.diagnostics, ...sourceDiagnostics];
+	const timing = {
+		...generatedTiming,
+		diagnostics,
+		summary: summarizeTimingDiagnostics(diagnostics),
+	};
+	const resolution = timing.resolution;
+	const offsetSeconds = timing.offsetSeconds;
+	const tempos = timing.hasAccurateTiming
+		? timing.tempos.map(({ tick, bpm }) => ({ tick, bpm }))
+		: [
+				{ tick: 0, bpm: 120 },
+				...timing.tempos.map(({ tick, bpm }) => ({ tick, bpm })),
+			];
 	const noteEvents = parseExpertDrumsNotes(text).map((note) => ({
 		...note,
 		seconds: tickToSeconds(note.tick, resolution, tempos),
 	}));
-	const sectionEvents = parseSectionEvents(text).map((sectionEvent) => ({
-		...sectionEvent,
-		seconds: tickToSeconds(sectionEvent.tick, resolution, tempos),
-		source: "generated-chart" as const,
-	}));
+	const sectionEvents = timing.sections;
 	return {
 		resolution,
 		offsetSeconds,
-		hasAccurateTiming: tempos.length > 0,
+		hasAccurateTiming: timing.hasAccurateTiming,
 		limitations:
-			tempos.length > 0
+			timing.hasAccurateTiming
 				? []
-				: ["Tempo map unavailable; note timing uses 120 BPM fallback."],
+				: [
+						timing.tempos.length > 0
+							? "Timing is low confidence: note timing uses 120 BPM until the first usable tempo, then honors later valid tempo changes."
+							: "Timing is low confidence: tempo map unavailable, so note timing uses a 120 BPM fallback.",
+					],
 		noteEvents,
 		sectionEvents,
+		timing,
 	};
-}
-
-function parseResolution(text: string): number | undefined {
-	const m = text.match(/Resolution\s*=\s*(\d+)/);
-	return m ? Number(m[1]) : undefined;
-}
-
-function parseOffset(text: string): number | undefined {
-	const m = text.match(/Offset\s*=\s*(-?\d+(?:\.\d+)?)/);
-	return m ? Number(m[1]) : undefined;
-}
-
-function parseTempos(text: string): Array<{ tick: number; bpm: number }> {
-	const sync = section(text, "SyncTrack");
-	if (!sync) return [];
-	const events: Array<{ tick: number; bpm: number }> = [];
-	for (const line of sync.split(/\r?\n/)) {
-		const m = line.match(/^(\s*\d+)\s*=\s*B\s+(\d+)/);
-		if (!m) continue;
-		const tick = Number(m[1].trim());
-		const chartBpmValue = Number(m[2]);
-		const bpm = chartBpmValue / 1000;
-		if (Number.isFinite(tick) && Number.isFinite(bpm) && bpm > 0) {
-			events.push({ tick, bpm });
-		}
-	}
-	return events.sort((a, b) => a.tick - b.tick);
 }
 
 function parseExpertDrumsNotes(text: string): Array<{ tick: number; lane: number }> {
@@ -147,21 +224,6 @@ function parseExpertDrumsNotes(text: string): Array<{ tick: number; lane: number
 	return notes.sort((a, b) => a.tick - b.tick);
 }
 
-function parseSectionEvents(text: string): Array<{ tick: number; name: string }> {
-	const events = section(text, "Events");
-	if (!events) return [];
-	const sectionEvents: Array<{ tick: number; name: string }> = [];
-	for (const line of events.split(/\r?\n/)) {
-		const m = line.match(/^(\s*\d+)\s*=\s*E\s+"section\s+(.+)"\s*$/);
-		if (!m) continue;
-		const tick = Number(m[1].trim());
-		const name = m[2].trim();
-		if (Number.isFinite(tick) && name.length > 0) {
-			sectionEvents.push({ tick, name });
-		}
-	}
-	return sectionEvents.sort((a, b) => a.tick - b.tick);
-}
 
 function tickToSeconds(tick: number, resolution: number, tempos: Array<{ tick: number; bpm: number }>): number {
 	if (!Number.isFinite(tick) || tick <= 0) return 0;
@@ -190,4 +252,39 @@ function section(text: string, name: "SyncTrack" | "ExpertDrums" | "Events"): st
 	const bodyStart = start + marker.length;
 	const nextSection = text.indexOf("\n[", bodyStart);
 	return (nextSection >= 0 ? text.slice(bodyStart, nextSection) : text.slice(bodyStart)).trim();
+}
+
+function isTempo(value: unknown): value is { tick: number; bpm: number } {
+	return (
+		isRecord(value) &&
+		isFiniteNumber(value["tick"]) &&
+		isFiniteNumber(value["bpm"])
+	);
+}
+
+function isTimeSignature(
+	value: unknown,
+): value is { tick: number; numerator: number; denominator: number } {
+	return (
+		isRecord(value) &&
+		isFiniteNumber(value["tick"]) &&
+		isFiniteNumber(value["numerator"]) &&
+		isFiniteNumber(value["denominator"])
+	);
+}
+
+function isSongSection(value: unknown): value is { tick: number; name: string } {
+	return (
+		isRecord(value) &&
+		isFiniteNumber(value["tick"]) &&
+		typeof value["name"] === "string"
+	);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+	return typeof value === "number" && Number.isFinite(value);
 }

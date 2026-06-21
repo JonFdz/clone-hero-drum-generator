@@ -13,3 +13,13 @@ export * from "./projectFileTypes.js";
 export * from "./settings.js";
 export * from "./mappingOverrides.js";
 export * from "./mappingProfiles.js";
+export {
+	compareGeneratedChartTiming,
+	formatChartTime,
+	parseGeneratedChartTiming,
+	summarizeTimingDiagnostics,
+	type GeneratedChartTiming,
+	type SourceTimingSnapshot,
+	type TimingDiagnostic,
+	type TimingDiagnosticsSummary,
+} from "@chdg/chart";

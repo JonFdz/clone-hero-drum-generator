@@ -6,6 +6,7 @@ import {
 	parseChartPreviewData,
 	pickAudioPreviewCandidate,
 	resolveChartPreviewPath,
+	sourceTimingFromAnalysisCache,
 } from "./previewData";
 
 describe("pickAudioPreviewCandidate", () => {
@@ -41,6 +42,14 @@ describe("parseChartPreviewData", () => {
 		const data = await parseChartPreviewData(chartPath);
 		expect(data.noteEvents[0]?.seconds).toBeCloseTo(0.5, 6);
 		expect(data.noteEvents[1]?.seconds).toBeCloseTo(1, 6);
+		expect(data.timing.tempos).toEqual([
+			{ tick: 0, bpm: 120, seconds: 0, source: "generated-chart" },
+		]);
+		expect(data.timing.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ code: "SOURCE_COMPARISON_UNAVAILABLE" }),
+			]),
+		);
 	});
 	it("parses generated chart section events with tempo-aware timing", async () => {
 		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
@@ -88,6 +97,96 @@ describe("parseChartPreviewData", () => {
 			}),
 		]);
 		expect(data.sectionEvents[1]?.seconds).toBeCloseTo(2, 6);
+		expect(data.timing.sections[1]).toEqual(
+			expect.objectContaining({ tick: 576, name: "Break", seconds: 2 }),
+		);
+	});
+
+	it("uses 120 BPM only before the first valid tempo and honors later changes", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = TS 4
+  384 = B 60000
+}
+[ExpertDrums]
+{
+  192 = N 0 0
+  384 = N 1 0
+  576 = N 2 0
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+
+		expect(data.hasAccurateTiming).toBe(false);
+		expect(data.noteEvents.map((note) => note.seconds)).toEqual([0.5, 1, 2]);
+		expect(data.timing.tempos).toEqual([
+			{ tick: 384, bpm: 60, seconds: 1, source: "generated-chart" },
+		]);
+		expect(data.limitations).toEqual([
+			"Timing is low confidence: note timing uses 120 BPM until the first usable tempo, then honors later valid tempo changes.",
+		]);
+	});
+
+	it("compares generated timing with accepted cached source analysis only", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = TS 4
+  0 = B 120000
+}
+[Events]
+{
+}
+[ExpertDrums]
+{
+  192 = N 0 0
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath, {
+			resolution: 192,
+			tempos: [
+				{ tick: 0, bpm: 120 },
+				{ tick: 384, bpm: 150 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 768, name: "Chorus" }],
+		});
+
+		expect(data.timing.diagnostics).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					code: "SOURCE_GENERATED_TEMPO_COUNT_MISMATCH",
+				}),
+				expect.objectContaining({
+					code: "SOURCE_TEMPO_MISSING_IN_GENERATED",
+				}),
+				expect.objectContaining({
+					code: "SOURCE_SECTION_MISSING_IN_GENERATED",
+				}),
+			]),
+		);
+		expect(data.timing.summary.label).toBe("Timing: 2 warnings, 1 info");
 	});
 
 	it("returns no section events when generated chart has no section markers", async () => {
@@ -116,6 +215,296 @@ describe("parseChartPreviewData", () => {
 		expect(data.sectionEvents).toEqual([]);
 	});
 
+});
+
+describe("sourceTimingFromAnalysisCache", () => {
+	it("extracts only cached resolution, tempo, time-signature, and section data", () => {
+		const source = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.mid" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [53],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			inspection: {
+				sourceKind: "midi",
+				sourcePath: "/tmp/demo.mid",
+				resolution: 480,
+				tempos: [{ tick: 0, bpm: 147 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 960, name: "Verse" }],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		expect(source).toEqual({
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 147 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 960, name: "Verse" }],
+		});
+	});
+
+	it("prefers normalized source timing over raw inspection timing", () => {
+		const source = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.gp" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [3],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedAt: "2026-06-14T00:01:00.000Z",
+			normalizedTiming: {
+				resolution: 960,
+				tempos: [
+					{ tick: 0, bpm: 164 },
+					{ tick: 184_320, bpm: 160 },
+				],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 30_720, name: "Verse" }],
+			},
+			inspection: {
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tempos: [{ path: "GPIF.Score.Tempo", value: "147" }],
+				timeSignatures: [],
+				sections: [],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		expect(source).toEqual({
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
+		});
+	});
+
+	it("falls back to reliable inspection timing when normalized timing is malformed", () => {
+		const cache = {
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.mid" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [53],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedTiming: {
+				resolution: 480,
+				tempos: "invalid",
+				timeSignatures: [],
+				sections: [],
+			},
+			inspection: {
+				sourceKind: "midi",
+				sourcePath: "/tmp/demo.mid",
+				resolution: 480,
+				tempos: [{ tick: 0, bpm: 147 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 960, name: "Verse" }],
+				tracks: [],
+				issues: [],
+			},
+		};
+
+		expect(
+			sourceTimingFromAnalysisCache(
+				cache as unknown as Parameters<typeof sourceTimingFromAnalysisCache>[0],
+			),
+		).toEqual({
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 147 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 960, name: "Verse" }],
+		});
+	});
+
+	it("detects missing generated GPIF tempos from normalized cached timing", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 960
+}
+[SyncTrack]
+{
+  0 = TS 4
+  0 = B 164000
+}
+[Events]
+{
+}
+[ExpertDrums]
+{
+  0 = N 0 0
+}
+`,
+			"utf8",
+		);
+		const sourceTiming = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.gp" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [3],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			normalizedTiming: {
+				resolution: 960,
+				tempos: [
+					{ tick: 0, bpm: 164 },
+					{ tick: 184_320, bpm: 160 },
+				],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [],
+			},
+			inspection: {
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tempos: [],
+				timeSignatures: [],
+				sections: [],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		const data = await parseChartPreviewData(chartPath, sourceTiming);
+		expect(data.timing.diagnostics.map((item) => item.code)).toEqual(
+			expect.arrayContaining([
+				"SOURCE_GENERATED_TEMPO_COUNT_MISMATCH",
+				"SOURCE_TEMPO_MISSING_IN_GENERATED",
+			]),
+		);
+	});
+
+	it("returns undefined without a cache instead of recalculating source analysis", () => {
+		expect(sourceTimingFromAnalysisCache(undefined)).toBeUndefined();
+	});
+
+	it("treats malformed persisted nested timing collections as unavailable", () => {
+		const cache = {
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.mid" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [53],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			inspection: {
+				sourceKind: "midi",
+				sourcePath: "/tmp/demo.mid",
+				resolution: 480,
+				tempos: { tick: 0, bpm: 147 },
+				timeSignatures: [],
+				sections: [],
+				tracks: [],
+				issues: [],
+			},
+		};
+
+		expect(() =>
+			sourceTimingFromAnalysisCache(
+				cache as unknown as Parameters<typeof sourceTimingFromAnalysisCache>[0],
+			),
+		).not.toThrow();
+		expect(
+			sourceTimingFromAnalysisCache(
+				cache as unknown as Parameters<typeof sourceTimingFromAnalysisCache>[0],
+			),
+		).toBeUndefined();
+	});
+
+	it("rejects malformed time-signature or section collections without affecting valid caches", () => {
+		const baseCache = {
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.mid" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [53],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			inspection: {
+				sourceKind: "midi",
+				sourcePath: "/tmp/demo.mid",
+				resolution: 480,
+				tempos: [{ tick: 0, bpm: 147 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 960, name: "Verse" }],
+				tracks: [],
+				issues: [],
+			},
+		};
+		const malformedTimeSignatures = {
+			...baseCache,
+			inspection: {
+				...baseCache.inspection,
+				timeSignatures: "4/4",
+			},
+		};
+		const malformedSections = {
+			...baseCache,
+			inspection: {
+				...baseCache.inspection,
+				sections: null,
+			},
+		};
+
+		expect(
+			sourceTimingFromAnalysisCache(
+				malformedTimeSignatures as unknown as Parameters<
+					typeof sourceTimingFromAnalysisCache
+				>[0],
+			),
+		).toBeUndefined();
+		expect(
+			sourceTimingFromAnalysisCache(
+				malformedSections as unknown as Parameters<
+					typeof sourceTimingFromAnalysisCache
+				>[0],
+			),
+		).toBeUndefined();
+		expect(
+			sourceTimingFromAnalysisCache(
+				baseCache as Parameters<typeof sourceTimingFromAnalysisCache>[0],
+			),
+		).toEqual({
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 147 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 960, name: "Verse" }],
+		});
+	});
+
+	it("treats raw GPIF inspection timing summaries as comparison unavailable", () => {
+		const source = sourceTimingFromAnalysisCache({
+			schemaVersion: 2,
+			sourceFingerprint: { path: "/tmp/demo.gp" },
+			mappingFingerprint: "mapping",
+			selectedTracks: [0],
+			inspectedAt: "2026-06-14T00:00:00.000Z",
+			inspection: {
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				tempos: [{ path: "GPIF.Score.Tempo", value: "147" }],
+				timeSignatures: [
+					{
+						path: "GPIF.MasterBars.MasterBar[0].TimeSignature",
+						value: "4/4",
+					},
+				],
+				sections: [
+					{
+						name: "Verse",
+						kind: "marker",
+						path: "GPIF.MasterBars.MasterBar[0].Marker",
+					},
+				],
+				tracks: [],
+				issues: [],
+			},
+		});
+
+		expect(source).toBeUndefined();
+	});
 });
 
 describe("resolveChartPreviewPath", () => {

@@ -69,6 +69,13 @@ describe("generatePackage", () => {
 			selectedTracks: [53],
 			outputDir: outDir,
 			hitCount: 1,
+			timing: {
+				hasAccurateTiming: true,
+				summary: {
+					label: "Timing: OK",
+					warningCount: 0,
+				},
+			},
 		});
 		await expect(stat(join(outDir, "notes.chart"))).resolves.toMatchObject({});
 		await expect(stat(join(outDir, "song.ini"))).resolves.toMatchObject({});

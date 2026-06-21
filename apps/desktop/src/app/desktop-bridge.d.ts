@@ -97,6 +97,7 @@ declare global {
 			getChartPreviewData: (input: {
 				outputDir?: string;
 				chartPath?: string;
+				analysis?: ChdgProjectAnalysisCache;
 			}) => Promise<JsonEnvelope<ChartPreviewData>>;
 			applyChartOffset: (input: {
 				outputDir: string;

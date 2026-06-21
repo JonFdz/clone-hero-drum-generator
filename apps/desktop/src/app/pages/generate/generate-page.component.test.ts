@@ -40,4 +40,11 @@ describe("GeneratePageComponent unified flow", () => {
 		expect(source).toContain("this.projectState.saveProject(payload)");
 		expect(source).not.toContain("markNeedsRegenerate");
 	});
+
+	it("shows the concise generated timing summary and important warnings", () => {
+		expect(source).toContain("Timing Summary");
+		expect(source).toContain("result.timing.summary.label");
+		expect(source).toContain("result.timing.summary.importantMessages");
+		expect(source).not.toContain("result.timing.tempos");
+	});
 });

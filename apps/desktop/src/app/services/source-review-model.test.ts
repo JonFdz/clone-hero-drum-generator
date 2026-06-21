@@ -10,6 +10,7 @@ import {
 	hasStaleGpifTrackNoteCounts,
 	mappingAttentionState,
 	mappingReviewCounts,
+	resolvePreviewAnalysisCache,
 	selectedTracksKey,
 	sourceFingerprintMatches,
 	shouldExpandMappingReview,
@@ -46,6 +47,66 @@ const normalizationPreview = {
 };
 
 describe("source-review-model", () => {
+	it("rejects stale cached analysis before Preview source comparison", () => {
+		const cache = createAnalysisCache({
+			sourceFingerprint: {
+				path: "/tmp/demo.mid",
+				sizeBytes: 100,
+				mtimeMs: 200,
+			},
+			mappingFingerprint: stableMappingFingerprint({}),
+			selectedTracks: [3],
+			inspection,
+			normalizationPreview,
+		});
+
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint: {
+					path: "/tmp/demo.mid",
+					sizeBytes: 101,
+					mtimeMs: 200,
+				},
+				mappingFingerprint: stableMappingFingerprint({}),
+				selectedTracks: [3],
+			}),
+		).toBeUndefined();
+	});
+
+	it("preserves a fresh Preview cache and rejects mapping-stale analysis", () => {
+		const sourceFingerprint = {
+			path: "/tmp/demo.mid",
+			sizeBytes: 100,
+			mtimeMs: 200,
+		};
+		const mappingFingerprint = stableMappingFingerprint({});
+		const cache = createAnalysisCache({
+			sourceFingerprint,
+			mappingFingerprint,
+			selectedTracks: [3],
+			inspection,
+			normalizationPreview,
+		});
+
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint,
+				mappingFingerprint,
+				selectedTracks: [3],
+			}),
+		).toBe(cache);
+		expect(
+			resolvePreviewAnalysisCache({
+				cache,
+				sourceFingerprint,
+				mappingFingerprint: "changed",
+				selectedTracks: [3],
+			}),
+		).toBeUndefined();
+	});
+
 	it("selects exactly one strongest default track", () => {
 		expect(strongestDefaultTrack(inspection.tracks)).toEqual([3]);
 	});
@@ -83,6 +144,36 @@ describe("source-review-model", () => {
 		});
 		expect(cache.schemaVersion).toBe(2);
 		expect(validateSourceReviewCache({ cache, sourceFingerprint, mappingFingerprint: "{}", selectedTracks: [3] }).valid).toBe(true);
+	});
+
+	it("stores normalized timing from the normalization result in the analysis cache", () => {
+		const normalizedTiming = {
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
+		};
+		const cache = createAnalysisCache({
+			sourceFingerprint: { path: "/tmp/demo.gp", sizeBytes: 1, mtimeMs: 2 },
+			mappingFingerprint: "{}",
+			selectedTracks: [3],
+			inspection: {
+				...inspection,
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+			},
+			normalizationPreview: {
+				...normalizationPreview,
+				sourceKind: "gpif",
+				sourcePath: "/tmp/demo.gp",
+				normalizedTiming,
+			},
+		});
+
+		expect(cache.normalizedTiming).toEqual(normalizedTiming);
 	});
 
 

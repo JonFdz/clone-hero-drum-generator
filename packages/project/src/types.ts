@@ -5,6 +5,10 @@ import type {
 	TimeSignatureEvent,
 } from "@chdg/core";
 import type {
+	GeneratedChartTiming,
+	TimingDiagnosticsSummary,
+} from "@chdg/chart";
+import type {
 	MappingCandidate,
 	ProjectMappingOverrides,
 } from "./mappingOverrides.js";
@@ -43,6 +47,13 @@ export type SourceInspectionResult = {
 	sections: SongSection[] | unknown[];
 	tracks: TrackCandidate[];
 	issues: ProjectIssue[];
+};
+
+export type NormalizedSourceTiming = {
+	resolution: number;
+	tempos: TempoEvent[];
+	timeSignatures: TimeSignatureEvent[];
+	sections: SongSection[];
 };
 
 export type NormalizationHitPreview = {
@@ -87,6 +98,7 @@ export type NormalizationPreview = {
 	mergeSummary?: MultiTrackMergeSummary;
 	mappingCandidates: MappingCandidate[];
 	mappingCoverage?: MappingCoverageSummary;
+	normalizedTiming?: NormalizedSourceTiming;
 	issues: ProjectIssue[];
 };
 
@@ -128,6 +140,9 @@ export type GeneratePackageResult = {
 		albumJpg?: string;
 	};
 	issues: ProjectIssue[];
+	timing: GeneratedChartTiming & {
+		summary: TimingDiagnosticsSummary;
+	};
 };
 
 export type GenerateProgressEvent = {

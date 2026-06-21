@@ -61,6 +61,7 @@ import {
 	pickAudioPreviewCandidate,
 	parseChartPreviewData,
 	resolveChartPreviewPath,
+	sourceTimingFromAnalysisCache,
 } from "./previewData.js";
 import { applyChartOffsetFile } from "./chartOffset.js";
 
@@ -834,6 +835,7 @@ app.whenReady().then(() => {
 					value["chartPath"],
 					"chartPath must be text.",
 				);
+				const analysis = optionalAnalysisCache(value["analysis"]);
 				let resolved: ReturnType<typeof resolveChartPreviewPath>;
 				try {
 					resolved = resolveChartPreviewPath({
@@ -857,7 +859,10 @@ app.whenReady().then(() => {
 				}
 				assertAllowedOutputFolder(resolved.chartDir);
 				await access(resolved.chartPath);
-				return parseChartPreviewData(resolved.chartPath);
+				return parseChartPreviewData(
+					resolved.chartPath,
+					sourceTimingFromAnalysisCache(analysis),
+				);
 			});
 		},
 	);

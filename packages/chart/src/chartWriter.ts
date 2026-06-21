@@ -100,6 +100,23 @@ function sectionEventLines(sections: SongSection[]): string[] {
 		});
 }
 
+function syncTrackLines(chart: DrumChart): string[] {
+	return [
+		...chart.timeSignatures.map((timeSignature) => ({
+			tick: timeSignature.tick,
+			order: 0,
+			line: `  ${timeSignature.tick} = TS ${timeSignature.numerator} ${Math.log2(timeSignature.denominator)}`,
+		})),
+		...chart.tempos.map((tempo) => ({
+			tick: tempo.tick,
+			order: 1,
+			line: `  ${tempo.tick} = B ${bpmToChartValue(tempo.bpm)}`,
+		})),
+	]
+		.sort((a, b) => a.tick - b.tick || a.order - b.order)
+		.map((event) => event.line);
+}
+
 export function writeChart(
 	chart: DrumChart,
 	options?: { name?: string; artist?: string; charter?: string },
@@ -110,15 +127,11 @@ export function writeChart(
 	const offsetSeconds = chart.offsetSeconds ?? 0;
 	const expertLines = chart.expertDrums.flatMap(expertDrumLines);
 	const eventLines = sectionEventLines(chart.sections);
+	const syncLines = syncTrackLines(chart);
 	return [
 		`[Song]\n{\n  Name = "${name}"\n  Artist = "${artist}"\n  Charter = "${charter}"\n  Offset = ${offsetSeconds}\n  Resolution = ${chart.resolution}\n}\n`,
 		`[SyncTrack]\n{`,
-		...chart.timeSignatures.map(
-			(ts) => `  ${ts.tick} = TS ${ts.numerator} ${Math.log2(ts.denominator)}`,
-		),
-		...chart.tempos.map(
-			(tempo) => `  ${tempo.tick} = B ${bpmToChartValue(tempo.bpm)}`,
-		),
+		...syncLines,
 		`}\n`,
 		`[Events]\n{`,
 		...eventLines,

@@ -25,6 +25,10 @@ describe("normalizeSelection", () => {
 	it("returns MIDI normalization preview DTO", async () => {
 		mocks.normalizeDrumsFromFile.mockResolvedValue({
 			track: { index: 53 },
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
 			hits: [
 				{
 					tick: 0,
@@ -60,6 +64,12 @@ describe("normalizeSelection", () => {
 				severity: "warning",
 			}),
 		]);
+		expect(result.normalizedTiming).toEqual({
+			resolution: 480,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+		});
 	});
 
 	it("applies mapping override during normalization preview", async () => {
@@ -167,6 +177,13 @@ describe("normalizeSelection", () => {
 	it("returns GPIF normalization preview DTO", async () => {
 		mocks.normalizeGpDrums.mockResolvedValue({
 			trackIndex: 3,
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
 			hits: [
 				{
 					tick: 120,
@@ -200,6 +217,15 @@ describe("normalizeSelection", () => {
 				expect.objectContaining({ code: "UNKNOWN_GPIF_ARTICULATION" }),
 			]),
 		);
+		expect(result.normalizedTiming).toEqual({
+			resolution: 960,
+			tempos: [
+				{ tick: 0, bpm: 164 },
+				{ tick: 184_320, bpm: 160 },
+			],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 30_720, name: "Verse" }],
+		});
 	});
 
 	it("filters unknown GPIF articulation warning when mapped by override", async () => {

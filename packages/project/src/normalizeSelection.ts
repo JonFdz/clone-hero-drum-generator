@@ -58,6 +58,7 @@ export async function normalizeSelection(
 				hits: applyProjectMappingOverrides(rawHits, input.mappingOverrides),
 				mappingCandidates,
 				mappingCoverage,
+				normalizedTiming: timingFromNormalization(results[0]),
 				sourceIssues,
 				includeMergeSummary: selectedTracks.length > 1,
 			});
@@ -134,6 +135,7 @@ export async function normalizeSelection(
 			),
 			mappingCandidates,
 			mappingCoverage,
+			normalizedTiming: timingFromNormalization(results[0]),
 			sourceIssues,
 			includeMergeSummary: selectedTracks.length > 1,
 		});
@@ -168,6 +170,7 @@ function toPreview(input: {
 	hits: DrumHit[];
 	mappingCandidates: NormalizationPreview["mappingCandidates"];
 	mappingCoverage?: NormalizationPreview["mappingCoverage"];
+	normalizedTiming: NonNullable<NormalizationPreview["normalizedTiming"]>;
 	sourceIssues: ProjectIssue[];
 	includeMergeSummary: boolean;
 }): NormalizationPreview {
@@ -186,7 +189,22 @@ function toPreview(input: {
 			: undefined,
 		mappingCandidates: input.mappingCandidates,
 		mappingCoverage: input.mappingCoverage,
+		normalizedTiming: input.normalizedTiming,
 		issues,
+	};
+}
+
+function timingFromNormalization(input: {
+	resolution: number;
+	tempos: NonNullable<NormalizationPreview["normalizedTiming"]>["tempos"];
+	timeSignatures: NonNullable<NormalizationPreview["normalizedTiming"]>["timeSignatures"];
+	sections: NonNullable<NormalizationPreview["normalizedTiming"]>["sections"];
+}): NonNullable<NormalizationPreview["normalizedTiming"]> {
+	return {
+		resolution: input.resolution,
+		tempos: input.tempos,
+		timeSignatures: input.timeSignatures,
+		sections: input.sections,
 	};
 }
 
