@@ -50,7 +50,7 @@ describe("resolveImportKey", () => {
 });
 
 describe("check:architecture cross-feature rules", () => {
-	it("1. rejects a relative projects -> settings import", () => {
+	it("1. rejects a normal relative projects -> settings import", () => {
 		const violations = findCrossFeatureViolations(
 			[
 				entry(
@@ -66,7 +66,34 @@ describe("check:architecture cross-feature rules", () => {
 		expect(violations[0].resolvedKey).toBe("features/settings/settings.service");
 	});
 
-	it("2. rejects a /features/-style cross-feature import", () => {
+	it("2. rejects a side-effect-only relative cross-feature import", () => {
+		const violations = findCrossFeatureViolations(
+			[entry("features/projects/projects-page.component.ts", 'import "../settings/settings.service";')],
+			APP_ROOT,
+		);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].to).toBe("settings");
+	});
+
+	it("3. rejects a dynamic relative cross-feature import", () => {
+		const violations = findCrossFeatureViolations(
+			[entry("features/projects/projects-page.component.ts", 'const settings = await import("../settings/settings.service");')],
+			APP_ROOT,
+		);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].to).toBe("settings");
+	});
+
+	it("4. rejects a cross-feature re-export", () => {
+		const violations = findCrossFeatureViolations(
+			[entry("features/projects/public-api.ts", 'export { SettingsService } from "../settings/settings.service";')],
+			APP_ROOT,
+		);
+		expect(violations).toHaveLength(1);
+		expect(violations[0].to).toBe("settings");
+	});
+
+	it("rejects a /features/-style cross-feature import", () => {
 		const violations = findCrossFeatureViolations(
 			[
 				entry(
@@ -80,7 +107,7 @@ describe("check:architecture cross-feature rules", () => {
 		expect(violations[0].to).toBe("settings");
 	});
 
-	it("3. accepts an import through the project-session public API", () => {
+	it("6. allows the explicit project-session public API", () => {
 		const violations = findCrossFeatureViolations(
 			[
 				entry(
@@ -93,7 +120,7 @@ describe("check:architecture cross-feature rules", () => {
 		expect(violations).toHaveLength(0);
 	});
 
-	it("4. rejects a direct internal project-session import from another feature", () => {
+	it("5. rejects direct access to a project-session internal file", () => {
 		const violations = findCrossFeatureViolations(
 			[
 				entry(
@@ -210,7 +237,7 @@ describe("check:architecture existing violations still fail", () => {
 });
 
 describe("extractImports", () => {
-	it("extracts single- and multi-line static imports", () => {
+	it("extracts imports, re-exports, and literal dynamic imports through the TypeScript AST", () => {
 		const specs = extractImports(
 			[
 				'import { A } from "a";',
@@ -219,9 +246,13 @@ describe("extractImports", () => {
 				'} from "b";',
 				'import type { C } from "c";',
 				'const d = import("d");',
+				'import "e";',
+				'export { F } from "f";',
+				'export * from "g";',
+				"const ignored = import(variable);",
 			].join("\n"),
 		);
-		expect(specs).toEqual(["a", "b", "c"]);
+		expect(specs).toEqual(["a", "b", "c", "d", "e", "f", "g"]);
 	});
 });
 

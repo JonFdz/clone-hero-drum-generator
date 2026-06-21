@@ -223,9 +223,11 @@ areas. It fails for:
 - a component without `ChangeDetectionStrategy.OnPush` (unless exempted);
 - a component importing `DesktopBridgeService`;
 - `window.confirm` or `window.prompt`;
-- a feature importing another feature's internals. Cross-feature imports are
-  detected for **both relative and `/features/`-style** specifiers by resolving
-  each import relative to the importing file. The only allowed cross-feature
+- a feature importing another feature's internals. TypeScript AST traversal
+  detects static imports (including side-effect-only imports), re-exports, and
+  literal `import()` calls for both relative and `/features/`-style specifiers.
+  Relative specifiers are resolved from the importing file. Computed dynamic
+  import arguments are not evaluated. The only allowed cross-feature
   target is the `project-session` public API
   (`features/project-session/public-api`); direct imports into
   `project-session` internals from another feature are rejected.

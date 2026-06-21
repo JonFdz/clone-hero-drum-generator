@@ -5,6 +5,7 @@
 // the real source tree. The CLI in `check-architecture.mjs` reads files and
 // calls these helpers.
 import { relative, resolve, dirname, sep } from "node:path";
+import ts from "typescript";
 
 /** Top-level app folders audited by the gate. */
 export const AUDITED_DIR_NAMES = ["core", "shared", "features"];
@@ -75,19 +76,44 @@ export function targetFeatureOfKey(key) {
 }
 
 // ---------------------------------------------------------------------------
-// Import extraction
+// Module-specifier extraction
 // ---------------------------------------------------------------------------
 
-const IMPORT_RE = /import\s[^;]*?from\s["']([^"']+)["']/g;
-
-/** Extracts all static import specifiers from a source string. */
+/**
+ * Extracts statically knowable module specifiers with the TypeScript parser.
+ *
+ * Covered syntax: import declarations (including side-effect-only imports),
+ * export declarations with a module specifier, and dynamic import() calls
+ * whose argument is a string literal. Computed dynamic import arguments are
+ * intentionally ignored because they cannot be resolved without execution.
+ */
 export function extractImports(source) {
 	const out = [];
-	IMPORT_RE.lastIndex = 0;
-	let m;
-	while ((m = IMPORT_RE.exec(source)) !== null) {
-		out.push(m[1]);
+	const sourceFile = ts.createSourceFile(
+		"architecture-check.ts",
+		source,
+		ts.ScriptTarget.Latest,
+		true,
+		ts.ScriptKind.TS,
+	);
+
+	function addModuleSpecifier(node) {
+		if (node && ts.isStringLiteralLike(node)) out.push(node.text);
 	}
+
+	function visit(node) {
+		if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+			addModuleSpecifier(node.moduleSpecifier);
+		} else if (
+			ts.isCallExpression(node) &&
+			node.expression.kind === ts.SyntaxKind.ImportKeyword
+		) {
+			addModuleSpecifier(node.arguments[0]);
+		}
+		ts.forEachChild(node, visit);
+	}
+
+	visit(sourceFile);
 	return out;
 }
 

@@ -71,6 +71,14 @@ in #74. Legacy `pages/` and `services/` are excluded until migrated. Remove the
 `src/app/pages/**` and `src/app/services/**` ignores as each area is migrated
 (#75/#76).
 
+### Architecture import analysis coverage
+
+The #74 architecture gate uses the TypeScript AST for static imports,
+side-effect-only imports, re-exports, and dynamic `import()` calls with literal
+module specifiers. Computed dynamic import arguments are intentionally not
+resolved because the target is not statically knowable. Revisit only if the
+codebase adopts computed module loading that requires an explicit policy.
+
 ### Behavioral routing test
 
 `app.routes.test.ts` asserts the routing contract structurally because importing
