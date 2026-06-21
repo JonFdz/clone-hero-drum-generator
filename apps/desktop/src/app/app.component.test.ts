@@ -1,55 +1,64 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join , resolve} from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+const __appRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), ".");
+
+const componentSource = () =>
+	readFileSync(join(__appRoot, "app.component.ts"), "utf8");
 
 describe("AppComponent source", () => {
 	it("does not include the no-op self-assignment anti-pattern", () => {
-		const source = readFileSync(
-			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
-			"utf8",
-		);
-		expect(source).not.toContain("this.generateState.applyError = this.generateState.applyError");
+		expect(componentSource()).not.toContain("this.generateState.applyError = this.generateState.applyError");
 	});
 
 	it("does not keep the empty saved branch in saveProjectAs", () => {
-		const source = readFileSync(
-			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
-			"utf8",
-		);
-		expect(source).not.toContain("const saved = await this.projectState.saveProjectAs");
-		expect(source).not.toContain("if (saved)");
+		expect(componentSource()).not.toContain("const saved = await this.projectState.saveProjectAs");
+		expect(componentSource()).not.toContain("if (saved)");
 	});
 
 	it("does not expose New Project as a top-level navigation item", () => {
-		const source = readFileSync(
-			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
-			"utf8",
-		);
-		expect(source).not.toContain('label: "New Project"');
-		expect(source).toContain('path: "/projects"');
+		expect(componentSource()).not.toContain('label: "New Project"');
+		expect(componentSource()).toContain('path: "/projects"');
 	});
 
 	it("exposes Source Review instead of old separated review steps", () => {
-		const source = readFileSync(
-			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
-			"utf8",
-		);
-		expect(source).toContain('label: "Source Review"');
-		expect(source).toContain('path: "/source-review"');
-		expect(source).not.toContain('label: "Inspect Source"');
-		expect(source).not.toContain('label: "Track Selection"');
-		expect(source).not.toContain('label: "Mapping"');
+		expect(componentSource()).toContain('label: "Source Review"');
+		expect(componentSource()).toContain('path: "/source-review"');
+		expect(componentSource()).not.toContain('label: "Inspect Source"');
+		expect(componentSource()).not.toContain('label: "Track Selection"');
+		expect(componentSource()).not.toContain('label: "Mapping"');
 	});
 
 	it("exposes Generate but not standalone Validation navigation", () => {
-		const source = readFileSync(
-			join(process.cwd(), "apps/desktop/src/app/app.component.ts"),
-			"utf8",
-		);
+		expect(componentSource()).toContain('label: "Generate"');
+		expect(componentSource()).toContain('path: "/generate"');
+		expect(componentSource()).not.toContain('label: "Validation"');
+		expect(componentSource()).not.toContain('path: "/validation"');
+	});
 
-		expect(source).toContain('label: "Generate"');
-		expect(source).toContain('path: "/generate"');
-		expect(source).not.toContain('label: "Validation"');
-		expect(source).not.toContain('path: "/validation"');
+	it("is an OnPush shell with external template and stylesheet", () => {
+		const src = componentSource();
+		expect(src).toContain("ChangeDetectionStrategy.OnPush");
+		expect(src).toContain('templateUrl: "./app.component.html"');
+		expect(src).toContain('styleUrl: "./app.component.css"');
+		expect(src).not.toMatch(/\btemplate\s*:/);
+		expect(src).not.toMatch(/\bstyles\s*:/);
+	});
+
+	it("does not import DesktopBridgeService directly", () => {
+		const src = componentSource();
+		expect(src).not.toMatch(/import[^;]*DesktopBridgeService[^;]*from/);
+		expect(src).not.toContain("this.desktopBridge");
+		expect(src).not.toContain("this.bridge");
+	});
+
+	it("opens projects through the centralized persistence service", () => {
+		const src = componentSource();
+		expect(src).toContain("ProjectPersistenceService");
+		expect(src).toContain("openProjectFromPicker");
+		// The duplicate bridge pick + project-state open sequence must be gone.
+		expect(src).not.toContain("openProjectFile");
+		expect(src).not.toContain("projectState.openProject");
 	});
 });

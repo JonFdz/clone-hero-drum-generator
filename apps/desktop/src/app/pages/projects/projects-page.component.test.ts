@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join , resolve} from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+const __appRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..");
+
 
 const source = () =>
 	readFileSync(
 		join(
-			process.cwd(),
-			"apps/desktop/src/app/pages/projects/projects-page.component.ts",
+			__appRoot, "pages/projects/projects-page.component.ts",
 		),
 		"utf8",
 	);

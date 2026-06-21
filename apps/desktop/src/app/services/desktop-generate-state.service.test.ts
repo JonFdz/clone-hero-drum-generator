@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join , resolve} from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import type { DesktopGenerateState } from "./desktop-generate-state.service";
 import {
@@ -7,6 +8,8 @@ import {
 	detectDesktopSourceKind,
 	validateGenerateState,
 } from "./desktop-generate-model";
+
+const __appRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
 function state(
 	overrides: Partial<DesktopGenerateState> = {},
@@ -92,8 +95,7 @@ describe("desktop generate state helpers", () => {
 describe("desktop generate state source regressions", () => {
 	const source = readFileSync(
 		join(
-			process.cwd(),
-			"apps/desktop/src/app/services/desktop-generate-state.service.ts",
+			__appRoot, "services/desktop-generate-state.service.ts",
 		),
 		"utf8",
 	);

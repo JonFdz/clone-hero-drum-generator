@@ -1,12 +1,19 @@
-import { Component, type OnInit, computed, inject } from "@angular/core";
+import {
+	ChangeDetectionStrategy,
+	Component,
+	type OnInit,
+	computed,
+	inject,
+} from "@angular/core";
 import {
 	Router,
 	RouterLink,
 	RouterLinkActive,
 	RouterOutlet,
 } from "@angular/router";
-import { DesktopBridgeService } from "./services/desktop-bridge.service";
-import { DesktopProjectStateService } from "./services/desktop-project-state.service";
+import { ApplicationStartupService } from "./core/application-startup.service";
+import { ProjectSessionStore } from "./features/project-session/project-session.store";
+import { ProjectPersistenceService } from "./features/project-session/project-persistence.service";
 import { DesktopGenerateStateService } from "./services/desktop-generate-state.service";
 
 type NavItem = {
@@ -21,17 +28,19 @@ type NavItem = {
 	imports: [RouterOutlet, RouterLink, RouterLinkActive],
 	templateUrl: "./app.component.html",
 	styleUrl: "./app.component.css",
+	changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit {
-	private readonly desktopBridge = inject(DesktopBridgeService);
-	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly startup = inject(ApplicationStartupService);
+	private readonly session = inject(ProjectSessionStore);
+	private readonly persistence = inject(ProjectPersistenceService);
 	private readonly generateState = inject(DesktopGenerateStateService);
 	private readonly router = inject(Router);
 
 	readonly navItems: NavItem[] = [
 		{ label: "Home", path: "/home", icon: "⌂" },
 		{ label: "Projects", path: "/projects", icon: "□" },
-		{ label: "Source Review", path: "/source-review", icon: "⌕" },
+		{ label: "Source Review", path: "/source-review", icon: "╕" },
 		{ label: "Generate", path: "/generate", icon: "✦" },
 		{ label: "Preview", path: "/preview", icon: "▷" },
 		{ label: "Settings", path: "/settings", icon: "⚙" },
@@ -39,16 +48,14 @@ export class AppComponent implements OnInit {
 
 	readonly appVersion = computed(
 		() =>
-			this.desktopBridge.appInfo()?.version ??
-			this.desktopBridge.health().appVersion,
+			this.startup.appInfo()?.version ??
+			this.startup.health().appVersion,
 	);
-	readonly health = this.desktopBridge.health;
-	readonly project = this.projectState.state;
+	readonly health = this.startup.health;
+	readonly project = this.session.state;
 
 	async ngOnInit(): Promise<void> {
-		void this.desktopBridge.loadStatus();
-		await this.projectState.loadSettings();
-		await this.projectState.loadRecentProjects();
+		await this.startup.initialize();
 	}
 
 	isHomeRoute(): boolean {
@@ -59,44 +66,51 @@ export class AppComponent implements OnInit {
 		const name = this.project().projectName;
 		const filePath = this.project().projectFilePath;
 		const payload = this.generateState.buildProjectStatePayload(name, filePath);
-		await this.projectState.saveProject(payload);
+		const result = await this.persistence.saveProject(payload);
+		if (result.ok) {
+			await this.startup.refreshRecentProjects();
+		}
 	}
 
 	async saveProjectAs(): Promise<void> {
 		const name = this.project().projectName;
 		const currentPath = this.project().projectFilePath;
-		const picked = await this.desktopBridge.saveProjectFile(name, currentPath);
-		if (!picked) return;
 		const payload = this.generateState.buildProjectStatePayload(
 			name,
-			picked.path,
+			currentPath,
 		);
-		await this.projectState.saveProjectAs({
-			...payload,
-			filePath: picked.path,
-		});
+		const result = await this.persistence.saveProjectAs(payload);
+		if (result.ok) {
+			await this.startup.refreshRecentProjects();
+		}
 	}
 
 	async openProject(): Promise<void> {
-		const picked = await this.desktopBridge.openProjectFile();
-		if (!picked) return;
-		const payload = await this.projectState.openProject(picked.path);
-		if (payload) {
-			this.generateState.loadProjectState({
-				sourcePath: payload.sourcePath,
-				audioPath: payload.audioPath,
-				outputDir: payload.outputDir,
-				cover: payload.cover,
-				sourceKind: payload.sourceKind,
-				selectedTracks: payload.selectedTracks,
-				metadata: payload.metadata,
-				offsetMs: payload.offsetMs,
-				lastGeneratedAt: payload.lastGeneratedAt,
-				outputFiles: payload.outputFiles,
-				mappingOverrides: payload.mappingOverrides,
-				analysis: payload.analysis,
-			});
-			await this.router.navigateByUrl("/projects/details");
+		const result = await this.persistence.openProjectFromPicker();
+		if (!result.ok) {
+			return;
 		}
+		this.generateState.loadProjectState(this.toGeneratePayload(result.payload));
+		await this.startup.refreshRecentProjects();
+		await this.router.navigateByUrl("/projects/details");
+	}
+
+	private toGeneratePayload(
+		payload: Parameters<DesktopGenerateStateService["loadProjectState"]>[0],
+	) {
+		return {
+			sourcePath: payload.sourcePath,
+			audioPath: payload.audioPath,
+			outputDir: payload.outputDir,
+			cover: payload.cover,
+			sourceKind: payload.sourceKind,
+			selectedTracks: payload.selectedTracks,
+			metadata: payload.metadata,
+			offsetMs: payload.offsetMs,
+			lastGeneratedAt: payload.lastGeneratedAt,
+			outputFiles: payload.outputFiles,
+			mappingOverrides: payload.mappingOverrides,
+			analysis: payload.analysis,
+		};
 	}
 }
