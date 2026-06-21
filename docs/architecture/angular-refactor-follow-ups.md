@@ -38,6 +38,17 @@ target places active-project/workflow state behind the project-session boundary.
 Consolidation is deferred to #76 (GenerationService) to avoid refactoring
 workflow-heavy page internals in the foundation PR.
 
+In the interim, `ProjectWorkflowHydrator` (via `toGenerateWorkflowState`) is the
+one canonical mapping from a persisted payload into the legacy generation
+workflow state, used by the shell and all pages that open/create projects.
+
+### Remove `ProjectWorkflowHydrator` (transitional)
+
+`features/project-session/project-workflow-hydrator.ts` is a transitional
+bridge between persisted payloads and the legacy `DesktopGenerateStateService`.
+It is removed in #76 when generation becomes a feature and owns its own
+hydration from the project-session payload.
+
 ### Replace `window.confirm` / `window.prompt` with Angular dialogs
 
 Forbidden by the architecture gate. Current usages (in unmigrated pages, outside

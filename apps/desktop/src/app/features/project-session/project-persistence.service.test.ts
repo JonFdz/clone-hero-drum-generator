@@ -208,6 +208,33 @@ describe("ProjectPersistenceService", () => {
 		expect(session.projectFilePath()).toBe("/p/as.chdg.json");
 	});
 
+	it("saveProjectAs opens exactly one file picker (no double-picker)", async () => {
+		const saveProjectFile = vi.fn().mockResolvedValue({ path: "/p/as.chdg.json", name: "as" });
+		const bridge = makeBridge({ saveProjectFile });
+		const { persistence } = makeService(bridge);
+
+		await persistence.saveProjectAs(samplePayload);
+
+		expect(saveProjectFile).toHaveBeenCalledTimes(1);
+		// The persisted path is the picker's selected path, not a caller-supplied one.
+		expect(bridge.saveProjectAs).toHaveBeenCalledWith(
+			expect.objectContaining({ filePath: "/p/as.chdg.json" }),
+		);
+	});
+
+	it("saveProjectAs cancelling the picker does not trigger a save", async () => {
+		const saveProjectFile = vi.fn().mockResolvedValue(null);
+		const bridge = makeBridge({ saveProjectFile });
+		const { persistence } = makeService(bridge);
+
+		const result = await persistence.saveProjectAs(samplePayload);
+
+		expect(saveProjectFile).toHaveBeenCalledTimes(1);
+		expect(bridge.saveProjectAs).not.toHaveBeenCalled();
+		expect(result.ok).toBe(false);
+		expect("cancelled" in result).toBe(true);
+	});
+
 	it("does not inject or use the Angular Router", async () => {
 		const source = readFileSync(
 			new URL("./project-persistence.service.ts", import.meta.url),

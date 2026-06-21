@@ -14,10 +14,11 @@ const source = () =>
 	);
 
 describe("ProjectsPageComponent source", () => {
-	it("selects projects without navigating to Project Details", () => {
+	it("selects projects by hydrating through the canonical hydrator without navigating", () => {
 		const text = source();
 		expect(text).toContain("async selectRecent");
-		expect(text).toContain("this.loadProjectState(payload);");
+		expect(text).toContain("this.workflowHydrator.hydrate(payload);");
+		expect(text).not.toContain("this.loadProjectState(payload);");
 		expect(text).not.toContain(
 			"selectRecent(filePath: string): Promise<void> {\n\t\tconst payload = await this.projectState.openProject(filePath);\n\t\tif (payload) {\n\t\t\tthis.loadProjectState(payload);\n\t\t\tawait this.router.navigateByUrl",
 		);
@@ -43,13 +44,14 @@ describe("ProjectsPageComponent source", () => {
 		);
 	});
 
-	it("loads the createProject payload for New Project", () => {
+	it("loads the createProject payload for New Project via the hydrator", () => {
 		const text = source();
 		expect(text).toContain("const defaultName = createDefaultProjectName()");
 		expect(text).toContain(
 			"const payload = await this.projectState.createProject(defaultName)",
 		);
-		expect(text).toContain("this.loadProjectState(payload)");
+		expect(text).toContain("this.workflowHydrator.hydrate(payload)");
+		expect(text).not.toContain("this.loadProjectState(payload)");
 		expect(text).not.toContain("new Date().toISOString().slice(0, 10)");
 		expect(text).not.toContain(
 			'this.generateState.reset();\n\t\t\tawait this.router.navigateByUrl("/projects/details?mode=new")',

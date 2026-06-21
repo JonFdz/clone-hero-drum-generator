@@ -12,8 +12,11 @@ import {
 	RouterOutlet,
 } from "@angular/router";
 import { ApplicationStartupService } from "./core/application-startup.service";
-import { ProjectSessionStore } from "./features/project-session/project-session.store";
-import { ProjectPersistenceService } from "./features/project-session/project-persistence.service";
+import {
+	ProjectPersistenceService,
+	ProjectSessionStore,
+	ProjectWorkflowHydrator,
+} from "./features/project-session/public-api";
 import { DesktopGenerateStateService } from "./services/desktop-generate-state.service";
 
 type NavItem = {
@@ -34,6 +37,7 @@ export class AppComponent implements OnInit {
 	private readonly startup = inject(ApplicationStartupService);
 	private readonly session = inject(ProjectSessionStore);
 	private readonly persistence = inject(ProjectPersistenceService);
+	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly generateState = inject(DesktopGenerateStateService);
 	private readonly router = inject(Router);
 
@@ -90,27 +94,8 @@ export class AppComponent implements OnInit {
 		if (!result.ok) {
 			return;
 		}
-		this.generateState.loadProjectState(this.toGeneratePayload(result.payload));
+		this.workflowHydrator.hydrate(result.payload);
 		await this.startup.refreshRecentProjects();
 		await this.router.navigateByUrl("/projects/details");
-	}
-
-	private toGeneratePayload(
-		payload: Parameters<DesktopGenerateStateService["loadProjectState"]>[0],
-	) {
-		return {
-			sourcePath: payload.sourcePath,
-			audioPath: payload.audioPath,
-			outputDir: payload.outputDir,
-			cover: payload.cover,
-			sourceKind: payload.sourceKind,
-			selectedTracks: payload.selectedTracks,
-			metadata: payload.metadata,
-			offsetMs: payload.offsetMs,
-			lastGeneratedAt: payload.lastGeneratedAt,
-			outputFiles: payload.outputFiles,
-			mappingOverrides: payload.mappingOverrides,
-			analysis: payload.analysis,
-		};
 	}
 }

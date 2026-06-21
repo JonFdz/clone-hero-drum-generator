@@ -14,13 +14,14 @@ const source = () =>
 	);
 
 describe("ProjectDetailsPageComponent source", () => {
-	it("loads the returned createProject payload instead of resetting state", () => {
+	it("loads the returned createProject payload via the canonical hydrator", () => {
 		const text = source();
 		expect(text).toContain("const name = createDefaultProjectName()");
 		expect(text).toContain(
 			"const payload = await this.projectState.createProject(name)",
 		);
-		expect(text).toContain("this.generateState.loadProjectState(payload)");
+		expect(text).toContain("this.workflowHydrator.hydrate(payload)");
+		expect(text).not.toContain("this.generateState.loadProjectState(payload)");
 		expect(text).not.toContain(
 			"this.projectNameInput.trim() || \"Untitled\"",
 		);

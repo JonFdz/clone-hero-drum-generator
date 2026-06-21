@@ -61,4 +61,13 @@ describe("AppComponent source", () => {
 		expect(src).not.toContain("openProjectFile");
 		expect(src).not.toContain("projectState.openProject");
 	});
+
+	it("hydrates the generation workflow through the canonical hydrator, not a local mapping", () => {
+		const src = componentSource();
+		expect(src).toContain("ProjectWorkflowHydrator");
+		expect(src).toContain("this.workflowHydrator.hydrate(result.payload)");
+		// The duplicated local payload mapping must be gone.
+		expect(src).not.toContain("toGeneratePayload");
+		expect(src).not.toMatch(/this\.generateState\.loadProjectState/);
+	});
 });

@@ -108,4 +108,36 @@ describe("DesktopProjectStateService facade", () => {
 		expect(state.recentProjects).toHaveLength(1);
 		expect(state.settings.projectLocation).toBe("/p");
 	});
+
+	it("saveProjectAs delegates to persistence (one picker) and refreshes recents on success", async () => {
+		const { session, library, settings } = makeDeps();
+		const saveProjectAs = vi.fn().mockResolvedValue({
+			ok: true,
+			filePath: "/p/as.chdg.json",
+			payload: { ...samplePayload, projectFilePath: "/p/as.chdg.json" },
+		});
+		const persistence = { saveProjectAs } as unknown as import("../features/project-session/project-persistence.service").ProjectPersistenceService;
+		const facade = new DesktopProjectStateService(session, library, settings, persistence);
+		const refreshSpy = vi.spyOn(library, "refresh").mockResolvedValue(undefined);
+
+		const filePath = await facade.saveProjectAs(samplePayload);
+
+		expect(saveProjectAs).toHaveBeenCalledTimes(1);
+		expect(saveProjectAs).toHaveBeenCalledWith(samplePayload);
+		expect(filePath).toBe("/p/as.chdg.json");
+		expect(refreshSpy).toHaveBeenCalled();
+	});
+
+	it("saveProjectAs returns null and does not refresh recents when the picker is cancelled", async () => {
+		const { session, library, settings } = makeDeps();
+		const saveProjectAs = vi.fn().mockResolvedValue({ ok: false, cancelled: true });
+		const persistence = { saveProjectAs } as unknown as import("../features/project-session/project-persistence.service").ProjectPersistenceService;
+		const facade = new DesktopProjectStateService(session, library, settings, persistence);
+		const refreshSpy = vi.spyOn(library, "refresh").mockResolvedValue(undefined);
+
+		const filePath = await facade.saveProjectAs(samplePayload);
+
+		expect(filePath).toBeNull();
+		expect(refreshSpy).not.toHaveBeenCalled();
+	});
 });

@@ -85,7 +85,8 @@ apps/desktop/src/app/
 to avoid churning every legacy page import during the foundation PR. It is the
 canonical core boundary by responsibility; its physical relocation into `core/`
 is recorded as a follow-up and is done together with the page migrations in
-# 75/#76, when those import paths are touched anyway.
+
+# 75/#76, when those import paths are touched anyway
 
 ## Project session and persistence
 
@@ -120,9 +121,33 @@ input path or picker -> bridge operation -> validate/interpret payload
   `{ ok: false, cancelled: true }`).
 - Does **not** inject the Angular Router. Pages and the shell navigate only
   after a success outcome.
+- Save As opens exactly one file picker (inside the service). Callers must not
+  open their own picker before calling `saveProjectAs`; the persisted path is
+  the picker's selected path, and the active session is hydrated from the
+  saved result. Cancelling the picker returns a cancelled outcome and performs
+  no save.
 - Does not refresh recent projects itself; callers (the shell and the legacy
   facade) trigger `ApplicationStartupService.refreshRecentProjects()` so the
   service stays free of cross-feature dependencies.
+
+### Project-session public API and workflow hydration
+
+`features/project-session/public-api.ts` is the explicit public surface of
+the project-session feature. Other features and the application shell import
+**only** from it. Direct imports into `features/project-session/*` internals
+from another feature are rejected by `check:architecture`.
+
+`ProjectWorkflowHydrator` (exposed via the public API) is the **one canonical
+path** that maps a persisted `ProjectStatePayload` into the legacy generation
+workflow state (`DesktopGenerateStateService.loadProjectState`) via the pure
+`toGenerateWorkflowState` mapper. The application shell and pages call
+`workflowHydrator.hydrate(payload)` after opening or creating a project; they
+no longer rebuild the payload-to-workflow mapping inline.
+
+It is a transitional service: it keeps the persistence boundary focused
+(persistence hydrates `ProjectSessionStore`; the hydrator hydrates the
+generation workflow) and is removed in #76 when generation becomes a feature
+and owns its own hydration.
 
 ### Legacy facade
 
@@ -138,6 +163,13 @@ the canonical services in #75/#76.
 Owns the bootstrap sequence: desktop health (`bridge.loadStatus`), persisted
 settings, and recent projects. It re-exposes the bridge `health` and `appInfo`
 signals so the application shell does not import `DesktopBridgeService`.
+
+`initialize()` is resilient:
+
+- concurrent calls share one in-flight initialization promise;
+- a failed bootstrap clears the in-flight promise so it can be retried;
+- a successful bootstrap is idempotent (later calls resolve immediately);
+- unexpected bootstrap errors propagate and are not swallowed.
 
 > Layering note: the startup coordinator injects the feature-owned
 > `SettingsService` and `ProjectLibraryService` to perform bootstrap loading.
@@ -182,19 +214,27 @@ the follow-up register.
 
 ### `check:architecture`
 
-A structured Node script (`scripts/check-architecture.mjs`) audits the
-application shell and the new `core/` / `shared/` / `features/` areas. It fails
-for:
+A structured Node script (`scripts/check-architecture.mjs`) delegates all
+checking to pure, unit-tested helpers in `scripts/check-architecture.lib.mjs`.
+It audits the application shell and the new `core/` / `shared/` / `features/`
+areas. It fails for:
 
 - inline `template` / `styles` / `style` component metadata;
 - a component without `ChangeDetectionStrategy.OnPush` (unless exempted);
 - a component importing `DesktopBridgeService`;
 - `window.confirm` or `window.prompt`;
-- a feature importing another feature's internals (except the
-  `project-session` public contract).
+- a feature importing another feature's internals. Cross-feature imports are
+  detected for **both relative and `/features/`-style** specifiers by resolving
+  each import relative to the importing file. The only allowed cross-feature
+  target is the `project-session` public API
+  (`features/project-session/public-api`); direct imports into
+  `project-session` internals from another feature are rejected.
 
 Legacy `pages/` and `services/` are not audited until migrated; this keeps the
 gate meaningful and free of false positives during the staged refactor.
+
+The helper library has behavioral test coverage in
+`scripts/check-architecture.test.mjs`.
 
 ### Tests
 

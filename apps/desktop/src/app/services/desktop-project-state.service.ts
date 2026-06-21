@@ -106,9 +106,7 @@ export class DesktopProjectStateService {
 		return { filePath: result.filePath, payload: result.payload };
 	}
 
-	async saveProjectAs(
-		payload: ProjectStatePayload & { filePath: string },
-	): Promise<string | null> {
+	async saveProjectAs(payload: ProjectStatePayload): Promise<string | null> {
 		const result = await this.persistence.saveProjectAs(payload);
 		if (!result.ok) {
 			if ("cancelled" in result) return null;

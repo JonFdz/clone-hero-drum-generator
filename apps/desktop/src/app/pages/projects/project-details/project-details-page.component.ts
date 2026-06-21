@@ -5,6 +5,7 @@ import { Router, RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../../services/desktop-project-state.service";
+import { ProjectWorkflowHydrator } from "../../../features/project-session/public-api";
 import { createDefaultProjectName } from "../../../services/project-name-model";
 
 @Component({
@@ -229,6 +230,7 @@ export class ProjectDetailsPageComponent {
 	private readonly bridge = inject(DesktopBridgeService);
 	readonly generateState = inject(DesktopGenerateStateService);
 	readonly projectState = inject(DesktopProjectStateService);
+	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly router = inject(Router);
 
 	readonly state = this.generateState.state;
@@ -290,7 +292,7 @@ export class ProjectDetailsPageComponent {
 		const name = createDefaultProjectName();
 		const payload = await this.projectState.createProject(name);
 		if (payload) {
-			this.generateState.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			this.projectNameInput = payload.projectName;
 			await this.router.navigateByUrl("/projects/details?mode=new");
 		}
@@ -310,16 +312,8 @@ export class ProjectDetailsPageComponent {
 	async saveProjectAs(): Promise<void> {
 		const name = this.projectState.state().projectName;
 		const currentPath = this.projectState.state().projectFilePath;
-		const picked = await this.bridge.saveProjectFile(name, currentPath);
-		if (!picked) return;
-		const payload = this.generateState.buildProjectStatePayload(
-			name,
-			picked.path,
-		);
-		await this.projectState.saveProjectAs({
-			...payload,
-			filePath: picked.path,
-		});
+		const payload = this.generateState.buildProjectStatePayload(name, currentPath);
+		await this.projectState.saveProjectAs(payload);
 	}
 
 	async pickSource(): Promise<void> {

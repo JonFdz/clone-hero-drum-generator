@@ -4,6 +4,7 @@ import { Router } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { ProjectWorkflowHydrator } from "../../features/project-session/public-api";
 import { deriveHomeDashboardModel } from "../../services/home-dashboard-model";
 import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
 import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
@@ -126,6 +127,7 @@ export class HomePageComponent {
 	private readonly projectState = inject(DesktopProjectStateService);
 	private readonly bridge = inject(DesktopBridgeService);
 	private readonly generateState = inject(DesktopGenerateStateService);
+	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly router = inject(Router);
 
 	readonly model = computed(() =>
@@ -144,7 +146,7 @@ export class HomePageComponent {
 	async openRecent(filePath: string): Promise<void> {
 		const payload = await this.projectState.openProject(filePath);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			await this.navigateTo(this.model().nextAction.route);
 		}
 	}
@@ -158,7 +160,7 @@ export class HomePageComponent {
 		if (!picked) return;
 		const payload = await this.projectState.openProject(picked.path);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			await this.navigateTo(this.model().nextAction.route);
 		}
 	}
@@ -170,24 +172,5 @@ export class HomePageComponent {
 			return;
 		}
 		await this.bridge.openOutputFolder(outputDir);
-	}
-
-	private loadProjectState(
-		payload: Awaited<ReturnType<DesktopProjectStateService["openProject"]>>,
-	): void {
-		if (!payload) return;
-		this.generateState.loadProjectState({
-			sourcePath: payload.sourcePath,
-			audioPath: payload.audioPath,
-			outputDir: payload.outputDir,
-			sourceKind: payload.sourceKind,
-			selectedTracks: payload.selectedTracks,
-			metadata: payload.metadata,
-			offsetMs: payload.offsetMs,
-			lastGeneratedAt: payload.lastGeneratedAt,
-			outputFiles: payload.outputFiles,
-			mappingOverrides: payload.mappingOverrides,
-			analysis: payload.analysis,
-		});
 	}
 }

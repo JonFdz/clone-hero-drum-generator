@@ -22,6 +22,7 @@ export class ApplicationStartupService {
 	private readonly library: ProjectLibraryService;
 
 	private started = false;
+	private initPromise: Promise<void> | null = null;
 
 	constructor(
 		bridge: DesktopBridgeService = inject(DesktopBridgeService),
@@ -43,10 +44,32 @@ export class ApplicationStartupService {
 		return this.bridge.appInfo;
 	}
 
-	/** Runs the bootstrap sequence. Safe to call once; subsequent calls are no-ops. */
-	async initialize(): Promise<void> {
-		if (this.started) return;
-		this.started = true;
+	/**
+	 * Runs the bootstrap sequence.
+	 *
+	 * Concurrent calls share one in-flight initialization. A failed bootstrap
+	 * can be retried (the in-flight promise is cleared on failure). A
+	 * successful bootstrap is idempotent: later calls resolve immediately.
+	 * Unexpected bootstrap errors propagate to the caller; this method does
+	 * not swallow them.
+	 */
+	initialize(): Promise<void> {
+		if (this.started) return Promise.resolve();
+		if (this.initPromise) return this.initPromise;
+		this.initPromise = this.runBootstrap()
+			.then(() => {
+				this.started = true;
+				this.initPromise = null;
+			})
+			.catch((error) => {
+				// Clear the in-flight promise so a failed bootstrap can be retried.
+				this.initPromise = null;
+				throw error;
+			});
+		return this.initPromise;
+	}
+
+	private async runBootstrap(): Promise<void> {
 		void this.bridge.loadStatus();
 		await this.settings.refresh();
 		await this.library.refresh();

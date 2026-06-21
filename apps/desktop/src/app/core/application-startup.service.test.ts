@@ -34,6 +34,73 @@ describe("ApplicationStartupService", () => {
 		expect(librarySpy).toHaveBeenCalledTimes(1);
 	});
 
+	it("shares one in-flight initialization across concurrent calls", async () => {
+		const bridge = makeBridge();
+		const library = new ProjectLibraryService(bridge);
+		const settings = new SettingsService(bridge);
+		const startup = new ApplicationStartupService(bridge, settings, library);
+		const settingsSpy = vi.spyOn(settings, "refresh").mockResolvedValue(undefined);
+		const librarySpy = vi.spyOn(library, "refresh").mockResolvedValue(undefined);
+
+		const [a, b, c] = await Promise.all([
+			startup.initialize(),
+			startup.initialize(),
+			startup.initialize(),
+		]);
+
+		expect(settingsSpy).toHaveBeenCalledTimes(1);
+		expect(librarySpy).toHaveBeenCalledTimes(1);
+		// All concurrent callers resolve together.
+		expect(a).toBeUndefined();
+		expect(b).toBeUndefined();
+		expect(c).toBeUndefined();
+	});
+
+	it("allows retrying a failed initialization", async () => {
+		const bridge = makeBridge();
+		const library = new ProjectLibraryService(bridge);
+		const settings = new SettingsService(bridge);
+		const startup = new ApplicationStartupService(bridge, settings, library);
+		const settingsSpy = vi.spyOn(settings, "refresh");
+		settingsSpy.mockRejectedValueOnce(new Error("settings down"));
+		settingsSpy.mockResolvedValueOnce(undefined);
+		const librarySpy = vi.spyOn(library, "refresh").mockResolvedValue(undefined);
+
+		await expect(startup.initialize()).rejects.toThrow("settings down");
+
+		// A failed bootstrap must not mark the service as started.
+		await startup.initialize();
+
+		expect(settingsSpy).toHaveBeenCalledTimes(2);
+		expect(librarySpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("remains idempotent after a successful initialization", async () => {
+		const bridge = makeBridge();
+		const library = new ProjectLibraryService(bridge);
+		const settings = new SettingsService(bridge);
+		const startup = new ApplicationStartupService(bridge, settings, library);
+		const settingsSpy = vi.spyOn(settings, "refresh").mockResolvedValue(undefined);
+		const librarySpy = vi.spyOn(library, "refresh").mockResolvedValue(undefined);
+
+		await startup.initialize();
+		await startup.initialize();
+		await startup.initialize();
+
+		expect(settingsSpy).toHaveBeenCalledTimes(1);
+		expect(librarySpy).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not hide unexpected bootstrap failures", async () => {
+		const bridge = makeBridge();
+		const library = new ProjectLibraryService(bridge);
+		const settings = new SettingsService(bridge);
+		const startup = new ApplicationStartupService(bridge, settings, library);
+		vi.spyOn(library, "refresh").mockRejectedValue(new Error("unexpected"));
+
+		await expect(startup.initialize()).rejects.toThrow("unexpected");
+	});
+
 	it("exposes the bridge health and app info signals without importing the bridge in the shell", () => {
 		const bridge = makeBridge();
 		const library = new ProjectLibraryService(bridge);
