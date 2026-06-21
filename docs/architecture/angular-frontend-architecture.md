@@ -204,12 +204,14 @@ pnpm --filter @chdg/desktop typecheck
 pnpm --filter @chdg/desktop build
 ```
 
-### Lint (#74 scope)
+### Lint (through #75)
 
 ESLint flat config with `angular-eslint` (TypeScript + Angular template
 linting). In #74, lint is enabled for the new boundaries (`core/`, `shared/`,
 `features/`), the application shell, and routes. Legacy `pages/` and `services/`
-are brought under lint progressively in #75/#76 as their internals migrate. See
+are brought under lint progressively in #76 as their internals migrate. Home,
+Projects, Project Details, and Settings now live under `features/` and are in
+the enforced lint scope. See
 the follow-up register.
 
 ### `check:architecture`
@@ -227,10 +229,9 @@ areas. It fails for:
   detects static imports (including side-effect-only imports), re-exports, and
   literal `import()` calls for both relative and `/features/`-style specifiers.
   Relative specifiers are resolved from the importing file. Computed dynamic
-  import arguments are not evaluated. The only allowed cross-feature
-  target is the `project-session` public API
-  (`features/project-session/public-api`); direct imports into
-  `project-session` internals from another feature are rejected.
+  import arguments are not evaluated. Cross-feature imports are allowed only
+  through the target feature's explicit `public-api`; internal files remain
+  private.
 
 Legacy `pages/` and `services/` are not audited until migrated; this keeps the
 gate meaningful and free of false positives during the staged refactor.
@@ -245,6 +246,25 @@ meaningful behavioral tests for the session store, mapper, persistence outcomes,
 project library, settings, startup, routing contract, and the shell boundaries.
 Existing source-text regression tests were made cwd-independent so they run both
 from the repo root and per-package.
+
+Component specs follow the Angular CLI `*.spec.ts` convention. Vitest discovers
+both `*.spec.ts` and the repository's existing `*.test.ts` files during the
+transition.
+
+## Migrated feature ownership (#75)
+
+- `features/home` owns the Home page, dashboard presentation components, and
+  output-folder application action.
+- `features/projects` owns recent-project state, filtering/sorting view models,
+  the Projects page, project cards, removal interaction, and its public API.
+- `features/project-details` owns project creation/editing presentation and
+  local file-picker/cover-preview application actions.
+- `features/settings` owns persisted settings and FFmpeg diagnostics.
+- All migrated components use external HTML/CSS and OnPush. No exception was
+  introduced.
+- Project lifecycle operations use the project-session public API; pages
+  navigate only after typed success outcomes and refresh recents after
+  successful create/open/save/save-as operations.
 
 ## OnPush exception register
 

@@ -42,6 +42,8 @@ describe("ProjectLibraryService", () => {
 
 		expect(library.recentProjects()).toHaveLength(1);
 		expect(library.recentProjects()[0].name).toBe("Old");
+		expect(library.error()).toBe("boom");
+		expect(library.loading()).toBe(false);
 	});
 
 	it("remove calls the bridge and refreshes", async () => {

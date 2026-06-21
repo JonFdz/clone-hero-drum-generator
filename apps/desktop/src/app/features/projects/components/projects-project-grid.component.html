@@ -1,0 +1,5 @@
+<section class="project-grid" aria-label="Project cards">
+			@for (project of projects; track project.path) {
+				<chdg-projects-project-card [project]="project" (selectProject)="selectProject.emit($event)" (editProject)="editProject.emit($event)" (requestRemove)="requestRemove.emit($event)" />
+			}
+		</section>

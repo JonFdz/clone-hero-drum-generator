@@ -1,0 +1,37 @@
+<div class="projects-library-page">
+			<chdg-projects-library-header [projectCount]="model().totalCount" (openProject)="openProject()" (newProject)="newProject()" />
+
+			<chdg-projects-toolbar
+				[query]="query()"
+				[sourceFilter]="sourceFilter()"
+				[sortMode]="sortMode()"
+				[resultCount]="model().resultCount"
+				(queryChange)="query.set($event)"
+				(sourceFilterChange)="sourceFilter.set($event)"
+				(sortModeChange)="sortMode.set($event)"
+			/>
+
+		<div class="library-layout">
+			<main class="library-main">
+				@if (libraryLoading()) { <p role="status">Loading recent projects…</p> }
+				@if (libraryError(); as error) { <p class="message warning" role="alert">{{ error }}</p> }
+					@if (model().projects.length > 0) {
+						<chdg-projects-project-grid [projects]="model().projects" (selectProject)="selectRecent($event)" (editProject)="editRecent($event)" (requestRemove)="askRemove($event)" />
+						<p class="local-note">All projects are stored locally on this device.</p>
+					} @else {
+						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" (openProject)="openProject()" (newProject)="newProject()" (resetFilters)="resetFilters()" />
+					}
+				</main>
+
+				<chdg-projects-library-stats [stats]="model().stats" />
+			</div>
+		</div>
+
+		<chdg-projects-remove-confirm-dialog
+			[isOpen]="!!projectPendingRemoval()"
+			[projectName]="projectPendingRemoval()?.name ?? 'Project'"
+			[projectPath]="projectPendingRemoval()?.path ?? ''"
+	(cancelled)="cancelRemove()"
+			(removeFromRecents)="confirmRemoveFromRecents()"
+			(removeAndDelete)="confirmRemoveAndDelete()"
+		/>

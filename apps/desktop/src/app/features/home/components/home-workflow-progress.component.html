@@ -1,0 +1,13 @@
+<section class="card workflow-overview-card">
+			<h2>Workflow Overview</h2>
+			<div class="workflow-mock-strip" aria-label="Canonical desktop workflow">
+				@for (step of steps; track step.index) {
+					<div class="workflow-mock-step" [class]="'workflow-mock-step status-' + step.status">
+						<div class="workflow-icon">{{ iconFor(step.index) }}</div>
+						<div class="step-number">{{ step.index }}</div>
+						<strong>{{ step.label }}</strong>
+						<p>{{ step.description }}</p>
+					</div>
+				}
+			</div>
+		</section>

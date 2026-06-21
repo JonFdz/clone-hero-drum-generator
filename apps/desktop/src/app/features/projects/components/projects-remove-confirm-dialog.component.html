@@ -1,0 +1,18 @@
+@if (isOpen) {
+   <div class="dialog-backdrop" role="presentation" (click)="cancelled.emit()">
+				<section class="dialog" role="dialog" aria-modal="true" aria-labelledby="remove-title" (click)="$event.stopPropagation()">
+					<h2 id="remove-title">Remove this project?</h2>
+					<p>You can remove it only from the recent list, or remove it from recents and delete the .chdg file from disk.</p>
+					<p>Deleting the .chdg file does not delete source/audio/output folders.</p>
+					<div class="project-summary">
+						<strong>{{ projectName }}</strong>
+						<span>{{ projectPath }}</span>
+					</div>
+					<div class="dialog-actions">
+		<button class="button ghost" type="button" (click)="cancelled.emit()">Cancel</button>
+						<button class="button secondary" type="button" (click)="removeFromRecents.emit()">Remove from Recents</button>
+						<button class="button danger" type="button" (click)="removeAndDelete.emit()">Remove from Recents and Delete File</button>
+					</div>
+				</section>
+			</div>
+		}

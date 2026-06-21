@@ -1,0 +1,5 @@
+.projects-library-page { display: grid; gap: 0; }
+		.library-layout { align-items: start; display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr) minmax(20rem, 23rem); }
+		.library-main { min-width: 0; }
+		.local-note { color: var(--color-muted); font-size: 0.88rem; margin: 1.35rem 0 0; }
+		@media (max-width: 1240px) { .library-layout { grid-template-columns: 1fr; } }

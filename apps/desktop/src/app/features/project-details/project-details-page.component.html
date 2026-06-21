@@ -1,0 +1,153 @@
+<header class="details-hero">
+			<div class="hero-copy">
+				<p class="eyebrow">Projects / Details</p>
+				<h1>{{ title() }}</h1>
+				<p>Configure the local .chdg project, source files, metadata, cover art, and chart offset.</p>
+			</div>
+			<div class="hero-actions">
+				<button class="button secondary" type="button" (click)="createProject()">New Project</button>
+				<a class="button ghost" routerLink="/projects">Back to Projects</a>
+			</div>
+		</header>
+
+		@if (projectState.missingPathWarnings().length > 0) {
+			<section class="notice warning-notice">
+				<div>
+					<h2>Missing local paths</h2>
+					<p>Re-select missing source/audio/output paths before generation. Missing cover artwork is non-blocking.</p>
+				</div>
+				<ul>
+					@for (warning of projectState.missingPathWarnings(); track warning.kind) {
+						<li>{{ warning.message }}</li>
+					}
+				</ul>
+			</section>
+		}
+
+		@if (projectState.outputStatus() === 'needs-regenerate') {
+			<section class="notice warning-notice compact-notice">
+				<h2>Output outdated</h2>
+				<p>Generation inputs changed since the last successful generation. Regenerate to update output.</p>
+			</section>
+		}
+
+		<div class="details-layout">
+			<main class="details-flow">
+				<section class="setup-card identity-card">
+					<div class="card-header-row">
+						<span class="step-badge">1</span>
+						<div class="header-text">
+							<h2>Project Identity</h2>
+							<p>Name the local project file and track its save status.</p>
+						</div>
+					</div>
+					<div class="identity-grid">
+						<label class="field-label">Project Name<input [(ngModel)]="projectNameInput" (change)="updateProjectName()" placeholder="Enter project name" /></label>
+						<div class="project-file-pill">
+							<span>{{ projectState.state().projectFilePath ? 'Project file' : 'Unsaved project' }}</span>
+							<strong>{{ projectState.state().projectFilePath || 'Save to create a .chdg file path' }}</strong>
+						</div>
+					</div>
+				</section>
+
+				<section class="setup-card cover-card">
+					<div class="card-header-row">
+						<span class="step-badge">2</span>
+						<div class="header-text">
+							<h2>Cover / Portada</h2>
+							<p>Optional local artwork reference. The image path is saved; the image is not embedded.</p>
+						</div>
+					</div>
+					<div class="cover-content">
+						@if (coverPreviewSrc()) {
+							<img class="cover-preview" [src]="coverPreviewSrc()" alt="Project cover preview" />
+						} @else {
+							<div class="cover-placeholder" aria-label="No cover selected">♪</div>
+						}
+						<div class="cover-copy">
+							<strong>{{ coverLabel() }}</strong>
+							<p>Supported: .png, .jpg, .jpeg, .webp. Missing cover files show a warning but do not block generation.</p>
+							<div class="button-row">
+								<button class="button secondary" type="button" (click)="pickCover()">Choose Cover</button>
+								<button class="button ghost" type="button" [disabled]="!state().cover?.imagePath" (click)="clearCover()">Remove Cover</button>
+							</div>
+						</div>
+					</div>
+				</section>
+
+				<section class="setup-card path-card">
+					<div class="card-header-row">
+						<span class="step-badge">3</span>
+						<div class="header-text"><h2>Source File</h2><p>Select a local chart source. Supports .mid, .midi, and .gp.</p></div>
+						<button class="button secondary" type="button" (click)="pickSource()">Choose File</button>
+					</div>
+					<div class="file-row"><span class="file-icon">♬</span><div><strong>{{ fileName(state().sourcePath) || 'No source selected' }}</strong><p>{{ state().sourceKind || 'Local source required. No network files or URLs.' }}</p></div><span class="ok" [class.on]="state().sourcePath">✓</span></div>
+				</section>
+
+				<section class="setup-card path-card">
+					<div class="card-header-row">
+						<span class="step-badge">4</span>
+						<div class="header-text"><h2>Audio File (Required)</h2><p>Select the local audio file for this project.</p></div>
+						<button class="button secondary" type="button" (click)="pickAudio()">Choose File</button>
+					</div>
+					<div class="file-row"><span class="file-icon">♫</span><div><strong>{{ fileName(state().audioPath) || 'No audio selected' }}</strong><p>Audio is required for Desktop Generate MVP.</p></div><span class="ok" [class.on]="state().audioPath">✓</span></div>
+				</section>
+
+				<section class="setup-card path-card">
+					<div class="card-header-row">
+						<span class="step-badge">5</span>
+						<div class="header-text"><h2>Output Folder</h2><p>Choose where notes.chart, song.ini, and song.ogg will be written.</p></div>
+						<button class="button secondary" type="button" (click)="pickOutput()">Choose Folder</button>
+					</div>
+					<div class="file-row"><span class="file-icon">□</span><div><strong>{{ state().outputDir || 'No output folder selected' }}</strong><p>A .chdg file stores project settings separately from generated output.</p></div><span class="ok" [class.on]="state().outputDir">✓</span></div>
+				</section>
+
+				<section class="setup-card metadata-card">
+					<div class="card-header-row">
+						<span class="step-badge">6</span>
+						<div class="header-text"><h2>Metadata</h2><p>Set song information for song.ini.</p></div>
+					</div>
+					<div class="metadata-grid">
+						<label class="field-label">Song Name<input [(ngModel)]="metadata.name" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Artist<input [(ngModel)]="metadata.artist" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Album<input [(ngModel)]="metadata.album" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Year<input [(ngModel)]="metadata.year" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Genre<input [(ngModel)]="metadata.genre" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Charter<input [(ngModel)]="metadata.charter" (ngModelChange)="updateMetadata()" /></label>
+					</div>
+				</section>
+
+				<section class="setup-card options-card">
+					<div class="card-header-row">
+						<span class="step-badge">7</span>
+						<div class="header-text"><h2>Offset and Options</h2><p>Chart offset is stored in the chart while note ticks are not moved.</p></div>
+					</div>
+					<div class="options-layout">
+						<label class="field-label offset-field">Chart Offset (ms)<input type="number" [ngModel]="state().offsetMs" (ngModelChange)="setOffset($event)" /></label>
+						<ul class="option-list"><li>Auto-detect source type</li><li>Track selection later</li><li>Local-only workflow</li></ul>
+					</div>
+				</section>
+			</main>
+
+			<aside class="summary-card">
+				<p class="summary-eyebrow">Project Summary</p>
+				<h2>{{ projectState.state().projectName }}</h2>
+				<div class="status-row">
+					<span class="status-pill" [class.modified]="projectState.state().dirty">{{ projectState.state().dirty ? 'Modified' : 'Saved' }}</span>
+					<span class="status-pill">{{ projectState.state().outputStatus }}</span>
+				</div>
+				<dl class="summary-list">
+					<dt>Cover</dt><dd>{{ coverLabel() }}</dd>
+					<dt>Source</dt><dd>{{ fileName(state().sourcePath) || 'Not selected' }}</dd>
+					<dt>Audio</dt><dd>{{ fileName(state().audioPath) || 'Required' }}</dd>
+					<dt>Output Folder</dt><dd>{{ state().outputDir || 'Not selected' }}</dd>
+					<dt>Offset</dt><dd>{{ state().offsetMs ?? 0 }} ms</dd>
+				</dl>
+				<ul class="readiness-list"><li [class.ready]="state().sourcePath">Source file</li><li [class.ready]="state().audioPath">Audio file</li><li [class.ready]="state().outputDir">Output folder</li><li class="ready">Local-only workflow</li></ul>
+				@if (validation().errors.length > 0) {
+					<div class="message warning small-message"><strong>Before generation:</strong><ul><li *ngFor="let error of validation().errors">{{ error }}</li></ul></div>
+				}
+				<div class="summary-actions"><button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="reviewSource()">Review Source</button><button class="button secondary" type="button" (click)="saveProject()">{{ primarySaveLabel() }}</button><button class="button ghost" type="button" (click)="saveProjectAs()">Save As</button></div>
+				<p class="summary-note">You can review and adjust settings before proceeding.</p>
+			</aside>
+		</div>

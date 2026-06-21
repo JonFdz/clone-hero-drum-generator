@@ -1,0 +1,22 @@
+<article class="project-card" [class.current]="project.isCurrent">
+			<div class="card-main">
+				<chdg-projects-cover-placeholder [label]="project.coverLabel" [projectName]="project.name" [sourceType]="project.sourceType" />
+				<div class="project-copy">
+					<div class="project-title-row">
+						<h2>{{ project.name }}</h2>
+						<button class="remove-button" type="button" title="Remove from recent projects" aria-label="Remove from recent projects" (click)="requestRemove.emit(project.path)">🗑</button>
+					</div>
+					<div class="badge-row">
+						<span class="status-badge" [class.success]="project.statusTone === 'success'" [class.warning]="project.statusTone === 'warning'" [class.danger]="project.statusTone === 'danger'">{{ project.statusLabel }}</span>
+						<chdg-projects-source-badge [label]="project.sourceLabel" [sourceType]="project.sourceType" />
+					</div>
+					<p class="opened">Last opened: {{ project.lastOpenedLabel }}</p>
+					<p class="path">{{ project.path }}</p>
+				</div>
+			</div>
+			<div class="card-actions">
+				<button type="button" (click)="selectProject.emit(project.path)"><span aria-hidden="true">✓</span> Select</button>
+				<button type="button" (click)="editProject.emit(project.path)"><span aria-hidden="true">✎</span> Edit</button>
+				<button type="button" class="danger-action" (click)="requestRemove.emit(project.path)"><span aria-hidden="true">−</span> Remove</button>
+			</div>
+		</article>
