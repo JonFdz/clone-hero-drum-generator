@@ -161,5 +161,51 @@ describe("DesktopPreviewService analysis cache handoff", () => {
 		expect(service.waveformError()).toBe(
 			"Audio and waveform unavailable: song.ogg missing",
 		);
+		expect(service.previewStatus()).toBe("Chart ready · audio unavailable");
+	});
+
+	it("handles a browser audio runtime error without hiding loaded chart timing", () => {
+		const { service } = createService({ ok: true, data: sourceFingerprint });
+		const chartData = {
+			noteEvents: [],
+			timing: { summary: { label: "Timing: OK" } },
+		};
+		service.chartData.set(chartData as never);
+		service.audioSrc.set("file:///tmp/output/song.ogg");
+		service.sourceKind.set("generated");
+		service.waveformStatus.set("ready");
+		service.currentTime.set(12);
+		service.duration.set(120);
+
+		service.handleAudioRuntimeError("Audio failed to load.");
+
+		expect(service.chartData()).toBe(chartData);
+		expect(service.error()).toBeNull();
+		expect(service.audioSrc()).toBeNull();
+		expect(service.sourceKind()).toBeNull();
+		expect(service.currentTime()).toBe(0);
+		expect(service.duration()).toBe(0);
+		expect(service.waveformStatus()).toBe("empty");
+		expect(service.waveformError()).toBe(
+			"Audio and waveform unavailable: Audio failed to load.",
+		);
+		expect(service.previewStatus()).toBe("Chart ready · audio unavailable");
+	});
+
+	it("distinguishes usable audio from waveform-only failure", () => {
+		const { service } = createService({ ok: true, data: sourceFingerprint });
+		expect(service.previewStatus()).toBe("Preview unavailable");
+
+		service.chartData.set({ noteEvents: [], timing: {} } as never);
+		service.audioSrc.set("file:///tmp/output/song.ogg");
+		service.sourceKind.set("generated");
+		service.waveformStatus.set("ready");
+
+		expect(service.previewStatus()).toBe("Preview up to date");
+
+		service.waveformStatus.set("error");
+		expect(service.previewStatus()).toBe(
+			"Preview ready · waveform unavailable",
+		);
 	});
 });

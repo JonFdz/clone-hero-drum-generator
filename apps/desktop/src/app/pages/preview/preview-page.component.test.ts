@@ -36,4 +36,13 @@ describe("Preview timing diagnostics UI", () => {
 			source.indexOf("<ng-template #missingAudio>"),
 		);
 	});
+
+	it("routes browser audio errors through the non-blocking service transition", () => {
+		expect(source).toContain(
+			'this.preview.handleAudioRuntimeError("Audio failed to load.");',
+		);
+		expect(source).not.toContain(
+			'this.preview.error.set("Audio failed to load.");',
+		);
+	});
 });

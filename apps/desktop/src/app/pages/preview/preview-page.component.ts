@@ -28,7 +28,7 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 				<h1>Preview & Offset</h1>
 				<p>Review generated notes against the audio waveform before export.</p>
 			</div>
-			<span class="status-pill" [class.warning]="preview.waveformStatus() === 'error'">
+			<span class="status-pill" [class.warning]="preview.waveformStatus() === 'error' || (!!preview.chartData() && !preview.audioSrc())">
 				● {{ preview.previewStatus() }}
 			</span>
 		</header>
@@ -323,7 +323,7 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 	onAudioError(): void {
 		this.stopPlaybackAnimation();
 		this.isPlaying.set(false);
-		this.preview.error.set("Audio failed to load.");
+		this.preview.handleAudioRuntimeError("Audio failed to load.");
 	}
 
 	async applyOffset(): Promise<void> {

@@ -255,3 +255,47 @@ git diff --check
 - Manual desktop interaction/screenshots were not performed in this executor environment.
 - The combined desktop `ng build` typecheck remains blocked by the existing Node.js 25.9.0/esbuild abort; direct Angular and Electron compiler checks pass.
 - External review remains incomplete by instruction.
+
+## Follow-up implementation — browser audio runtime failure
+
+Fixed the remaining browser/runtime audio error path without changing chart availability:
+
+- `PreviewPageComponent.onAudioError()` now delegates to `DesktopPreviewService.handleAudioRuntimeError(...)` instead of setting the fatal Preview error signal.
+- The service reuses the non-blocking audio-unavailable transition, clears the unusable audio source and playback timing, and preserves successfully parsed `chartData`.
+- The header status now reports `Chart ready · audio unavailable` instead of `Preview up to date` when chart timing exists without playable audio.
+- The existing `Preview unavailable`, normal audio, and waveform-only failure statuses remain distinct.
+- The no-audio template continues to render generated Timing Diagnostics while transport and offset controls remain unavailable.
+
+### Browser audio runtime TDD evidence
+
+| Stage | Result |
+|---|---|
+| RED | 2 files: 3 failed, 7 passed. Failures proved the missing service transition, incorrect `Preview up to date` status, and direct fatal error mutation. |
+| GREEN / triangulation | 2 files: 10 passed. Covered bridge-level no-audio, browser runtime audio failure, chart preservation, cleared audio/playback state, non-fatal error state, chart-unavailable status, normal audio status, and waveform-only failure. |
+
+### Browser audio runtime commands and results
+
+```bash
+pnpm exec vitest run apps/desktop/src/app/services/desktop-preview.service.test.ts apps/desktop/src/app/pages/preview/preview-page.component.test.ts
+# 2 files, 10 tests passed.
+
+pnpm exec vitest run apps/desktop/electron/previewData.test.ts packages/chart/src/chartTiming.test.ts packages/project/src/normalizeSelection.test.ts
+# 3 files, 47 tests passed.
+
+pnpm test
+# 61 files, 538 tests passed.
+
+pnpm --filter @chdg/desktop exec tsc -p tsconfig.electron.json --noEmit
+# Passed.
+
+pnpm --filter @chdg/desktop exec ngc -p tsconfig.app.json
+# Passed.
+
+git diff --check
+# Passed.
+```
+
+### Browser audio runtime limitations
+
+- Manual browser/desktop playback validation was not performed in this executor environment.
+- External review remains incomplete by instruction; no merge was performed.

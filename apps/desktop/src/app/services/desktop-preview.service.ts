@@ -87,7 +87,8 @@ export class DesktopPreviewService {
 		return 0;
 	});
 	readonly previewStatus = computed(() => {
-		if (this.error()) return "Preview unavailable";
+		if (this.error() || !this.chartData()) return "Preview unavailable";
+		if (!this.audioSrc()) return "Chart ready · audio unavailable";
 		if (this.waveformStatus() === "loading") return "Loading waveform";
 		if (this.waveformStatus() === "error")
 			return "Preview ready · waveform unavailable";
@@ -177,6 +178,11 @@ export class DesktopPreviewService {
 		this.sourceKind.set(audio.data.sourceKind);
 		await this.loadWaveform(audio.data.src);
 
+	}
+
+	handleAudioRuntimeError(message: string): void {
+		this.error.set(null);
+		this.setAudioUnavailable(message);
 	}
 
 	private setAudioUnavailable(message: string): void {
