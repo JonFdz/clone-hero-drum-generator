@@ -4,6 +4,7 @@ import { Router } from "@angular/router";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
+import { ProjectWorkflowHydrator } from "../../features/project-session/public-api";
 import { createDefaultProjectName } from "../../services/project-name-model";
 import {
 	deriveProjectsLibraryModel,
@@ -81,6 +82,7 @@ export class ProjectsPageComponent {
 	private readonly projectState = inject(DesktopProjectStateService);
 	private readonly bridge = inject(DesktopBridgeService);
 	private readonly generateState = inject(DesktopGenerateStateService);
+	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly router = inject(Router);
 
 	readonly query = signal("");
@@ -102,14 +104,14 @@ export class ProjectsPageComponent {
 	async selectRecent(filePath: string): Promise<void> {
 		const payload = await this.projectState.openProject(filePath);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 		}
 	}
 
 	async editRecent(filePath: string): Promise<void> {
 		const payload = await this.projectState.openProject(filePath);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			await this.router.navigateByUrl("/projects/details");
 		}
 	}
@@ -152,7 +154,7 @@ export class ProjectsPageComponent {
 		if (!picked) return;
 		const payload = await this.projectState.openProject(picked.path);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			await this.router.navigateByUrl("/projects/details");
 		}
 	}
@@ -161,28 +163,8 @@ export class ProjectsPageComponent {
 		const defaultName = createDefaultProjectName();
 		const payload = await this.projectState.createProject(defaultName);
 		if (payload) {
-			this.loadProjectState(payload);
+			this.workflowHydrator.hydrate(payload);
 			await this.router.navigateByUrl("/projects/details?mode=new");
 		}
-	}
-
-	private loadProjectState(
-		payload: Awaited<ReturnType<DesktopProjectStateService["openProject"]>>,
-	): void {
-		if (!payload) return;
-		this.generateState.loadProjectState({
-			sourcePath: payload.sourcePath,
-			audioPath: payload.audioPath,
-			outputDir: payload.outputDir,
-			cover: payload.cover,
-			sourceKind: payload.sourceKind,
-			selectedTracks: payload.selectedTracks,
-			metadata: payload.metadata,
-			offsetMs: payload.offsetMs,
-			lastGeneratedAt: payload.lastGeneratedAt,
-			outputFiles: payload.outputFiles,
-			mappingOverrides: payload.mappingOverrides,
-			analysis: payload.analysis,
-		});
 	}
 }

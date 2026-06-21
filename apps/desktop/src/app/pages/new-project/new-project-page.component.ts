@@ -175,16 +175,8 @@ export class NewProjectPageComponent {
 	async saveProjectAs(): Promise<void> {
 		const name = this.projectState.state().projectName;
 		const currentPath = this.projectState.state().projectFilePath;
-		const picked = await this.bridge.saveProjectFile(name, currentPath);
-		if (!picked) return;
-		const payload = this.generateState.buildProjectStatePayload(
-			name,
-			picked.path,
-		);
-		await this.projectState.saveProjectAs({
-			...payload,
-			filePath: picked.path,
-		});
+		const payload = this.generateState.buildProjectStatePayload(name, currentPath);
+		await this.projectState.saveProjectAs(payload);
 	}
 
 	async pickSource(): Promise<void> {

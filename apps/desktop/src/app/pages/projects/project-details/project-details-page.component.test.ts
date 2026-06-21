@@ -1,24 +1,27 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join , resolve} from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+const __appRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..", "..", "..");
+
 
 const source = () =>
 	readFileSync(
 		join(
-			process.cwd(),
-			"apps/desktop/src/app/pages/projects/project-details/project-details-page.component.ts",
+			__appRoot, "pages/projects/project-details/project-details-page.component.ts",
 		),
 		"utf8",
 	);
 
 describe("ProjectDetailsPageComponent source", () => {
-	it("loads the returned createProject payload instead of resetting state", () => {
+	it("loads the returned createProject payload via the canonical hydrator", () => {
 		const text = source();
 		expect(text).toContain("const name = createDefaultProjectName()");
 		expect(text).toContain(
 			"const payload = await this.projectState.createProject(name)",
 		);
-		expect(text).toContain("this.generateState.loadProjectState(payload)");
+		expect(text).toContain("this.workflowHydrator.hydrate(payload)");
+		expect(text).not.toContain("this.generateState.loadProjectState(payload)");
 		expect(text).not.toContain(
 			"this.projectNameInput.trim() || \"Untitled\"",
 		);

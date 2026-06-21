@@ -7,8 +7,6 @@ import type {
 	NormalizeSelectionInput,
 	SourceInspectionResult,
 	ChdgProjectAnalysisCache,
-	ChdgProjectFile,
-	ChdgOutputStatus,
 	ChdgSourceFingerprint,
 	DesktopSettings,
 	MappingOverrideProfile,

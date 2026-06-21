@@ -1,25 +1,57 @@
 import type { Routes } from "@angular/router";
-import { GeneratePageComponent } from "./pages/generate/generate-page.component";
 import { HomePageComponent } from "./pages/home/home-page.component";
-import { SourceReviewPageComponent } from "./pages/source-review/source-review-page.component";
-import { ProjectDetailsPageComponent } from "./pages/projects/project-details/project-details-page.component";
-import { PreviewPageComponent } from "./pages/preview/preview-page.component";
-import { ProjectsPageComponent } from "./pages/projects/projects-page.component";
-import { SettingsPageComponent } from "./pages/settings/settings-page.component";
 
 export const routes: Routes = [
 	{ path: "", pathMatch: "full", redirectTo: "home" },
+	// Home stays eagerly loaded.
 	{ path: "home", component: HomePageComponent },
-	{ path: "projects", component: ProjectsPageComponent },
-	{ path: "projects/details", component: ProjectDetailsPageComponent },
+	// Feature routes are lazy-loaded via loadComponent.
+	{
+		path: "projects",
+		loadComponent: () =>
+			import("./pages/projects/projects-page.component").then(
+				(m) => m.ProjectsPageComponent,
+			),
+	},
+	{
+		path: "projects/details",
+		loadComponent: () =>
+			import("./pages/projects/project-details/project-details-page.component").then(
+				(m) => m.ProjectDetailsPageComponent,
+			),
+	},
 	{ path: "new-project", redirectTo: "projects/details" },
-	{ path: "source-review", component: SourceReviewPageComponent },
+	{
+		path: "source-review",
+		loadComponent: () =>
+			import("./pages/source-review/source-review-page.component").then(
+				(m) => m.SourceReviewPageComponent,
+			),
+	},
 	{ path: "inspect-source", redirectTo: "source-review" },
 	{ path: "track-selection", redirectTo: "source-review" },
 	{ path: "mapping", redirectTo: "source-review" },
-	{ path: "generate", component: GeneratePageComponent },
+	{
+		path: "generate",
+		loadComponent: () =>
+			import("./pages/generate/generate-page.component").then(
+				(m) => m.GeneratePageComponent,
+			),
+	},
 	{ path: "validation", redirectTo: "generate" },
-	{ path: "preview", component: PreviewPageComponent },
-	{ path: "settings", component: SettingsPageComponent },
+	{
+		path: "preview",
+		loadComponent: () =>
+			import("./pages/preview/preview-page.component").then(
+				(m) => m.PreviewPageComponent,
+			),
+	},
+	{
+		path: "settings",
+		loadComponent: () =>
+			import("./pages/settings/settings-page.component").then(
+				(m) => m.SettingsPageComponent,
+			),
+	},
 	{ path: "**", redirectTo: "home" },
 ];
