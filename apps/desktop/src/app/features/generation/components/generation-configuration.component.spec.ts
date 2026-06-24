@@ -1,2 +1,18 @@
-import "@angular/compiler"; import { describe, expect, it } from "vitest"; import { GenerationConfigurationComponent } from "./generation-configuration.component";
-describe("GenerationConfigurationComponent", () => { it("accepts config rows", () => { const c = new GenerationConfigurationComponent(); c.rows = [{ icon: "▧", label: "Source", value: "demo.mid", status: "ok", glyph: "✓" }]; expect(c.rows[0].glyph).toBe("✓"); }); });
+import "@angular/compiler";
+import { describe, expect, it } from "vitest";
+import { GenerationConfigurationComponent } from "./generation-configuration.component";
+describe("GenerationConfigurationComponent", () => {
+	it("accepts config rows", () => {
+		const c = new GenerationConfigurationComponent();
+		c.rows = [
+			{
+				icon: "▧",
+				label: "Source",
+				value: "demo.mid",
+				status: "ok",
+				glyph: "✓",
+			},
+		];
+		expect(c.rows[0].glyph).toBe("✓");
+	});
+});

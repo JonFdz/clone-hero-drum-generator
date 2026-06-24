@@ -1,4 +1,12 @@
-<div class="readiness-pill" [class.warning]="tone === 'warning'" [class.danger]="tone === 'danger'" [class.running]="tone === 'running'">
+<div
+	class="readiness-pill"
+	[class.warning]="tone === 'warning'"
+	[class.danger]="tone === 'danger'"
+	[class.running]="tone === 'running'"
+>
 	<span class="readiness-icon" aria-hidden="true">{{ icon }}</span>
-	<span><strong>{{ label }}</strong><small>{{ detail }}</small></span>
+	<span
+		><strong>{{ label }}</strong
+		><small>{{ detail }}</small></span
+	>
 </div>

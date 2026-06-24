@@ -1,11 +1,51 @@
-.readiness-pill { align-items: center; background: rgba(20, 27, 36, 0.78); border: 1px solid rgba(101, 222, 119, 0.22); border-radius: 999px; display: inline-flex; gap: var(--space-3); min-width: 18rem; padding: 0.8rem 1rem; }
-.readiness-pill strong { color: var(--color-success); display: block; }
-.readiness-pill small { color: var(--color-muted); display: block; margin-top: 0.15rem; }
-.readiness-pill.warning { border-color: rgba(246, 180, 80, 0.34); }
-.readiness-pill.warning strong { color: var(--color-warning); }
-.readiness-pill.danger { border-color: rgba(255, 107, 122, 0.38); }
-.readiness-pill.danger strong { color: var(--color-danger); }
-.readiness-pill.running strong { color: var(--color-accent-soft); }
-.readiness-icon { align-items: center; border: 2px solid currentColor; border-radius: 999px; color: var(--color-success); display: inline-flex; font-weight: 900; height: 2rem; justify-content: center; width: 2rem; }
-.readiness-pill.warning .readiness-icon { color: var(--color-warning); }
-.readiness-pill.danger .readiness-icon { color: var(--color-danger); }
+.readiness-pill {
+	align-items: center;
+	background: rgba(20, 27, 36, 0.78);
+	border: 1px solid rgba(101, 222, 119, 0.22);
+	border-radius: 999px;
+	display: inline-flex;
+	gap: var(--space-3);
+	min-width: 18rem;
+	padding: 0.8rem 1rem;
+}
+.readiness-pill strong {
+	color: var(--color-success);
+	display: block;
+}
+.readiness-pill small {
+	color: var(--color-muted);
+	display: block;
+	margin-top: 0.15rem;
+}
+.readiness-pill.warning {
+	border-color: rgba(246, 180, 80, 0.34);
+}
+.readiness-pill.warning strong {
+	color: var(--color-warning);
+}
+.readiness-pill.danger {
+	border-color: rgba(255, 107, 122, 0.38);
+}
+.readiness-pill.danger strong {
+	color: var(--color-danger);
+}
+.readiness-pill.running strong {
+	color: var(--color-accent-soft);
+}
+.readiness-icon {
+	align-items: center;
+	border: 2px solid currentColor;
+	border-radius: 999px;
+	color: var(--color-success);
+	display: inline-flex;
+	font-weight: 900;
+	height: 2rem;
+	justify-content: center;
+	width: 2rem;
+}
+.readiness-pill.warning .readiness-icon {
+	color: var(--color-warning);
+}
+.readiness-pill.danger .readiness-icon {
+	color: var(--color-danger);
+}

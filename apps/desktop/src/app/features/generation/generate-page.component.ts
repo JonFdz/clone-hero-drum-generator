@@ -189,7 +189,9 @@ export class GeneratePageComponent implements OnInit {
 		return summary.errorCount === 0 && summary.warningCount === 0;
 	});
 
-	readonly checkedAtLabel = computed(() => formatCheckedAt(this.summary().checkedAt));
+	readonly checkedAtLabel = computed(() =>
+		formatCheckedAt(this.summary().checkedAt),
+	);
 
 	readonly checklistRows = computed<ChecklistRow[]>(() =>
 		this.filteredChecklistItems().map((item) => ({
@@ -224,7 +226,9 @@ export class GeneratePageComponent implements OnInit {
 					? `${state.selectedTracks.length} track${state.selectedTracks.length === 1 ? "" : "s"}`
 					: "None",
 				status: state.selectedTracks.length > 0 ? "ok" : "missing",
-				glyph: this.statusGlyph(state.selectedTracks.length > 0 ? "ok" : "missing"),
+				glyph: this.statusGlyph(
+					state.selectedTracks.length > 0 ? "ok" : "missing",
+				),
 			},
 			{
 				icon: "▭",

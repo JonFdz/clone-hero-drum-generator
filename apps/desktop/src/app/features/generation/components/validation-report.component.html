@@ -1,8 +1,36 @@
-<section class="card validation-report" [class.ready]="summary.canGenerate" [class.blocked]="summary.errorCount > 0">
+<section
+	class="card validation-report"
+	[class.ready]="summary.canGenerate"
+	[class.blocked]="summary.errorCount > 0"
+>
 	<h2>Validation Report</h2>
 	<div class="report-body">
-		<div class="report-status"><span class="large-status-icon" aria-hidden="true">{{ icon }}</span><div><strong>{{ label }}</strong><p>{{ message }}</p></div></div>
-		<div class="report-counts" aria-label="Validation counts"><div><strong>{{ summary.errorCount }}</strong><span class="danger-text">Errors</span></div><div><strong>{{ summary.warningCount }}</strong><span class="warning-text">Warnings</span></div><div><strong>{{ summary.infoCount }}</strong><span class="info-text">Info</span></div></div>
+		<div class="report-status">
+			<span class="large-status-icon" aria-hidden="true">{{ icon }}</span>
+			<div>
+				<strong>{{ label }}</strong>
+				<p>{{ message }}</p>
+			</div>
+		</div>
+		<div class="report-counts" aria-label="Validation counts">
+			<div>
+				<strong>{{ summary.errorCount }}</strong
+				><span class="danger-text">Errors</span>
+			</div>
+			<div>
+				<strong>{{ summary.warningCount }}</strong
+				><span class="warning-text">Warnings</span>
+			</div>
+			<div>
+				<strong>{{ summary.infoCount }}</strong
+				><span class="info-text">Info</span>
+			</div>
+		</div>
 	</div>
-	<footer class="report-meta"><span>Checked at: <strong>{{ checkedAt }}</strong></span><span>Validator: <strong>Desktop Validator</strong></span><span>Version: <strong>1.8.0</strong></span></footer>
+	<footer class="report-meta">
+		<span
+			>Checked at: <strong>{{ checkedAt }}</strong></span
+		><span>Validator: <strong>Desktop Validator</strong></span
+		><span>Version: <strong>1.8.0</strong></span>
+	</footer>
 </section>

@@ -1,1 +1,26 @@
-<div class="generate-action-bar"><a class="button ghost" routerLink="/source-review">‹ Back to Source Review</a><button class="button secondary" type="button" [disabled]="!canOpenOutputFolder" (click)="openOutputFolder.emit()">▭ Open Output Folder</button><button class="button secondary" type="button" [disabled]="!canOpenPreview" (click)="openPreview.emit()">▷ Open Preview</button><button class="button primary" type="button" [disabled]="!canStartGeneration" (click)="generate.emit()">{{ generateActionLabel }}</button></div>
+<div class="generate-action-bar">
+	<a class="button ghost" routerLink="/source-review"
+		>‹ Back to Source Review</a
+	><button
+		class="button secondary"
+		type="button"
+		[disabled]="!canOpenOutputFolder"
+		(click)="openOutputFolder.emit()"
+	>
+		▭ Open Output Folder</button
+	><button
+		class="button secondary"
+		type="button"
+		[disabled]="!canOpenPreview"
+		(click)="openPreview.emit()"
+	>
+		▷ Open Preview</button
+	><button
+		class="button primary"
+		type="button"
+		[disabled]="!canStartGeneration"
+		(click)="generate.emit()"
+	>
+		{{ generateActionLabel }}
+	</button>
+</div>

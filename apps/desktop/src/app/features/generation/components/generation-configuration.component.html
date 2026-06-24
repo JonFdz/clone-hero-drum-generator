@@ -1,1 +1,21 @@
-<section class="card config-card"><h2>Generation Configuration</h2><div class="config-list">@for (row of rows; track row.label) {<div class="config-row"><span class="config-icon" aria-hidden="true">{{ row.icon }}</span><span class="config-label">{{ row.label }}</span><span class="config-value">{{ row.value }}</span><span class="config-status" [class.warning]="row.status === 'warning'" [class.missing]="row.status === 'missing'" aria-hidden="true">{{ row.glyph }}</span></div>}</div></section>
+<section class="card config-card">
+	<h2>Generation Configuration</h2>
+	<div class="config-list">
+		@for (row of rows; track row.label) {
+			<div class="config-row">
+				<span class="config-icon" aria-hidden="true">{{
+					row.icon
+				}}</span
+				><span class="config-label">{{ row.label }}</span
+				><span class="config-value">{{ row.value }}</span
+				><span
+					class="config-status"
+					[class.warning]="row.status === 'warning'"
+					[class.missing]="row.status === 'missing'"
+					aria-hidden="true"
+					>{{ row.glyph }}</span
+				>
+			</div>
+		}
+	</div>
+</section>

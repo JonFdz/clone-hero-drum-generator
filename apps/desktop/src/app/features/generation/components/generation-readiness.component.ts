@@ -10,7 +10,11 @@ import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
 	styleUrl: "./generation-readiness.component.css",
 })
 export class GenerationReadinessComponent {
-	@Input({ required: true }) tone!: "success" | "warning" | "danger" | "running";
+	@Input({ required: true }) tone!:
+		| "success"
+		| "warning"
+		| "danger"
+		| "running";
 	@Input({ required: true }) icon!: string;
 	@Input({ required: true }) label!: string;
 	@Input({ required: true }) detail!: string;

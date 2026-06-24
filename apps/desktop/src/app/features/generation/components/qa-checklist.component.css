@@ -1,1 +1,115 @@
-.checklist-card { min-width: 0; }.card-heading { align-items: flex-start; display: flex; gap: var(--space-4); justify-content: space-between; margin-bottom: var(--space-4); }.card-heading h2, .card-heading p { margin-bottom: 0; }.pill.success { background: rgba(101, 222, 119, 0.16); border-color: rgba(101, 222, 119, 0.34); color: var(--color-success); }.check-filter { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }.button.small { min-height: 2rem; padding: 0.35rem 0.7rem; }.button.active { border-color: rgba(166, 108, 255, 0.82); color: var(--color-accent-soft); }.danger-filter { color: var(--color-danger); }.warning-filter { color: var(--color-warning); }.info-filter { color: #45b5ff; }.checklist-table { overflow: hidden; }.checklist-header, .checklist-row { display: grid; gap: var(--space-3); grid-template-columns: 4rem minmax(9rem, 0.75fr) minmax(6rem, 0.36fr) minmax(0, 1.2fr) minmax(8rem, auto); }.checklist-header { border-bottom: 1px solid var(--color-border); color: var(--color-muted); font-size: 0.74rem; font-weight: 900; padding: 0 0 var(--space-3); text-transform: uppercase; }.checklist-scroll { max-height: 15.5rem; overflow: auto; }.checklist-row { align-items: center; border-bottom: 1px solid rgba(197, 209, 225, 0.08); color: var(--color-text-soft); padding: var(--space-3) 0; }.severity-icon { font-size: 1.1rem; }.checklist-row.error .severity-icon { color: var(--color-danger); }.checklist-row.warning .severity-icon { color: var(--color-warning); }.checklist-row.info .severity-icon { color: #45b5ff; }.category-badge { background: rgba(151, 83, 229, 0.18); border: 1px solid rgba(151, 83, 229, 0.26); border-radius: var(--radius-sm); color: var(--color-accent-soft); font-size: 0.78rem; font-weight: 800; padding: 0.2rem 0.45rem; width: fit-content; }.check-message { overflow-wrap: anywhere; }.muted-action { color: var(--color-muted); text-align: center; }.empty-state { align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-muted); display: grid; justify-items: center; min-height: 5rem; padding: var(--space-5); text-align: center; }.empty-state strong { color: var(--color-text-soft); }
+.checklist-card {
+	min-width: 0;
+}
+.card-heading {
+	align-items: flex-start;
+	display: flex;
+	gap: var(--space-4);
+	justify-content: space-between;
+	margin-bottom: var(--space-4);
+}
+.card-heading h2,
+.card-heading p {
+	margin-bottom: 0;
+}
+.pill.success {
+	background: rgba(101, 222, 119, 0.16);
+	border-color: rgba(101, 222, 119, 0.34);
+	color: var(--color-success);
+}
+.check-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	margin-bottom: var(--space-4);
+}
+.button.small {
+	min-height: 2rem;
+	padding: 0.35rem 0.7rem;
+}
+.button.active {
+	border-color: rgba(166, 108, 255, 0.82);
+	color: var(--color-accent-soft);
+}
+.danger-filter {
+	color: var(--color-danger);
+}
+.warning-filter {
+	color: var(--color-warning);
+}
+.info-filter {
+	color: #45b5ff;
+}
+.checklist-table {
+	overflow: hidden;
+}
+.checklist-header,
+.checklist-row {
+	display: grid;
+	gap: var(--space-3);
+	grid-template-columns: 4rem minmax(9rem, 0.75fr) minmax(6rem, 0.36fr) minmax(
+			0,
+			1.2fr
+		) minmax(8rem, auto);
+}
+.checklist-header {
+	border-bottom: 1px solid var(--color-border);
+	color: var(--color-muted);
+	font-size: 0.74rem;
+	font-weight: 900;
+	padding: 0 0 var(--space-3);
+	text-transform: uppercase;
+}
+.checklist-scroll {
+	max-height: 15.5rem;
+	overflow: auto;
+}
+.checklist-row {
+	align-items: center;
+	border-bottom: 1px solid rgba(197, 209, 225, 0.08);
+	color: var(--color-text-soft);
+	padding: var(--space-3) 0;
+}
+.severity-icon {
+	font-size: 1.1rem;
+}
+.checklist-row.error .severity-icon {
+	color: var(--color-danger);
+}
+.checklist-row.warning .severity-icon {
+	color: var(--color-warning);
+}
+.checklist-row.info .severity-icon {
+	color: #45b5ff;
+}
+.category-badge {
+	background: rgba(151, 83, 229, 0.18);
+	border: 1px solid rgba(151, 83, 229, 0.26);
+	border-radius: var(--radius-sm);
+	color: var(--color-accent-soft);
+	font-size: 0.78rem;
+	font-weight: 800;
+	padding: 0.2rem 0.45rem;
+	width: fit-content;
+}
+.check-message {
+	overflow-wrap: anywhere;
+}
+.muted-action {
+	color: var(--color-muted);
+	text-align: center;
+}
+.empty-state {
+	align-items: center;
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	color: var(--color-muted);
+	display: grid;
+	justify-items: center;
+	min-height: 5rem;
+	padding: var(--space-5);
+	text-align: center;
+}
+.empty-state strong {
+	color: var(--color-text-soft);
+}

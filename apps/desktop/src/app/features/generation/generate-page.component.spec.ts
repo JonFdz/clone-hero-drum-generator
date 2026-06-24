@@ -239,7 +239,6 @@ describe("GeneratePageComponent", () => {
 		expect(rows).toHaveLength(2);
 	});
 
-
 	it("statusGlyph returns correct symbols for each status", () => {
 		expect(component.statusGlyph("ok")).toBe("✓");
 		expect(component.statusGlyph("warning")).toBe("⚠");
