@@ -23,4 +23,11 @@ describe("PreviewPageComponent", () => {
 		const c = new PreviewPageComponent(null as never);
 		expect(c.isPlaying()).toBe(false);
 	});
+
+	it("defaults to chart mode and normal highway preset", () => {
+		const c = new PreviewPageComponent(null as never);
+		expect(c.visualMode()).toBe("chart");
+		expect(c.highwayPreset()).toBe("normal");
+		expect(c.highwayHudEnabled()).toBe(true);
+	});
 });

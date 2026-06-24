@@ -1,0 +1,22 @@
+<section class="highway-card">
+	<div class="highway-header">
+		<div>
+			<h2>Highway Preview</h2>
+			<p>Experimental read-only Canvas 2D playback view.</p>
+		</div>
+		<span class="experimental-pill">Experimental</span>
+	</div>
+
+	<div class="canvas-shell" #container>
+		<canvas
+			#canvas
+			class="highway-canvas"
+			role="img"
+			aria-label="Experimental five-lane drum highway preview"
+		></canvas>
+	</div>
+
+	<p class="highway-summary" aria-live="polite">
+		{{ accessibleSummary() }}
+	</p>
+</section>
