@@ -79,12 +79,14 @@ apps/desktop/src/app/
 - `window.confirm` and `window.prompt` are forbidden; reusable Angular dialogs
   replace them (rolled out in #76).
 
-### Bridge location (#74 decision)
+### Bridge location (#74/#76 decision)
 
 `DesktopBridgeService` currently remains at `services/desktop-bridge.service.ts`
-to avoid churning every legacy page import during the foundation PR. It is the
-canonical core boundary by responsibility; its physical relocation into `core/`
-is recorded as a follow-up and is done together with the page migrations in
+to avoid churning every legacy page import. It is the canonical core boundary
+by responsibility; its physical relocation into `core/` is recorded as a
+follow-up. All #76 feature services (`GenerationService`,
+`MappingProfileService`, `SourceReviewOrchestratorService`,
+`DesktopPreviewService`) import the bridge; no migrated component does.
 
 # 75/#76, when those import paths are touched anyway
 
@@ -146,8 +148,9 @@ no longer rebuild the payload-to-workflow mapping inline.
 
 It is a transitional service: it keeps the persistence boundary focused
 (persistence hydrates `ProjectSessionStore`; the hydrator hydrates the
-generation workflow) and is removed in #76 when generation becomes a feature
-and owns its own hydration.
+generation workflow). #76 retained it because `DesktopGenerateStateService`
+still owns the workflow state; remove it only after workflow hydration moves to
+a consolidated feature-owned store.
 
 ### Legacy facade
 
@@ -273,7 +276,46 @@ transition.
   navigate only after typed success outcomes and refresh recents after
   successful create/open/save/save-as operations.
 
+## Migrated feature ownership (#76)
+
+- `features/source-review` owns the Source Review page, feature-local mapping
+  models (`mapping.model.ts`, `source-review-view.model.ts`,
+  `source-review-format.util.ts`), mapping-profile CRUD service
+  (`mapping-profile.service.ts`), integrated mapping review, and focused
+  presentational components for selected source summary, source/combined
+  summaries, track candidates, mapping review, mapping profiles, issues,
+  advanced JSON, and the action area. The page is a thin coordinator with
+  computed signals for all derived presentation state.
+  `window.prompt`/metadata editing for mapping profiles is replaced by the
+  feature-local two-field `profile-metadata-dialog`; delete confirmation uses
+  `shared/confirmation-dialog`. The `SourceReviewOrchestratorService` (in
+  `services/`) owns bridge-backed analysis/normalization. The legacy
+  `pages/mapping/` was deleted with proof.
+- `features/generation` owns the Generate page, `GenerationService`
+  (bridge-backed orchestration with typed outcomes for generation, overwrite,
+  autosave, and output-folder operations), and focused presentation components
+  for readiness, validation report, configuration, QA checklist, generation
+  steps, log, output preview, and the action bar. The page is a thin
+  coordinator with computed signals. `window.confirm` for overwrite is replaced
+  by `shared/confirmation-dialog`. The page decides navigation only.
+- `features/preview` owns the Preview page and 4 child components
+  (chart-stage, transport-card, offset-panel, footer-stats). All use external
+  templates/styles and OnPush. Collection-creating template methods were
+  converted to `computed` signals using the `@Input() set` → internal
+  `signal()` → `computed()` pattern. `DesktopPreviewService` (in `services/`)
+  owns bridge-backed preview operations.
+- `shared/confirmation-dialog` is the accessible Angular confirmation dialog
+  used by Generate for overwrite confirmation.
+- `shared/text-input-dialog` remains available as the shared one-field text
+  input primitive. Source Review no longer uses it after the review fix because
+  profile creation/editing requires both name and description, which is handled
+  by the feature-local `profile-metadata-dialog`.
+- All `window.confirm` and `window.prompt` usage is eliminated from Angular
+  code. The architecture gate enforces this.
+- No migrated component imports `DesktopBridgeService`; feature services own
+  all bridge interaction.
+
 ## OnPush exception register
 
-No exceptions in #74. Any future exception must be proven and listed in
-`angular-refactor-follow-ups.md`.
+No exceptions in #74, #75, or #76. Any future exception must be proven and
+listed in `angular-refactor-follow-ups.md`.

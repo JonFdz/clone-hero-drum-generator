@@ -1,0 +1,247 @@
+<section
+	class="card accordion-card mapping-card"
+	[class.open]="open"
+	[class.attention]="needsAttention"
+>
+	<div class="accordion-header mapping-header">
+		<div class="accordion-copy">
+			<div class="accordion-title-row">
+				<h2>Mapping Review</h2>
+				<span class="review-badge" [class.warning]="needsAttention">
+					<span aria-hidden="true">{{
+						needsAttention
+							? "△"
+							: statusLabel === "Known percussion ignored"
+								? "i"
+								: "✓"
+					}}</span>
+					{{ statusLabel }}
+				</span>
+			</div>
+			<p>{{ summary }}</p>
+			@if (coverageSummary) {
+				<p class="profile-line">{{ coverageSummary }}</p>
+			}
+			<p class="profile-line">
+				Profile: {{ selectedProfileName ?? "None" }}
+			</p>
+		</div>
+		<div class="accordion-actions">
+			<button
+				class="button secondary small"
+				type="button"
+				(click)="toggleOpen.emit()"
+			>
+				{{ actionLabel }}
+			</button>
+			<button
+				class="chevron-button"
+				type="button"
+				(click)="toggleOpen.emit()"
+				[attr.aria-label]="actionLabel"
+			>
+				{{ open ? "⌃" : "⌄" }}
+			</button>
+		</div>
+	</div>
+	@if (open) {
+		<div class="mapping-review-panel">
+			<div class="mapping-copy-stack">
+				<p>
+					Candidates are skipped by default. Apply a suggestion only
+					if the sound is important for the playable drum chart.
+				</p>
+				@if (ignoredKnownCount > 0) {
+					<p>
+						Known ignored percussion is recognized but not charted
+						by default.
+					</p>
+				}
+				@if (unknownCount > 0) {
+					<p>
+						Unknown notes were skipped because CHDG does not know
+						what drum lane they represent.
+					</p>
+				}
+			</div>
+			<div class="mapping-filter-row" aria-label="Mapping review filters">
+				@for (filter of filters; track filter.id) {
+					<button
+						class="filter-chip"
+						type="button"
+						[class.active]="this.filter === filter.id"
+						(click)="setFilter.emit(filter.id)"
+					>
+						{{ filter.label
+						}}<span>{{ filterCountRecord[filter.id] }}</span>
+					</button>
+				}
+			</div>
+			@if (rowsEmpty) {
+				<p class="mapping-empty">
+					No mapping sources detected for the selected track.
+				</p>
+			} @else if (filteredRowsEmpty) {
+				<p class="mapping-empty">{{ emptyFilterMessage }}</p>
+			} @else {
+				<div class="mapping-row-list">
+					@for (row of filteredRows; track row.key) {
+						<article
+							class="mapping-review-row"
+							[ngClass]="row.kind"
+						>
+							<div class="mapping-row-identity">
+								<strong>{{ row.primaryLabel }}</strong>
+								<span>{{ row.metaLabel }}</span>
+							</div>
+							<div class="mapping-row-decision">
+								<p class="mapping-current">
+									{{ row.currentMappingLabel }}
+								</p>
+								@if (row.suggestedPieceLabel) {
+									<p class="mapping-detail">
+										Suggested: {{ row.suggestedPieceLabel }}
+									</p>
+								}
+								@if (row.confidence || row.reason) {
+									<p class="mapping-detail subtle">
+										@if (row.confidence) {
+											<span
+												>Confidence:
+												{{ row.confidence }}</span
+											>
+										}
+										@if (row.reason) {
+											<span>{{ row.reason }}</span>
+										}
+									</p>
+								}
+								@if (row.overrideLabel) {
+									<p class="mapping-detail override-copy">
+										{{ row.overrideLabel }}
+									</p>
+								}
+							</div>
+							<div class="mapping-row-control">
+								<span
+									class="mapping-status"
+									[ngClass]="row.badgeTone"
+									>{{ row.badgeLabel }}</span
+								>
+								<div class="mapping-row-actions">
+									@if (row.hasOverride) {
+										<button
+											class="button secondary small"
+											type="button"
+											(click)="resetOverride.emit(row)"
+										>
+											Reset override
+										</button>
+									}
+									@if (
+										!row.hasOverride &&
+										row.action === "candidate" &&
+										row.suggestedPiece
+									) {
+										<button
+											class="button secondary small"
+											type="button"
+											(click)="applySuggestion.emit(row)"
+										>
+											Apply suggestion
+										</button>
+									}
+									@if (
+										!row.hasOverride &&
+										row.action === "ignore"
+									) {
+										<span class="mapping-static-action"
+											>Keep ignored</span
+										>
+									}
+									@if (
+										!row.hasOverride && row.action === "map"
+									) {
+										<span class="mapping-static-action"
+											>Keep default</span
+										>
+									}
+									<label class="mapping-piece-select">
+										<span>{{
+											row.action === "map" &&
+											!row.hasOverride
+												? "Override"
+												: "Map to"
+										}}</span>
+										<select
+											aria-label="Map source to piece"
+											[ngModel]="row.selectValue"
+											(ngModelChange)="
+												mapRow.emit({
+													row,
+													value: $event,
+												})
+											"
+										>
+											<option value="">
+												Choose piece…
+											</option>
+											@for (
+												opt of row.selectOptions;
+												track opt.value
+											) {
+												<option [value]="opt.value">
+													{{ opt.label }}
+												</option>
+											}
+										</select>
+									</label>
+									@if (row.showIgnoreAction) {
+										<button
+											class="button secondary small ignore-action"
+											[class.quiet]="
+												row.action === 'map' &&
+												!row.hasOverride
+											"
+											type="button"
+											(click)="ignore.emit(row)"
+										>
+											Ignore
+										</button>
+									}
+								</div>
+							</div>
+						</article>
+					}
+				</div>
+			}
+			<div class="mapping-details-grid">
+				<section class="mini-card overrides-summary">
+					<h3>Active Overrides Summary</h3>
+					<div class="override-metrics">
+						<span
+							><strong>{{ overrideCount }}</strong
+							>Total Overrides</span
+						>
+						<span
+							><strong>{{ changedCount }}</strong
+							>Mappings Changed</span
+						>
+						<span
+							><strong>{{ ignoredCount }}</strong
+							>Ignored Sources</span
+						>
+						<span
+							><strong>{{ unknownCount }}</strong
+							>Unknown Sources</span
+						>
+					</div>
+					<p>
+						Overrides are applied during generation. They do not
+						modify the source files.
+					</p>
+				</section>
+			</div>
+		</div>
+	}
+</section>

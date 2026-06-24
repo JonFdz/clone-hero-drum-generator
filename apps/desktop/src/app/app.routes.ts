@@ -24,7 +24,7 @@ export const routes: Routes = [
 	{
 		path: "source-review",
 		loadComponent: () =>
-			import("./pages/source-review/source-review-page.component").then(
+			import("./features/source-review/source-review-page.component").then(
 				(m) => m.SourceReviewPageComponent,
 			),
 	},
@@ -34,7 +34,7 @@ export const routes: Routes = [
 	{
 		path: "generate",
 		loadComponent: () =>
-			import("./pages/generate/generate-page.component").then(
+			import("./features/generation/generate-page.component").then(
 				(m) => m.GeneratePageComponent,
 			),
 	},
@@ -42,7 +42,7 @@ export const routes: Routes = [
 	{
 		path: "preview",
 		loadComponent: () =>
-			import("./pages/preview/preview-page.component").then(
+			import("./features/preview/preview-page.component").then(
 				(m) => m.PreviewPageComponent,
 			),
 	},

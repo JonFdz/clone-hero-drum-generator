@@ -1,0 +1,24 @@
+.json-card {
+	margin-bottom: 0.85rem;
+	padding: 1rem;
+	box-shadow: 0 16px 52px rgba(0, 0, 0, 0.22);
+}
+.json-header {
+	align-items: center;
+	display: flex;
+	justify-content: space-between;
+}
+.json-card h2 {
+	font-size: 1rem;
+	margin: 0;
+}
+.json-card pre {
+	max-height: 24rem;
+	overflow: auto;
+	white-space: pre-wrap;
+	margin-top: 0.75rem;
+}
+.button.small {
+	min-height: 2.35rem;
+	padding: 0.48rem 0.75rem;
+}

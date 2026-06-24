@@ -1,0 +1,15 @@
+@if (open) {
+	<section class="card json-card">
+		<div class="json-header">
+			<h2>Advanced JSON</h2>
+			<button
+				class="button ghost small"
+				type="button"
+				(click)="hide.emit()"
+			>
+				Hide
+			</button>
+		</div>
+		<pre>{{ json }}</pre>
+	</section>
+}

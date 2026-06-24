@@ -1,0 +1,25 @@
+.footer-stats {
+	align-items: center;
+	background: rgba(255, 255, 255, 0.025);
+	border: 1px solid rgba(197, 209, 225, 0.12);
+	border-radius: 0.75rem;
+	color: #aab4c5;
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	padding: 0.9rem 1rem;
+}
+span {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.error {
+	color: #ff8ca0;
+}
+@media (max-width: 980px) {
+	.footer-stats {
+		grid-template-columns: 1fr 1fr;
+	}
+}

@@ -5,9 +5,9 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
 import { ProjectLibraryService } from "../projects/public-api";
 import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator } from "../project-session/public-api";
 import { deriveHomeDashboardModel } from "./home-dashboard.model";
-import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
-import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
-import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress.component";
+import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact/home-recent-projects-compact.component";
+import { HomeWarningsPanelComponent } from "./components/home-warnings-panel/home-warnings-panel.component";
+import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress/home-workflow-progress.component";
 import { HomeService } from "./home.service";
 
 @Component({

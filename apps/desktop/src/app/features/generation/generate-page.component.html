@@ -1,0 +1,78 @@
+<header class="generate-header">
+	<div>
+		<h1>Generate</h1>
+		<p>Validate project readiness and create the Clone Hero package.</p>
+	</div>
+	<chdg-generation-readiness
+		[tone]="statusTone()"
+		[icon]="statusIcon()"
+		[label]="statusLabel()"
+		[detail]="statusDetail()"
+	/>
+</header>
+
+@if (autosaveWarning()) {
+	<section class="card message warning autosave-warning">
+		<h2>Autosave warning</h2>
+		<p>{{ autosaveWarning() }}</p>
+	</section>
+}
+
+<div class="generate-grid top-grid">
+	<chdg-validation-report
+		[summary]="summary()"
+		[icon]="statusIcon()"
+		[label]="reportLabel()"
+		[message]="reportMessage()"
+		[checkedAt]="checkedAtLabel()"
+	/>
+
+	<chdg-generation-configuration [rows]="configRows()" />
+</div>
+
+<div class="generate-grid middle-grid">
+	<chdg-qa-checklist
+		[summary]="summary()"
+		[rows]="checklistRows()"
+		[filter]="checklistFilter()"
+		[hasOnlyInfoChecks]="hasOnlyInfoChecks()"
+		(filterChange)="checklistFilter.set($event)"
+	/>
+
+	<chdg-generation-steps
+		[steps]="generationSteps"
+		[state]="generationStepState()"
+	/>
+</div>
+
+<div class="generate-grid lower-grid">
+	<chdg-generation-log
+		[errorMessage]="state().errorMessage"
+		[logs]="state().logs"
+	/>
+
+	<chdg-output-preview
+		[result]="state().generationResult"
+		[files]="outputRows()"
+	/>
+</div>
+
+<chdg-generation-action-bar
+	[canOpenOutputFolder]="canOpenOutputFolder()"
+	[canOpenPreview]="canOpenPreview()"
+	[canStartGeneration]="canStartGeneration()"
+	[generateActionLabel]="generateActionLabel()"
+	(openOutputFolder)="openOutputFolder()"
+	(openPreview)="openPreview()"
+	(generate)="generate()"
+/>
+
+<chdg-confirmation-dialog
+	[isOpen]="showOverwriteDialog()"
+	title="Overwrite existing files?"
+	message="Overwrite only notes.chart, song.ini, and song.ogg?"
+	confirmLabel="Overwrite"
+	[destructive]="true"
+	(confirmed)="confirmOverwrite()"
+	(cancelled)="cancelOverwrite()"
+/>

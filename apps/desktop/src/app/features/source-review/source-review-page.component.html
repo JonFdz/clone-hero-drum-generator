@@ -1,0 +1,170 @@
+<header class="source-review-header">
+	<div class="source-review-title">
+		<h1>Source Review</h1>
+		<p>
+			Review selected drum tracks, normalized preview, and mapping before
+			generation.
+		</p>
+	</div>
+	<span
+		class="review-status"
+		[class.attention]="status() === 'attention'"
+		[class.failed]="status() === 'failed'"
+	>
+		<span class="status-glyph" aria-hidden="true"></span>
+		{{ statusLabel() }}
+	</span>
+</header>
+
+@if (!state().sourcePath) {
+	<section class="card message warning">
+		<h2>No source selected</h2>
+		<p>
+			Choose a local .mid, .midi, or .gp source in Project Details first.
+		</p>
+		<a class="button primary" routerLink="/projects/details"
+			>Back to Project Details</a
+		>
+	</section>
+} @else {
+	<chdg-source-review-selected-source
+		[view]="selectedSource()"
+		(refresh)="refreshAnalysis()"
+		(toggleJson)="toggleJson()"
+	/>
+
+	@if (state().errorMessage) {
+		<section class="card message danger">
+			<h2>Source review failed</h2>
+			<p>{{ state().errorMessage }}</p>
+		</section>
+	}
+	@if (orchestrator.autosaveWarning()) {
+		<section class="card message warning">
+			<p>{{ orchestrator.autosaveWarning() }}</p>
+		</section>
+	}
+	@if (profileError()) {
+		<section class="card message warning">
+			<h2>Profile action failed</h2>
+			<p>{{ profileError() }}</p>
+		</section>
+	}
+
+	<chdg-source-review-summaries
+		[sourceFacts]="sourceSummaryFacts()"
+		[combined]="combinedSummary()"
+		[pieceEntries]="pieceEntries()"
+		[hasPreview]="!!state().normalizationPreview"
+		[buildingMessage]="buildingMessage()"
+	/>
+
+	<chdg-source-review-track-list
+		[rows]="trackRows()"
+		[selectedCountLabel]="selectedTrackCountLabel()"
+		[notesSummaryLabel]="trackNotesSummaryLabel()"
+		(toggleTrack)="toggleTrack($event)"
+	/>
+
+	<chdg-source-review-mapping-review
+		[open]="mappingOpen()"
+		[needsAttention]="mappingNeedsAttention()"
+		[actionLabel]="mappingActionLabel()"
+		[statusLabel]="mappingStatusLabel()"
+		[summary]="mappingSummary()"
+		[coverageSummary]="mappingCoverageSummary()"
+		[selectedProfileName]="selectedProfile()?.name"
+		[filters]="mappingFilters"
+		[filterCountRecord]="mappingFilterCountRecord()"
+		[filter]="mappingFilter()"
+		[rowsEmpty]="rowsEmpty()"
+		[filteredRowsEmpty]="filteredMappingRows().length === 0"
+		[emptyFilterMessage]="mappingEmptyFilterMessage()"
+		[filteredRows]="filteredMappingRows()"
+		[unknownCount]="unknownCount()"
+		[ignoredKnownCount]="ignoredKnownCount()"
+		[overrideCount]="overrideCount()"
+		[changedCount]="changedMappingCount()"
+		[ignoredCount]="ignoredCount()"
+		(toggleOpen)="toggleMappingReview()"
+		(setFilter)="setMappingFilter($event)"
+		(applySuggestion)="applySuggestion($event)"
+		(ignore)="ignoreRow($event)"
+		(mapRow)="mapRow($event.row, $event.value)"
+		(resetOverride)="resetOverride($event)"
+	/>
+
+	<chdg-source-review-mapping-profiles
+		[profiles]="profileViews()"
+		[selectedProfile]="selectedProfileView()"
+		[applyMode]="applyMode()"
+		[applyModeOptions]="applyModeOptions"
+		[status]="profileStatus()"
+		[error]="profileError()"
+		[overrideCount]="overrideCount()"
+		(selectProfile)="selectProfile($event)"
+		(setApplyMode)="setApplyMode($event)"
+		(requestCreate)="openCreateProfileDialog()"
+		(requestUpdate)="updateSelectedFromCurrent()"
+		(requestEdit)="openEditProfileDialog()"
+		(requestDelete)="requestDeleteProfile()"
+		(apply)="applySelectedProfile()"
+	/>
+
+	<chdg-source-review-issues
+		[open]="issuesOpen()"
+		[needAttention]="issuesNeedAttention()"
+		[warningCount]="warningCount()"
+		[actionLabel]="issuesActionLabel()"
+		[summary]="issuesSummary()"
+		[preview]="issuePreview()"
+		[warningIssues]="warningIssues()"
+		[infoIssues]="infoIssues()"
+		(toggleOpen)="toggleIssues()"
+		(reviewInMapping)="mappingUserOpen.set(true)"
+	/>
+
+	<chdg-source-review-advanced
+		[open]="jsonOpen()"
+		[json]="analysisJson()"
+		(hide)="toggleJson()"
+	/>
+
+	<chdg-source-review-action-area
+		[canContinue]="canContinue()"
+		(back)="goBack()"
+		(continueToGenerate)="continueToGenerate()"
+	/>
+}
+
+<chdg-profile-metadata-dialog
+	[isOpen]="showCreateProfileDialog()"
+	title="Create mapping profile"
+	message="Save the current mapping overrides as a reusable local profile."
+	[required]="true"
+	confirmLabel="Create"
+	(cancelled)="cancelCreateProfileDialog()"
+	(confirmed)="confirmCreateProfile($event)"
+/>
+
+<chdg-profile-metadata-dialog
+	[isOpen]="showEditProfileDialog()"
+	title="Edit profile metadata"
+	message="Update the name and description of the selected profile."
+	[nameInitialValue]="editProfileInitial().name"
+	[descriptionInitialValue]="editProfileInitial().description"
+	[required]="true"
+	confirmLabel="Save"
+	(cancelled)="cancelEditProfileDialog()"
+	(confirmed)="confirmEditProfile($event)"
+/>
+
+<chdg-confirmation-dialog
+	[isOpen]="showDeleteProfileConfirm()"
+	title="Delete profile?"
+	[message]="'Delete the selected mapping profile? This cannot be undone.'"
+	confirmLabel="Delete"
+	[destructive]="true"
+	(confirmed)="confirmDeleteProfile()"
+	(cancelled)="cancelDeleteProfile()"
+/>

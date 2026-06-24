@@ -1,0 +1,169 @@
+.preview-header {
+	align-items: start;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+	margin-bottom: 1rem;
+}
+.preview-header .eyebrow {
+	margin-bottom: 0.35rem;
+}
+.preview-header h1 {
+	font-size: clamp(1.45rem, 2vw, 2rem);
+	margin-bottom: 0.35rem;
+	max-width: 28rem;
+}
+.preview-header p {
+	font-size: 0.95rem;
+	margin-bottom: 0;
+}
+.status-pill {
+	align-items: center;
+	background: rgba(34, 197, 94, 0.12);
+	border: 1px solid rgba(34, 197, 94, 0.25);
+	border-radius: 999px;
+	color: #22f06f;
+	display: inline-flex;
+	font-weight: 800;
+	gap: 0.45rem;
+	padding: 0.65rem 0.9rem;
+	white-space: nowrap;
+}
+.status-pill.warning {
+	background: rgba(246, 180, 80, 0.12);
+	border-color: rgba(246, 180, 80, 0.3);
+	color: #f6b450;
+}
+audio {
+	display: none;
+}
+.preview-layout {
+	align-items: start;
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+	min-width: 0;
+}
+.preview-main {
+	display: grid;
+	gap: 1rem;
+	min-width: 0;
+}
+chdg-preview-offset-panel {
+	min-width: 0;
+}
+.timing-card {
+	display: grid;
+	gap: 1rem;
+}
+.timing-heading {
+	align-items: start;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+.timing-heading h2,
+.timing-heading p,
+.timing-card h3 {
+	margin-bottom: 0;
+}
+.timing-status {
+	border: 1px solid rgba(69, 181, 255, 0.35);
+	border-radius: 999px;
+	color: #45b5ff;
+	font-weight: 800;
+	padding: 0.45rem 0.7rem;
+}
+.timing-status.warning,
+.diagnostic-list li.warning {
+	border-color: rgba(246, 180, 80, 0.4);
+	color: var(--color-warning);
+}
+.timing-status.danger,
+.diagnostic-list li.danger {
+	border-color: rgba(255, 107, 122, 0.4);
+	color: var(--color-danger);
+}
+.timing-facts {
+	display: grid;
+	gap: 0.75rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.timing-facts div {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	display: grid;
+	gap: 0.25rem;
+	padding: 0.75rem;
+}
+.timing-facts span,
+.diagnostic-list small,
+.empty-diagnostics {
+	color: var(--color-muted);
+}
+.diagnostic-list {
+	display: grid;
+	gap: 0.5rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.diagnostic-list li {
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	display: grid;
+	gap: 0.25rem;
+	padding: 0.7rem;
+}
+.diagnostic-list li strong {
+	font-size: 0.78rem;
+}
+.timing-tables {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.timing-tables section {
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	min-width: 0;
+	overflow: hidden;
+	padding: 0.75rem;
+}
+.timing-row {
+	display: grid;
+	gap: 0.5rem;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	padding: 0.4rem 0;
+}
+.timing-row.header {
+	border-bottom: 1px solid var(--color-border);
+	color: var(--color-muted);
+	font-size: 0.75rem;
+	font-weight: 800;
+	text-transform: uppercase;
+}
+.note-summary {
+	display: grid;
+	gap: 0.5rem;
+}
+.note-summary span {
+	display: flex;
+	justify-content: space-between;
+}
+@media (max-width: 1500px) {
+	.preview-layout {
+		grid-template-columns: 1fr;
+	}
+}
+@media (max-width: 760px) {
+	.preview-header,
+	.timing-heading {
+		display: grid;
+	}
+	.timing-facts,
+	.timing-tables {
+		grid-template-columns: 1fr;
+	}
+}

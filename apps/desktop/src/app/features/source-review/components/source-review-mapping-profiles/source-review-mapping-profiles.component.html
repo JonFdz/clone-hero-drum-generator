@@ -1,0 +1,109 @@
+<section class="card profile-management-card">
+	<div class="profile-manage-header">
+		<h2>Mapping Profiles</h2>
+		<p>{{ status }}</p>
+	</div>
+	@if (error) {
+		<p class="profile-error">{{ error }}</p>
+	}
+	<p class="profile-hint">
+		Profiles are stored locally on this machine and are not synced. Applying
+		a profile copies its overrides into this project.
+	</p>
+
+	@if (profiles.length === 0) {
+		<p class="profile-empty">No profiles saved yet.</p>
+	} @else {
+		<div class="profile-select-row">
+			<label class="profile-select-label">
+				<span>Selected profile</span>
+				<select
+					aria-label="Select mapping profile"
+					[ngModel]="selectedProfile?.id ?? ''"
+					(ngModelChange)="selectProfile.emit($event)"
+				>
+					<option value="">— None —</option>
+					@for (profile of profiles; track profile.id) {
+						<option [value]="profile.id">
+							{{ profile.name }} ({{
+								profile.overrideCount
+							}}
+							overrides)
+						</option>
+					}
+				</select>
+			</label>
+			<label class="profile-apply-mode">
+				<span>Apply mode</span>
+				<select
+					aria-label="Apply mode"
+					[ngModel]="applyMode"
+					(ngModelChange)="setApplyMode.emit($event)"
+				>
+					@for (mode of applyModeOptions; track mode.value) {
+						<option [value]="mode.value">{{ mode.label }}</option>
+					}
+				</select>
+			</label>
+		</div>
+
+		@if (selectedProfile; as selected) {
+			<div class="selected-profile-detail">
+				<div class="selected-profile-name">
+					<strong>{{ selected.name }}</strong>
+					<span class="override-chip"
+						>{{ selected.overrideCount }} overrides</span
+					>
+				</div>
+				@if (selected.description) {
+					<p class="selected-profile-description">
+						{{ selected.description }}
+					</p>
+				}
+			</div>
+			<div class="profile-action-row">
+				<button
+					class="button secondary small"
+					type="button"
+					(click)="apply.emit()"
+				>
+					Apply profile
+				</button>
+				<button
+					class="button secondary small"
+					type="button"
+					(click)="requestUpdate.emit()"
+				>
+					Update from current
+				</button>
+				<button
+					class="button secondary small"
+					type="button"
+					(click)="requestEdit.emit()"
+				>
+					Edit metadata
+				</button>
+				<button
+					class="button secondary small danger"
+					type="button"
+					(click)="requestDelete.emit()"
+				>
+					Delete
+				</button>
+			</div>
+		}
+	}
+
+	<div class="profile-create-row">
+		<span class="current-overrides"
+			>{{ overrideCount }} current overrides</span
+		>
+		<button
+			class="button secondary small"
+			type="button"
+			(click)="requestCreate.emit()"
+		>
+			Create from current overrides
+		</button>
+	</div>
+</section>

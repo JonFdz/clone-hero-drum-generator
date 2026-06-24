@@ -1,0 +1,17 @@
+<div class="source-review-actions">
+	<button
+		class="button ghost back-button"
+		type="button"
+		(click)="back.emit()"
+	>
+		<span aria-hidden="true">←</span> Back to Project Details
+	</button>
+	<button
+		class="button primary continue-button"
+		type="button"
+		[disabled]="!canContinue"
+		(click)="continueToGenerate.emit()"
+	>
+		Continue to Generate <span aria-hidden="true">→</span>
+	</button>
+</div>

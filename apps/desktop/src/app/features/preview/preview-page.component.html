@@ -1,0 +1,382 @@
+<header class="page-header preview-header">
+	<div>
+		<p class="eyebrow">Preview</p>
+		<h1>Preview & Offset</h1>
+		<p>Review generated notes against the audio waveform before export.</p>
+	</div>
+	<span
+		class="status-pill"
+		[class.warning]="
+			preview.waveformStatus() === 'error' ||
+			(!!preview.chartData() && !preview.audioSrc())
+		"
+	>
+		● {{ preview.previewStatus() }}
+	</span>
+</header>
+
+<section class="card message danger" *ngIf="preview.error(); else loaded">
+	<h2>Preview unavailable</h2>
+	<p>{{ preview.error() }}</p>
+</section>
+
+<ng-template #loaded>
+	<ng-container *ngIf="preview.audioSrc(); else missingAudio">
+		<audio
+			#audio
+			[src]="preview.audioSrc()!"
+			(loadedmetadata)="onLoadedMetadata()"
+			(timeupdate)="onTimeUpdate()"
+			(play)="onAudioPlay()"
+			(pause)="onAudioPause()"
+			(ended)="onAudioEnded()"
+			(error)="onAudioError()"
+		></audio>
+
+		<div class="preview-layout">
+			<div class="preview-main">
+				<chdg-preview-transport-card
+					[title]="preview.previewTitle()"
+					[subtitle]="preview.previewSubtitle()"
+					[currentTime]="preview.currentTime()"
+					[duration]="preview.duration()"
+					[isPlaying]="isPlaying()"
+					(playPressed)="play()"
+					(pausePressed)="pause()"
+					(seek)="seek($event)"
+				/>
+
+				<chdg-preview-chart-stage
+					[waveformOverview]="preview.waveformOverview()"
+					[chartData]="preview.chartData()"
+					[currentTime]="preview.currentTime()"
+					[duration]="preview.duration()"
+					[previewOffsetMs]="preview.previewOffsetMs()"
+					[audioSourceLabel]="preview.audioSourceLabel()"
+					[noteCount]="preview.previewNoteCount()"
+					[waveformStatus]="preview.waveformStatus()"
+					[waveformError]="preview.waveformError()"
+					(seek)="seek($event)"
+				/>
+
+				<section
+					class="card timing-card"
+					*ngIf="preview.chartData()?.timing as timing"
+				>
+					<div class="timing-heading">
+						<div>
+							<p class="eyebrow">Generated notes.chart</p>
+							<h2>Timing Diagnostics</h2>
+						</div>
+						<span
+							class="timing-status"
+							[class.warning]="timing.summary.warningCount > 0"
+							[class.danger]="timing.summary.errorCount > 0"
+						>
+							{{ timing.summary.label }}
+						</span>
+					</div>
+
+					<div class="timing-facts">
+						<div>
+							<span>Resolution</span
+							><strong>{{ timing.resolution }}</strong>
+						</div>
+						<div>
+							<span>Offset adjustment</span
+							><strong
+								>{{
+									formatOffsetMilliseconds(
+										timing.offsetSeconds
+									)
+								}}
+								ms</strong
+							>
+						</div>
+						<div>
+							<span>Tempo events</span
+							><strong>{{ timing.tempos.length }}</strong>
+						</div>
+						<div>
+							<span>Time signatures</span
+							><strong>{{ timing.timeSignatures.length }}</strong>
+						</div>
+					</div>
+
+					<h3>Diagnostics</h3>
+					<p
+						class="empty-diagnostics"
+						*ngIf="timing.diagnostics.length === 0"
+					>
+						No timing diagnostics were reported.
+					</p>
+					<ul class="diagnostic-list">
+						<li
+							*ngFor="let diagnostic of timing.diagnostics"
+							[class.warning]="diagnostic.severity === 'warning'"
+							[class.danger]="diagnostic.severity === 'error'"
+						>
+							<strong>{{ diagnostic.code }}</strong>
+							<span>{{ diagnostic.message }}</span>
+							<small
+								*ngIf="
+									diagnostic.code ===
+									'SOURCE_COMPARISON_UNAVAILABLE'
+								"
+								>Cached source analysis was not recalculated by
+								Preview.</small
+							>
+						</li>
+					</ul>
+
+					<div class="timing-tables">
+						<section>
+							<h3>Tempo Events</h3>
+							<div class="timing-row header">
+								<span>Tick</span><span>Time</span
+								><span>BPM</span>
+							</div>
+							<div
+								class="timing-row"
+								*ngFor="let tempo of timing.tempos"
+							>
+								<span>{{ tempo.tick }}</span
+								><span>{{
+									formatDiagnosticTime(tempo.seconds)
+								}}</span
+								><span>{{ tempo.bpm }}</span>
+							</div>
+						</section>
+						<section>
+							<h3>Time Signatures</h3>
+							<div class="timing-row header">
+								<span>Tick</span><span>Time</span
+								><span>Signature</span>
+							</div>
+							<div
+								class="timing-row"
+								*ngFor="let signature of timing.timeSignatures"
+							>
+								<span>{{ signature.tick }}</span
+								><span>{{
+									formatDiagnosticTime(signature.seconds)
+								}}</span
+								><span
+									>{{ signature.numerator }}/{{
+										signature.denominator
+									}}</span
+								>
+							</div>
+						</section>
+						<section>
+							<h3>Generated Sections</h3>
+							<div class="timing-row header">
+								<span>Tick</span><span>Time</span
+								><span>Name</span>
+							</div>
+							<div
+								class="timing-row"
+								*ngFor="let section of timing.sections"
+							>
+								<span>{{ section.tick }}</span
+								><span>{{
+									formatDiagnosticTime(section.seconds)
+								}}</span
+								><span>{{ section.name }}</span>
+							</div>
+						</section>
+						<section>
+							<h3>Generated Notes</h3>
+							<div class="note-summary">
+								<span
+									>Count
+									<strong>{{
+										timing.notes.count
+									}}</strong></span
+								>
+								<span
+									>First
+									<strong
+										>{{ timing.notes.firstTick ?? "—" }} ·
+										{{
+											formatDiagnosticTime(
+												timing.notes.firstSeconds
+											)
+										}}</strong
+									></span
+								>
+								<span
+									>Last
+									<strong
+										>{{ timing.notes.lastTick ?? "—" }} ·
+										{{
+											formatDiagnosticTime(
+												timing.notes.lastSeconds
+											)
+										}}</strong
+									></span
+								>
+							</div>
+						</section>
+					</div>
+				</section>
+			</div>
+
+			<chdg-preview-offset-panel
+				[previewOffsetMs]="preview.previewOffsetMs()"
+				[savedOffsetMs]="preview.savedOffsetMs()"
+				[offsetDeltaMs]="preview.offsetDeltaMs()"
+				[offsetInputMs]="preview.offsetInputMs()"
+				[offsetInputValid]="preview.offsetInputValid()"
+				[offsetStatus]="preview.offsetStatus()"
+				[canApplyOffset]="preview.canApplyOffset()"
+				(nudge)="preview.nudgeOffset($event)"
+				(inputOffset)="preview.setPreviewOffsetInput($event)"
+				(resetPreview)="preview.resetPreviewOffset()"
+				(resetToZero)="preview.setPreviewOffsetInput('0')"
+				(apply)="applyOffset()"
+			/>
+		</div>
+	</ng-container>
+</ng-template>
+
+<ng-template #missingAudio>
+	<section class="card message">
+		<h2>No preview audio</h2>
+		<p>
+			Audio and waveform are unavailable. Timing diagnostics from
+			notes.chart remain available.
+		</p>
+	</section>
+
+	<section
+		class="card timing-card"
+		*ngIf="preview.chartData()?.timing as timing"
+	>
+		<div class="timing-heading">
+			<div>
+				<p class="eyebrow">Generated notes.chart</p>
+				<h2>Timing Diagnostics</h2>
+			</div>
+			<span
+				class="timing-status"
+				[class.warning]="timing.summary.warningCount > 0"
+				[class.danger]="timing.summary.errorCount > 0"
+			>
+				{{ timing.summary.label }}
+			</span>
+		</div>
+
+		<div class="timing-facts">
+			<div>
+				<span>Resolution</span><strong>{{ timing.resolution }}</strong>
+			</div>
+			<div>
+				<span>Offset adjustment</span
+				><strong
+					>{{
+						formatOffsetMilliseconds(timing.offsetSeconds)
+					}}
+					ms</strong
+				>
+			</div>
+			<div>
+				<span>Tempo events</span
+				><strong>{{ timing.tempos.length }}</strong>
+			</div>
+			<div>
+				<span>Time signatures</span
+				><strong>{{ timing.timeSignatures.length }}</strong>
+			</div>
+		</div>
+
+		<h3>Diagnostics</h3>
+		<p class="empty-diagnostics" *ngIf="timing.diagnostics.length === 0">
+			No timing diagnostics were reported.
+		</p>
+		<ul class="diagnostic-list">
+			<li
+				*ngFor="let diagnostic of timing.diagnostics"
+				[class.warning]="diagnostic.severity === 'warning'"
+				[class.danger]="diagnostic.severity === 'error'"
+			>
+				<strong>{{ diagnostic.code }}</strong>
+				<span>{{ diagnostic.message }}</span>
+				<small
+					*ngIf="diagnostic.code === 'SOURCE_COMPARISON_UNAVAILABLE'"
+					>Cached source analysis was not recalculated by
+					Preview.</small
+				>
+			</li>
+		</ul>
+
+		<div class="timing-tables">
+			<section>
+				<h3>Tempo Events</h3>
+				<div class="timing-row header">
+					<span>Tick</span><span>Time</span><span>BPM</span>
+				</div>
+				<div class="timing-row" *ngFor="let tempo of timing.tempos">
+					<span>{{ tempo.tick }}</span
+					><span>{{ formatDiagnosticTime(tempo.seconds) }}</span
+					><span>{{ tempo.bpm }}</span>
+				</div>
+			</section>
+			<section>
+				<h3>Time Signatures</h3>
+				<div class="timing-row header">
+					<span>Tick</span><span>Time</span><span>Signature</span>
+				</div>
+				<div
+					class="timing-row"
+					*ngFor="let signature of timing.timeSignatures"
+				>
+					<span>{{ signature.tick }}</span
+					><span>{{ formatDiagnosticTime(signature.seconds) }}</span
+					><span
+						>{{ signature.numerator }}/{{
+							signature.denominator
+						}}</span
+					>
+				</div>
+			</section>
+			<section>
+				<h3>Generated Sections</h3>
+				<div class="timing-row header">
+					<span>Tick</span><span>Time</span><span>Name</span>
+				</div>
+				<div class="timing-row" *ngFor="let section of timing.sections">
+					<span>{{ section.tick }}</span
+					><span>{{ formatDiagnosticTime(section.seconds) }}</span
+					><span>{{ section.name }}</span>
+				</div>
+			</section>
+			<section>
+				<h3>Generated Notes</h3>
+				<div class="note-summary">
+					<span
+						>Count <strong>{{ timing.notes.count }}</strong></span
+					>
+					<span
+						>First
+						<strong
+							>{{ timing.notes.firstTick ?? "—" }} ·
+							{{
+								formatDiagnosticTime(timing.notes.firstSeconds)
+							}}</strong
+						></span
+					>
+					<span
+						>Last
+						<strong
+							>{{ timing.notes.lastTick ?? "—" }} ·
+							{{
+								formatDiagnosticTime(timing.notes.lastSeconds)
+							}}</strong
+						></span
+					>
+				</div>
+			</section>
+		</div>
+	</section>
+</ng-template>
