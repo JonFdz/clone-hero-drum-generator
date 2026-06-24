@@ -1,0 +1,36 @@
+<section class="offset-panel">
+	<h2>Offset Adjustment</h2>
+	<p>Fine-tune the audio offset to improve note timing and sync.</p>
+
+	<div class="offset-readout">
+		<span>Current Offset</span>
+		<strong>{{ signedOffset(previewOffsetMs) }} ms</strong>
+		<small>{{ directionText() }}</small>
+	</div>
+
+	<label class="panel-group direct-offset">Direct Offset (ms)
+		<input type="number" [class.invalid]="!offsetInputValid" [value]="offsetInputMs" (input)="onInput($event)" />
+	</label>
+
+	<div class="offset-actions">
+		<button type="button" class="button primary apply" [disabled]="!canApplyOffset" (click)="apply.emit()">✓ Apply Offset</button>
+		<button type="button" class="button ghost reset" (click)="resetPreview.emit()">↻ Reset Preview</button>
+	</div>
+
+	<div class="panel-group nudge-section">
+		<h3>Nudge Offset</h3>
+		<div class="nudge-grid">
+			<button type="button" class="button ghost" (click)="nudge.emit(-100)">-100 ms</button>
+			<button type="button" class="button ghost" (click)="nudge.emit(-50)">-50 ms</button>
+			<button type="button" class="button ghost" (click)="nudge.emit(-10)">-10 ms</button>
+			<button type="button" class="button ghost" (click)="nudge.emit(10)">+10 ms</button>
+			<button type="button" class="button ghost" (click)="nudge.emit(50)">+50 ms</button>
+			<button type="button" class="button ghost" (click)="nudge.emit(100)">+100 ms</button>
+		</div>
+	</div>
+
+	<button type="button" class="button link reset-zero" (click)="resetToZero.emit()">↻ Reset to 0 ms</button>
+
+	<p class="status" *ngIf="offsetStatus">{{ offsetStatus }}</p>
+	<p class="saved">Saved offset: {{ signedOffset(savedOffsetMs) }} ms · Delta: {{ signedOffset(offsetDeltaMs) }} ms</p>
+</section>

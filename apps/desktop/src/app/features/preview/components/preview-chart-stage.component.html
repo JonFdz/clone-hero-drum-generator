@@ -1,0 +1,119 @@
+<section class="chart-stage-card">
+	<div class="stage-copy">
+		<h2>Chart Preview</h2>
+		<p>Click or drag the chart to scrub timing.</p>
+	</div>
+	<div class="section-nav" *ngIf="sectionItems().length > 0">
+		<div class="section-nav-copy">
+			<span>Section</span>
+			<strong>{{ currentSection()?.displayName || "Before first section" }}</strong>
+		</div>
+		<div class="section-nav-controls">
+			<button type="button" [disabled]="!adjacentSections().previous" (click)="seekToSection(adjacentSections().previous)" aria-label="Previous section">‹</button>
+			<select aria-label="Jump to section" [value]="currentSection()?.index ?? ''" (change)="onSectionSelect($event)">
+				<option value="" disabled>Select section…</option>
+				<option *ngFor="let section of sectionItems(); trackBy: trackSection" [value]="section.index">{{ section.label }}</option>
+			</select>
+			<button type="button" [disabled]="!adjacentSections().next" (click)="seekToSection(adjacentSections().next)" aria-label="Next section">›</button>
+		</div>
+	</div>
+	<div class="stage-shell">
+		<svg #chartSvg viewBox="0 0 1240 555" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Preview chart highway">
+			<defs>
+				<linearGradient id="stageFade" x1="0" x2="1" y1="0" y2="0">
+					<stop offset="0" stop-color="#020817" stop-opacity="0" />
+					<stop offset="0.08" stop-color="#020817" stop-opacity="1" />
+					<stop offset="0.92" stop-color="#020817" stop-opacity="1" />
+					<stop offset="1" stop-color="#020817" stop-opacity="0" />
+				</linearGradient>
+			</defs>
+
+			<rect x="0" y="0" width="1240" height="555" rx="18" class="svg-bg" />
+
+			<rect [attr.x]="chartX" [attr.y]="chartY" [attr.width]="chartWidth" [attr.height]="chartHeight" class="chart-bg" />
+			<ng-container *ngFor="let tick of verticalTicks()">
+				<line
+					[attr.x1]="chartX + chartWidth * tick"
+					[attr.x2]="chartX + chartWidth * tick"
+					[attr.y1]="chartY"
+					[attr.y2]="chartY + chartHeight"
+					class="grid-line"
+				/>
+			</ng-container>
+			<ng-container *ngFor="let lane of lanes; let index = index">
+				<line
+					[attr.x1]="chartX"
+					[attr.x2]="chartX + chartWidth"
+					[attr.y1]="laneY(index)"
+					[attr.y2]="laneY(index)"
+					[attr.stroke]="lane.color"
+					class="lane-line"
+				/>
+			</ng-container>
+
+			<path *ngIf="waveformPath()" [attr.d]="waveformPath()" class="waveform" />
+			<rect [attr.x]="chartX" [attr.y]="chartY" [attr.width]="chartWidth" [attr.height]="chartHeight" fill="url(#stageFade)" opacity="0.32" />
+
+			<ng-container *ngFor="let tick of timeTicks()">
+				<line
+					[attr.x1]="xForSeconds(tick.seconds)"
+					[attr.x2]="xForSeconds(tick.seconds)"
+					[attr.y1]="tick.major ? 34 : 42"
+					[attr.y2]="52"
+					[class.ruler-major]="tick.major"
+					class="ruler-tick"
+				/>
+				<text *ngIf="tick.major" [attr.x]="xForSeconds(tick.seconds)" y="24" text-anchor="middle" class="ruler-label">
+					{{ formatTick(tick.seconds) }}
+				</text>
+			</ng-container>
+
+			<ng-container *ngFor="let lane of lanes; let index = index">
+				<g [attr.transform]="'translate(0 ' + laneY(index) + ')'">
+					<circle cx="38" cy="0" r="15" [attr.stroke]="lane.color" fill="rgba(4, 12, 28, 0.86)" stroke-width="2" />
+					<polygon *ngIf="lane.shape === 'diamond'" [attr.points]="diamondPoints(38, 0, 10)" [attr.fill]="lane.color" />
+					<circle *ngIf="lane.shape === 'circle'" cx="38" cy="0" r="8" [attr.fill]="lane.color" />
+					<text x="70" y="-2" [attr.fill]="lane.color" class="lane-primary">{{ lane.label }}</text>
+					<text *ngIf="lane.sublabel" x="70" y="16" [attr.fill]="lane.color" class="lane-secondary">({{ lane.sublabel }})</text>
+				</g>
+			</ng-container>
+
+			<ng-container *ngFor="let note of visibleNotes(); trackBy: trackNote">
+				<g [attr.transform]="'translate(' + noteX(note) + ' ' + noteY(note) + ')'">
+					<circle *ngIf="note.shape === 'circle'" r="12" [attr.fill]="note.color" class="note-fill" />
+					<polygon *ngIf="note.shape === 'diamond'" points="0,-13 13,0 0,13 -13,0" [attr.fill]="note.color" class="note-fill" />
+					<circle r="16" fill="none" [attr.stroke]="note.color" class="note-ring" />
+					<circle *ngIf="note.open" r="7" fill="rgba(4, 10, 24, 0.84)" />
+				</g>
+			</ng-container>
+
+			<line [attr.x1]="playheadX()" [attr.x2]="playheadX()" [attr.y1]="chartY - 8" [attr.y2]="chartY + chartHeight" class="playhead-line" />
+			<circle [attr.cx]="playheadX()" [attr.cy]="chartY - 8" r="7" class="playhead-dot" />
+			<text [attr.x]="playheadX()" y="24" text-anchor="middle" class="playhead-label">{{ formatTick(currentTime) }}</text>
+
+			<rect
+				[attr.x]="chartX"
+				[attr.y]="chartY"
+				[attr.width]="chartWidth"
+				[attr.height]="chartHeight"
+				class="seek-hit-area"
+				fill="transparent"
+				pointer-events="all"
+				(pointerdown)="onStagePointerDown($event)"
+				(pointermove)="onStagePointerMove($event)"
+				(pointerup)="onStagePointerUp($event)"
+				(pointercancel)="onStagePointerUp($event)"
+			/>
+		</svg>
+		<div class="waveform-message" *ngIf="waveformStatus === 'loading'">Loading waveform preview…</div>
+		<div class="waveform-message warning" *ngIf="waveformStatus === 'error'">Waveform decode failed; notes and audio controls remain available.</div>
+		<div class="empty-notes" *ngIf="allNotes().length === 0">No chart preview notes available yet.</div>
+	</div>
+	<chdg-preview-footer-stats
+		[audioSourceLabel]="audioSourceLabel"
+		[duration]="duration"
+		[noteCount]="noteCount || allNotes().length"
+		[waveformStatus]="waveformStatus"
+		[waveformError]="waveformError"
+	/>
+</section>

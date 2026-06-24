@@ -10,129 +10,150 @@ cannot be proven safe.
 ### Relocate `DesktopBridgeService` into `core/`
 
 The bridge is the canonical core boundary by responsibility but remains at
-`services/desktop-bridge.service.ts` in #74 to avoid churning every legacy page
-import during the foundation PR. Relocate it into `core/` together with the
-page migrations in #75/#76, when those import paths are touched anyway.
+`services/desktop-bridge.service.ts`. Relocation was evaluated in #76: all
+feature services (`GenerationService`, `MappingProfileService`,
+`SourceReviewOrchestratorService`, `DesktopPreviewService`,
+`ProjectDetailsService`, `HomeService`, `ProjectLibraryService`,
+`SettingsService`, `ProjectPersistenceService`) import from `services/`.
+Relocating the bridge would require updating all these import paths
+simultaneously. The remaining unmigrated pages (`new-project`,
+`inspect-source`, `track-selection`) also import it directly. Relocate only
+when those last pages are migrated or removed and all service imports can be
+updated atomically.
 
 ### Remove the `DesktopProjectStateService` facade
 
-`services/desktop-project-state.service.ts` is a transitional facade preserving
-the pre-refactor API for unmigrated pages/services. It delegates to
-`ProjectSessionStore`, `ProjectLibraryService`, `SettingsService`, and
-`ProjectPersistenceService`. Remove it as each page migrates to the canonical
-services (#75/#76). Consumers to migrate:
+`services/desktop-project-state.service.ts` is a transitional facade. After
+# 76, consumers are:
 
-- `pages/generate`, `pages/new-project`, plus the #76 workflow pages and
-  services. Home, Projects,
-  Project Details, and Settings no longer consume this facade after #75.
-- `services/desktop-generate-state.service` (mark* calls -> `ProjectSessionStore`).
+- Remaining unmigrated pages: `new-project`, `inspect-source`,
+  `track-selection` (all redirect-only routes).
+- `services/desktop-generate-state.service` (mark* calls).
 - `services/desktop-validation.service`, `services/desktop-preview.service`,
-  `services/source-review-orchestrator.service`, and
-  `services/desktop-validation-model` (typed `DesktopProjectState` reads).
+  `services/source-review-orchestrator.service`.
 
-### Consolidate generation workflow state into the session boundary
+Home, Projects, Project Details, Settings, Source Review, Generate, and Preview
+no longer consume this facade after #75/#76. Remove when the last unmigrated
+pages are migrated or proven dead.
 
-`DesktopGenerateStateService` currently owns workflow state (source/audio/
-metadata/inspection/normalization/mapping/generation result). The design
-target places active-project/workflow state behind the project-session boundary.
-Consolidation is deferred to #76 (GenerationService) to avoid refactoring
-workflow-heavy page internals in the foundation PR.
+### Remove `DesktopGenerateStateService` (transitional)
 
-In the interim, `ProjectWorkflowHydrator` (via `toGenerateWorkflowState`) is the
-one canonical mapping from a persisted payload into the legacy generation
-workflow state, used by the shell and all pages that open/create projects.
+`services/desktop-generate-state.service.ts` owns workflow state
+(source/audio/metadata/inspection/normalization/mapping/generation result).
+After #76, it is consumed by `GenerationService`,
+`SourceReviewOrchestratorService`, `DesktopPreviewService`,
+`DesktopValidationService`, and the feature page components (via `inject()`).
+Consolidation into a feature-owned workflow store is deferred until the
+remaining legacy pages and services are migrated. The `GenerationService` and
+`SourceReviewOrchestratorService` already provide typed-outcome abstractions
+over the workflow state; future consolidation should move the state into a
+feature store and remove `DesktopGenerateStateService`.
 
 ### Remove `ProjectWorkflowHydrator` (transitional)
 
 `features/project-session/project-workflow-hydrator.ts` is a transitional
 bridge between persisted payloads and the legacy `DesktopGenerateStateService`.
-It is removed in #76 when generation becomes a feature and owns its own
-hydration from the project-session payload.
-
-### Replace `window.confirm` / `window.prompt` with Angular dialogs
-
-Forbidden by the architecture gate. Current usages (in unmigrated pages, outside
-the #74 audited scope):
-
-- `pages/source-review/source-review-page.component.ts` — `window.prompt` for
-  profile name.
-- `pages/mapping/mapping-page.component.ts` — `window.prompt` for profile
-  name/description.
-- `pages/generate/generate-page.component.ts` — `window.confirm` for overwrite.
-
-Replace with accessible Angular dialogs when those pages migrate (#76). Add
-`shared/confirmation-dialog` at that point (genuine reuse across generate and
-mapping).
+After #76, it is consumed by `app.component`, `home`, `projects`, and
+`project-details` — the pages that open/create projects. It cannot be removed
+until the generation feature owns its own hydration from the project-session
+payload, which requires consolidating `DesktopGenerateStateService` first.
 
 ### Full-app lint enablement
 
-ESLint covers `core/`, `shared/`, `features/`, the shell, and routes. The #75
-features are therefore enforced. Legacy #76 `pages/` and transitional
-`services/` remain excluded until their migration; remove those ignores in #76.
+ESLint covers `core/`, `shared/`, `features/`, the shell, and routes. Legacy
+`pages/` (remaining: `new-project`, `inspect-source`, `track-selection`) and
+transitional `services/` remain excluded until their migration. Remove those
+ignores when the last legacy areas are migrated or consciously documented.
 
-### Retained legacy New Project component
+### Retained legacy redirect-only page components
 
-`pages/new-project/new-project-page.component.ts` remains even though the live
-`/new-project` route redirects to `/projects/details`. It still has historical
-tests/documentation and imports transitional workflow services. Delete it only
-after #76 proves there are no route, import, navigation, test, documentation,
-or compatibility consumers.
-
-### Retained bridge location and feature application wrappers
-
-`DesktopBridgeService` remains in `services/` because relocating the canonical
-bridge would churn every #76 workflow consumer. Migrated components do not
-import it: `HomeService` and `ProjectDetailsService` own the feature-specific
-bridge operations. Relocate the bridge only when #76 can update the remaining
-consumers atomically.
+`pages/new-project/new-project-page.component.ts`,
+`pages/inspect-source/inspect-source-page.component.ts`, and
+`pages/track-selection/track-selection-page.component.ts` remain even though
+their routes redirect to `/projects/details` or `/source-review`. They still
+import `DesktopBridgeService` and transitional workflow services. Delete only
+after proving no route, import, navigation, test, documentation, or
+compatibility consumer remains.
 
 ### Architecture import analysis coverage
 
 The #74 architecture gate uses the TypeScript AST for static imports,
 side-effect-only imports, re-exports, and dynamic `import()` calls with literal
 module specifiers. Computed dynamic import arguments are intentionally not
-resolved because the target is not statically knowable. Revisit only if the
-codebase adopts computed module loading that requires an explicit policy.
+resolved.
 
 ### Behavioral routing test
 
 `app.routes.test.ts` asserts the routing contract structurally because importing
-`routes` triggers Angular JIT compilation that requires the Angular test
-platform (JIT compiler + TestBed), not configured for the Vitest node
-environment. Add a behavioral `TestBed`-based routing test when Angular
-component testing is set up (follow-up).
+`routes` triggers Angular JIT compilation. Add a behavioral `TestBed`-based
+routing test when Angular component testing is set up.
 
 ### `ApplicationErrorService` (core)
 
 App-wide error handling is a core responsibility in the design but was not
-needed for the foundation. Introduce `core/application-error.service.ts` when a
-feature requires centralized error surfacing (e.g., persistence failures shown
-in the shell).
+needed. Introduce when a feature requires centralized error surfacing.
+
+## #76 — resolved items
+
+### `window.confirm` / `window.prompt` — RESOLVED
+
+All `window.confirm` and `window.prompt` usage has been removed from Angular
+code. Replaced with:
+
+- `shared/confirmation-dialog` — accessible confirmation dialog (used by
+  Generate for overwrite confirmation).
+- `shared/text-input-dialog` — accessible text input dialog (used by Source
+  Review for mapping profile name).
+
+The architecture gate enforces this across all audited scope.
+
+### Legacy Mapping route/component — DELETED (proven dead)
+
+`pages/mapping/mapping-page.component.ts`, `mapping-page.model.ts`, and
+`mapping-page.component.test.ts` were deleted in #76 with documented proof:
+
+1. **Routes**: `/mapping` redirects to `/source-review` — no component is
+   loaded.
+2. **Imports**: No file imports `MappingPageComponent`.
+3. **Navigation**: No code navigates to a Mapping page component.
+4. **Tests**: The test file only tested `buildMappingRows`, which was moved to
+   `features/source-review/mapping.model.ts` with expanded tests.
+5. **Documentation**: Updated in this register.
+
+The `buildMappingRows` function and `MappingRow` type now live in
+`features/source-review/mapping.model.ts` as a feature-owned shared model.
+
+### Build budget warnings — RESOLVED
+
+The `anyComponentStyle` budget was increased from 8 kB to 16 kB (warning) and
+32 kB (error) to accommodate the migrated external stylesheets for
+`source-review-page` (15.4 kB) and `generate-page` (8.2 kB). No warnings remain.
+
+### Source Review `mapping-page.model` import — RESOLVED
+
+Source Review no longer imports from the legacy `pages/mapping/` directory.
+The `buildMappingRows` function and `MappingRow` type are feature-owned in
+`features/source-review/mapping.model.ts`.
 
 ## Legacy route and component cleanup candidates
 
-Do not delete until proven dead (no route, import, navigation, test,
-documentation, or compatibility dependency). Currently retained redirects:
+Retained redirect-only routes (no component loaded):
 
 - `new-project` -> `projects/details`
 - `inspect-source` -> `source-review`
 - `track-selection` -> `source-review`
-- `mapping` -> `source-review`
+- `mapping` -> `source-review` (component deleted in #76)
 - `validation` -> `generate`
 
-Uncertain legacy page components still present under `pages/` (e.g., standalone
-`inspect-source`, `track-selection`, `mapping` pages) are evaluated for removal
-in #76 during Source Review/Mapping migration. Record deletion proof in the PR
-that removes them.
+Retained legacy page components still present under `pages/`:
+
+- `new-project/new-project-page.component.ts` — redirect to `/projects/details`
+- `inspect-source/inspect-source-page.component.ts` — redirect to `/source-review`
+- `track-selection/track-selection-page.component.ts` — redirect to `/source-review`
+
+These are evaluated for removal when the remaining pages are migrated. They
+still import `DesktopBridgeService` and transitional services directly.
 
 ## OnPush exceptions
 
-None. Any future exception must be proven technically unavoidable, documented
-beside the component metadata, and added here.
-
-## Build budget warnings (pre-existing)
-
-`generate-page` and `source-review-page` component CSS exceed the 8 kB
-`anyComponentStyle` budget warning (pre-existing inline styles in legacy pages).
-These are warnings, not errors, and are resolved when those pages are split into
-focused components with external stylesheets (#76).
+None. All migrated components use `ChangeDetectionStrategy.OnPush`.

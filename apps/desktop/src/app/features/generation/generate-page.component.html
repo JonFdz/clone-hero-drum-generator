@@ -1,0 +1,205 @@
+<header class="generate-header">
+  <div>
+    <h1>Generate</h1>
+    <p>Validate project readiness and create the Clone Hero package.</p>
+  </div>
+  <div class="readiness-pill" [class.warning]="statusTone() === 'warning'" [class.danger]="statusTone() === 'danger'" [class.running]="statusTone() === 'running'">
+    <span class="readiness-icon" aria-hidden="true">{{ statusIcon() }}</span>
+    <span>
+      <strong>{{ statusLabel() }}</strong>
+      <small>{{ statusDetail() }}</small>
+    </span>
+  </div>
+</header>
+
+@if (autosaveWarning()) {
+  <section class="card message warning autosave-warning">
+    <h2>Autosave warning</h2>
+    <p>{{ autosaveWarning() }}</p>
+  </section>
+}
+
+<div class="generate-grid top-grid">
+  <section class="card validation-report" [class.ready]="summary().canGenerate" [class.blocked]="summary().errorCount > 0">
+    <h2>Validation Report</h2>
+    <div class="report-body">
+      <div class="report-status">
+        <span class="large-status-icon" aria-hidden="true">{{ statusIcon() }}</span>
+        <div>
+          <strong>{{ reportLabel() }}</strong>
+          <p>{{ reportMessage() }}</p>
+        </div>
+      </div>
+      <div class="report-counts" aria-label="Validation counts">
+        <div><strong>{{ summary().errorCount }}</strong><span class="danger-text">Errors</span></div>
+        <div><strong>{{ summary().warningCount }}</strong><span class="warning-text">Warnings</span></div>
+        <div><strong>{{ summary().infoCount }}</strong><span class="info-text">Info</span></div>
+      </div>
+    </div>
+    <footer class="report-meta">
+      <span>Checked at: <strong>{{ formatCheckedAt(summary().checkedAt) }}</strong></span>
+      <span>Validator: <strong>Desktop Validator</strong></span>
+      <span>Version: <strong>1.8.0</strong></span>
+    </footer>
+  </section>
+
+  <section class="card config-card">
+    <h2>Generation Configuration</h2>
+    <div class="config-list">
+      @for (row of configRows(); track row.label) {
+        <div class="config-row">
+          <span class="config-icon" aria-hidden="true">{{ row.icon }}</span>
+          <span class="config-label">{{ row.label }}</span>
+          <span class="config-value">{{ row.value }}</span>
+          <span class="config-status" [class.warning]="row.status === 'warning'" [class.missing]="row.status === 'missing'" aria-hidden="true">{{ statusGlyph(row.status) }}</span>
+        </div>
+      }
+    </div>
+  </section>
+</div>
+
+<div class="generate-grid middle-grid">
+  <section class="card checklist-card" [class.compact]="hasOnlyInfoChecks()">
+    <div class="card-heading">
+      <div>
+        <h2>QA Checklist</h2>
+        <p>Errors block generation. Warnings and info are non-blocking.</p>
+      </div>
+      @if (hasOnlyInfoChecks()) {
+        <span class="pill success">All checks passed</span>
+      }
+    </div>
+
+    @if (hasOnlyInfoChecks()) {
+      <div class="empty-state small">
+        <strong>All checks passed</strong>
+        <span>{{ summary().infoCount }} informational checks available.</span>
+      </div>
+    } @else {
+      <div class="check-filter" aria-label="Checklist severity filter">
+        <button type="button" class="button ghost small" [class.active]="checklistFilter() === 'all'" (click)="checklistFilter.set('all')">All <span>{{ summary().items.length }}</span></button>
+        <button type="button" class="button ghost small danger-filter" [class.active]="checklistFilter() === 'error'" (click)="checklistFilter.set('error')">Errors <span>{{ summary().errorCount }}</span></button>
+        <button type="button" class="button ghost small warning-filter" [class.active]="checklistFilter() === 'warning'" (click)="checklistFilter.set('warning')">Warnings <span>{{ summary().warningCount }}</span></button>
+        <button type="button" class="button ghost small info-filter" [class.active]="checklistFilter() === 'info'" (click)="checklistFilter.set('info')">Info <span>{{ summary().infoCount }}</span></button>
+      </div>
+
+      <div class="checklist-table" role="table" aria-label="Validation checklist">
+        <div class="checklist-header" role="row">
+          <span>Status</span>
+          <span>Check</span>
+          <span>Category</span>
+          <span>Message</span>
+          <span>Action</span>
+        </div>
+        <div class="checklist-scroll">
+          @for (item of filteredChecklistItems(); track item.id + item.message) {
+            <div class="checklist-row" role="row" [class.error]="item.severity === 'error'" [class.warning]="item.severity === 'warning'" [class.info]="item.severity === 'info'">
+              <span class="severity-icon" [attr.aria-label]="item.severity">{{ severityIcon(item.severity) }}</span>
+              <strong>{{ item.title }}</strong>
+              <span class="category-badge">{{ item.category }}</span>
+              <span class="check-message">{{ item.message }}</span>
+              @if (item.fixAction?.route) {
+                <a class="button ghost small" [routerLink]="item.fixAction?.route">{{ item.fixAction?.label }}</a>
+              } @else {
+                <span class="muted-action">—</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="card steps-card">
+    <h2>Generation Steps</h2>
+    <ol class="steps-list">
+      @for (step of generationSteps; track step) {
+        <li>
+          <span class="step-number">{{ $index + 1 }}</span>
+          <span>{{ step }}</span>
+          <span class="step-state" [class.running]="generationStepState() === 'Running'" [class.completed]="generationStepState() === 'Completed'" [class.failed]="generationStepState() === 'Failed'">{{ generationStepState() }}</span>
+        </li>
+      }
+    </ol>
+  </section>
+</div>
+
+<div class="generate-grid lower-grid">
+  <section class="card log-card">
+    <div class="card-heading inline">
+      <h2>Generation Log</h2>
+    </div>
+    @if (state().errorMessage) {
+      <div class="inline-error">{{ state().errorMessage }}</div>
+    }
+    @if (state().logs.length === 0) {
+      <div class="empty-state">
+        <span aria-hidden="true">▱</span>
+        <strong>No generation actions yet.</strong>
+        <small>Logs will appear here when you start generation.</small>
+      </div>
+    } @else {
+      <ul class="log-list scroll-list">
+        @for (log of state().logs; track $index) {
+          <li>{{ log }}</li>
+        }
+      </ul>
+    }
+  </section>
+
+  <section class="card output-card">
+    <h2>Output Files Preview</h2>
+    @if (state().generationResult; as result) {
+      <div class="output-list">
+        @for (file of outputFileRows(result); track file.name) {
+          <div class="output-row">
+            <span aria-hidden="true">{{ file.icon }}</span>
+            <strong>{{ file.name }}</strong>
+            <span>{{ compactPath(file.path) }}</span>
+            <span class="config-status" aria-hidden="true">✓</span>
+          </div>
+        }
+      </div>
+      <div class="metrics-grid">
+        <div><span>Hits</span><strong>{{ result.hitCount }}</strong></div>
+        <div><span>Mapped</span><strong>{{ result.mappedNoteCount }}</strong></div>
+        <div><span>Deduped</span><strong>{{ result.deduplicatedCount }}</strong></div>
+        <div><span>Tracks</span><strong>{{ result.selectedTracks.length }}</strong></div>
+      </div>
+      <section class="timing-summary">
+        <h3>Timing Summary</h3>
+        <strong>{{ result.timing.summary.label }}</strong>
+        @if (result.timing.summary.importantMessages.length > 0) {
+          <ul>
+            @for (message of result.timing.summary.importantMessages; track message) {
+              <li>{{ message }}</li>
+            }
+          </ul>
+        }
+      </section>
+    } @else {
+      <div class="empty-state output-empty">
+        <span aria-hidden="true">▭</span>
+        <strong>No output files yet.</strong>
+        <small>Run generation to create notes.chart, song.ini, and song.ogg.</small>
+      </div>
+    }
+  </section>
+</div>
+
+<div class="generate-action-bar">
+  <a class="button ghost" routerLink="/source-review">‹ Back to Source Review</a>
+  <button class="button secondary" type="button" [disabled]="!canOpenOutputFolder()" (click)="openOutputFolder()">▭ Open Output Folder</button>
+  <button class="button secondary" type="button" [disabled]="!canOpenPreview()" (click)="openPreview()">▷ Open Preview</button>
+  <button class="button primary" type="button" [disabled]="!canStartGeneration()" (click)="generate()">{{ generateActionLabel() }}</button>
+</div>
+
+<chdg-confirmation-dialog
+  [isOpen]="showOverwriteDialog()"
+  title="Overwrite existing files?"
+  message="Overwrite only notes.chart, song.ini, and song.ogg?"
+  confirmLabel="Overwrite"
+  [destructive]="true"
+  (confirmed)="confirmOverwrite()"
+  (cancelled)="cancelOverwrite()"
+/>

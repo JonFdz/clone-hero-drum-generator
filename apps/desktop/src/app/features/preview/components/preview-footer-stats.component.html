@@ -1,0 +1,6 @@
+<div class="footer-stats">
+	<span>▣ Source: {{ audioSourceLabel }}</span>
+	<span>◷ Chart Length: {{ formatDuration(duration) }}</span>
+	<span>▥ Notes: {{ noteCount }}</span>
+	<span [class.error]="waveformStatus === 'error'">{{ statusText() }}</span>
+</div>
