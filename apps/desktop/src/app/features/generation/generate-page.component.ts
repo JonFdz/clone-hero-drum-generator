@@ -7,7 +7,7 @@ import {
 	inject,
 	signal,
 } from "@angular/core";
-import { Router, RouterModule } from "@angular/router";
+import { Router } from "@angular/router";
 import type {
 	GeneratePackageResult,
 	ValidationItem,
@@ -16,25 +16,26 @@ import type {
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopValidationService } from "../../services/desktop-validation.service";
-import { GenerationService } from "./generation.service";
 import { ConfirmationDialogComponent } from "../../shared/confirmation-dialog/confirmation-dialog.component";
-
-type ChecklistFilter = "all" | ValidationItem["severity"];
-type ConfigRowStatus = "ok" | "warning" | "missing";
-
-type ConfigRow = {
-	icon: string;
-	label: string;
-	value: string;
-	status: ConfigRowStatus;
-	route?: string;
-};
-
-type OutputFileRow = {
-	icon: string;
-	name: string;
-	path?: string;
-};
+import { GenerationActionBarComponent } from "./components/generation-action-bar.component";
+import {
+	GenerationConfigurationComponent,
+	type GenerationConfigRow,
+} from "./components/generation-configuration.component";
+import { GenerationLogComponent } from "./components/generation-log.component";
+import { GenerationReadinessComponent } from "./components/generation-readiness.component";
+import { GenerationStepsComponent } from "./components/generation-steps.component";
+import {
+	OutputPreviewComponent,
+	type OutputFileRow,
+} from "./components/output-preview.component";
+import {
+	QaChecklistComponent,
+	type ChecklistFilter,
+	type ChecklistRow,
+} from "./components/qa-checklist.component";
+import { ValidationReportComponent } from "./components/validation-report.component";
+import { GenerationService } from "./generation.service";
 
 const severityRank: Record<ValidationItem["severity"], number> = {
 	error: 0,
@@ -64,7 +65,18 @@ function formatCheckedAt(value: string): string {
 	selector: "chdg-generate-page",
 	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	imports: [CommonModule, RouterModule, ConfirmationDialogComponent],
+	imports: [
+		CommonModule,
+		ConfirmationDialogComponent,
+		GenerationActionBarComponent,
+		GenerationConfigurationComponent,
+		GenerationLogComponent,
+		GenerationReadinessComponent,
+		GenerationStepsComponent,
+		OutputPreviewComponent,
+		QaChecklistComponent,
+		ValidationReportComponent,
+	],
 	templateUrl: "./generate-page.component.html",
 	styleUrl: "./generate-page.component.css",
 })
@@ -80,7 +92,6 @@ export class GeneratePageComponent implements OnInit {
 	readonly autosaveWarning = this.generationService.autosaveWarning;
 	readonly checklistFilter = signal<ChecklistFilter>("all");
 	readonly showOverwriteDialog = signal(false);
-	private pendingOverwriteMessage = "";
 	private readonly validationRun = signal(0);
 
 	readonly summary = computed<ValidationSummary>(() => {
@@ -178,7 +189,16 @@ export class GeneratePageComponent implements OnInit {
 		return summary.errorCount === 0 && summary.warningCount === 0;
 	});
 
-	readonly configRows = computed<ConfigRow[]>(() => {
+	readonly checkedAtLabel = computed(() => formatCheckedAt(this.summary().checkedAt));
+
+	readonly checklistRows = computed<ChecklistRow[]>(() =>
+		this.filteredChecklistItems().map((item) => ({
+			...item,
+			icon: this.severityIcon(item.severity),
+		})),
+	);
+
+	readonly configRows = computed<GenerationConfigRow[]>(() => {
 		const state = this.state();
 		const metadata = state.metadata;
 		const offset = state.offsetMs ?? 0;
@@ -188,14 +208,14 @@ export class GeneratePageComponent implements OnInit {
 				label: "Source File",
 				value: compactPath(state.sourcePath) || "Not selected",
 				status: state.sourcePath ? "ok" : "missing",
-				route: "/source-review",
+				glyph: this.statusGlyph(state.sourcePath ? "ok" : "missing"),
 			},
 			{
 				icon: "♫",
 				label: "Audio File",
 				value: compactPath(state.audioPath) || "Not selected",
 				status: state.audioPath ? "ok" : "missing",
-				route: "/projects/details",
+				glyph: this.statusGlyph(state.audioPath ? "ok" : "missing"),
 			},
 			{
 				icon: "♬",
@@ -204,42 +224,42 @@ export class GeneratePageComponent implements OnInit {
 					? `${state.selectedTracks.length} track${state.selectedTracks.length === 1 ? "" : "s"}`
 					: "None",
 				status: state.selectedTracks.length > 0 ? "ok" : "missing",
-				route: "/source-review",
+				glyph: this.statusGlyph(state.selectedTracks.length > 0 ? "ok" : "missing"),
 			},
 			{
 				icon: "▭",
 				label: "Output Folder",
 				value: compactPath(state.outputDir) || "Not selected",
 				status: state.outputDir ? "ok" : "missing",
-				route: "/projects/details",
+				glyph: this.statusGlyph(state.outputDir ? "ok" : "missing"),
 			},
 			{
 				icon: "◇",
 				label: "Song",
 				value: metadata.name || fallbackSongName(state.sourcePath),
 				status: "ok",
-				route: "/projects/details",
+				glyph: this.statusGlyph("ok"),
 			},
 			{
 				icon: "♙",
 				label: "Artist",
 				value: metadata.artist || "Not set",
 				status: metadata.artist ? "ok" : "warning",
-				route: "/projects/details",
+				glyph: this.statusGlyph(metadata.artist ? "ok" : "warning"),
 			},
 			{
 				icon: "▣",
 				label: "Album",
 				value: metadata.album || "Not set",
 				status: "ok",
-				route: "/projects/details",
+				glyph: this.statusGlyph("ok"),
 			},
 			{
 				icon: "◴",
 				label: "Offset",
 				value: `${offset} ms`,
 				status: "ok",
-				route: "/projects/details",
+				glyph: this.statusGlyph("ok"),
 			},
 		];
 	});
@@ -258,14 +278,18 @@ export class GeneratePageComponent implements OnInit {
 	);
 
 	readonly canOpenOutputFolder = computed(() =>
-		Boolean(
-			this.state().generationResult?.outputDir ?? this.state().outputDir,
-		),
+		Boolean(this.state().generationResult?.outputDir ?? this.state().outputDir),
 	);
 
 	readonly canOpenPreview = computed(() =>
 		Boolean(this.state().generationResult),
 	);
+
+	readonly outputRows = computed<OutputFileRow[]>(() => {
+		const result = this.state().generationResult;
+		if (!result) return [];
+		return this.outputFileRows(result);
+	});
 
 	readonly generateActionLabel = computed(() =>
 		this.state().generationResult ? "Regenerate" : "Start Generate",
@@ -288,7 +312,6 @@ export class GeneratePageComponent implements OnInit {
 		if (outcome.ok) {
 			this.runValidation();
 		} else if ("needsOverwriteConfirmation" in outcome) {
-			this.pendingOverwriteMessage = outcome.message;
 			this.showOverwriteDialog.set(true);
 		} else if (outcome.error) {
 			this.generateState.applyError(outcome.error);
@@ -322,23 +345,32 @@ export class GeneratePageComponent implements OnInit {
 
 	outputFileRows(result: GeneratePackageResult): OutputFileRow[] {
 		return [
-			{ icon: "▧", name: "notes.chart", path: result.files.chart },
-			{ icon: "▧", name: "song.ini", path: result.files.songIni },
+			{
+				icon: "▧",
+				name: "notes.chart",
+				path: result.files.chart,
+				compactPath: compactPath(result.files.chart),
+			},
+			{
+				icon: "▧",
+				name: "song.ini",
+				path: result.files.songIni,
+				compactPath: compactPath(result.files.songIni),
+			},
 			...(result.files.songOgg
-				? [{ icon: "♫", name: "song.ogg", path: result.files.songOgg }]
+				? [
+						{
+							icon: "♫",
+							name: "song.ogg",
+							path: result.files.songOgg,
+							compactPath: compactPath(result.files.songOgg),
+						},
+					]
 				: []),
 		];
 	}
 
-	compactPath(value: string | undefined): string {
-		return compactPath(value);
-	}
-
-	formatCheckedAt(value: string): string {
-		return formatCheckedAt(value);
-	}
-
-	statusGlyph(status: ConfigRowStatus): string {
+	statusGlyph(status: GenerationConfigRow["status"]): string {
 		if (status === "missing") return "×";
 		if (status === "warning") return "⚠";
 		return "✓";

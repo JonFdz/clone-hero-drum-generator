@@ -3,20 +3,49 @@
 	<div class="metadata">
 		<h2>{{ title }}</h2>
 		<p>{{ subtitle }}</p>
-		<strong>{{ format(currentTime) }} <span>/ {{ format(duration) }}</span></strong>
+		<strong
+			>{{ format(currentTime) }}
+			<span>/ {{ format(duration) }}</span></strong
+		>
 	</div>
 	<div class="transport-playback">
 		<div class="transport-controls">
-			<button class="round secondary" type="button" aria-label="Seek backward" (click)="seekBy(-5)">|◀</button>
-			<button class="round primary" type="button" [attr.aria-label]="isPlaying ? 'Pause' : 'Play'" (click)="togglePlay()">
+			<button
+				class="round secondary"
+				type="button"
+				aria-label="Seek backward"
+				(click)="seekBy(-5)"
+			>
+				|◀
+			</button>
+			<button
+				class="round primary"
+				type="button"
+				[attr.aria-label]="isPlaying ? 'Pause' : 'Play'"
+				(click)="togglePlay()"
+			>
 				{{ isPlaying ? "❚❚" : "▶" }}
 			</button>
-			<button class="round secondary" type="button" aria-label="Seek forward" (click)="seekBy(5)">▶|</button>
+			<button
+				class="round secondary"
+				type="button"
+				aria-label="Seek forward"
+				(click)="seekBy(5)"
+			>
+				▶|
+			</button>
 		</div>
 		<div class="seek-control" [class.disabled]="duration <= 0">
 			<div class="seek-track" aria-hidden="true">
-				<div class="seek-progress" [style.width.%]="seekProgressPercent()"></div>
-				<div class="seek-thumb" [style.left.%]="seekProgressPercent()" [style.transform]="seekThumbTransform()"></div>
+				<div
+					class="seek-progress"
+					[style.width.%]="seekProgressPercent()"
+				></div>
+				<div
+					class="seek-thumb"
+					[style.left.%]="seekProgressPercent()"
+					[style.transform]="seekThumbTransform()"
+				></div>
 			</div>
 			<input
 				class="seek-input"

@@ -91,9 +91,12 @@ export class PreviewChartStageComponent {
 		return this._previewOffsetMs();
 	}
 
-	@Input() set waveformStatus(
-		value: "idle" | "loading" | "ready" | "error" | "empty",
-	) {
+	@Input() set waveformStatus(value:
+		| "idle"
+		| "loading"
+		| "ready"
+		| "error"
+		| "empty",) {
 		this._waveformStatus.set(value);
 	}
 	get waveformStatus(): "idle" | "loading" | "ready" | "error" | "empty" {
@@ -136,26 +139,26 @@ export class PreviewChartStageComponent {
 		Array.from({ length: 9 }, (_, index) => index / 8),
 	);
 
-	readonly timeTicks = computed<
-		Array<{ seconds: number; major: boolean }>
-	>(() => {
-		const viewport = this.viewport();
-		if (viewport.endSeconds <= viewport.startSeconds) return [];
-		const first = Math.ceil(viewport.startSeconds * 4) / 4;
-		const ticks: Array<{ seconds: number; major: boolean }> = [];
-		for (
-			let seconds = first;
-			seconds <= viewport.endSeconds + 0.001;
-			seconds += 0.25
-		) {
-			const rounded = Math.round(seconds * 1000) / 1000;
-			ticks.push({
-				seconds: rounded,
-				major: Math.abs(rounded - Math.round(rounded)) < 0.001,
-			});
-		}
-		return ticks;
-	});
+	readonly timeTicks = computed<Array<{ seconds: number; major: boolean }>>(
+		() => {
+			const viewport = this.viewport();
+			if (viewport.endSeconds <= viewport.startSeconds) return [];
+			const first = Math.ceil(viewport.startSeconds * 4) / 4;
+			const ticks: Array<{ seconds: number; major: boolean }> = [];
+			for (
+				let seconds = first;
+				seconds <= viewport.endSeconds + 0.001;
+				seconds += 0.25
+			) {
+				const rounded = Math.round(seconds * 1000) / 1000;
+				ticks.push({
+					seconds: rounded,
+					major: Math.abs(rounded - Math.round(rounded)) < 0.001,
+				});
+			}
+			return ticks;
+		},
+	);
 
 	readonly waveformPath = computed<string>(() => {
 		const overview = this._waveformOverview();
@@ -191,20 +194,16 @@ export class PreviewChartStageComponent {
 	});
 
 	readonly sectionItems = computed<PreviewSectionNavigationItem[]>(() =>
-		deriveSectionNavigationItems(
-			this._chartData(),
-			this._previewOffsetMs(),
-		),
+		deriveSectionNavigationItems(this._chartData(), this._previewOffsetMs()),
 	);
 
-	readonly currentSection = computed<
-		PreviewSectionNavigationItem | undefined
-	>(() =>
-		deriveCurrentSection(
-			this._chartData(),
-			this._currentTime(),
-			this._previewOffsetMs(),
-		),
+	readonly currentSection = computed<PreviewSectionNavigationItem | undefined>(
+		() =>
+			deriveCurrentSection(
+				this._chartData(),
+				this._currentTime(),
+				this._previewOffsetMs(),
+			),
 	);
 
 	readonly adjacentSections = computed<{
@@ -247,9 +246,7 @@ export class PreviewChartStageComponent {
 
 	onStagePointerDown(event: PointerEvent): void {
 		this.scrubbingPointerId = event.pointerId;
-		(event.currentTarget as SVGRectElement).setPointerCapture(
-			event.pointerId,
-		);
+		(event.currentTarget as SVGRectElement).setPointerCapture(event.pointerId);
 		this.seek.emit(this.clientXToChartSeconds(event));
 	}
 
@@ -284,9 +281,7 @@ export class PreviewChartStageComponent {
 	onSectionSelect(event: Event): void {
 		const select = event.target as HTMLSelectElement | null;
 		const index = select ? Number(select.value) : Number.NaN;
-		const section = this.sectionItems().find(
-			(item) => item.index === index,
-		);
+		const section = this.sectionItems().find((item) => item.index === index);
 		this.seekToSection(section);
 	}
 

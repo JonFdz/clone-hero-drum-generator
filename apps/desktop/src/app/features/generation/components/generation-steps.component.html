@@ -1,0 +1,1 @@
+<section class="card steps-card"><h2>Generation Steps</h2><ol class="steps-list">@for (step of steps; track step) {<li><span class="step-number">{{ $index + 1 }}</span><span>{{ step }}</span><span class="step-state" [class.running]="state === 'Running'" [class.completed]="state === 'Completed'" [class.failed]="state === 'Failed'">{{ state }}</span></li>}</ol></section>

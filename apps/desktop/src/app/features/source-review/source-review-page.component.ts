@@ -122,15 +122,17 @@ export class SourceReviewPageComponent implements OnInit {
 			case "up-to-date":
 				return "Source review up to date";
 			default:
-				return this.state().sourcePath
-					? "Ready to review"
-					: "Source required";
+				return this.state().sourcePath ? "Ready to review" : "Source required";
 		}
 	});
 
 	readonly sourceKindLabel = computed(() => {
 		const kind = this.state().sourceKind;
-		return kind === "gpif" ? "Guitar Pro" : kind === "midi" ? "MIDI" : "Unknown";
+		return kind === "gpif"
+			? "Guitar Pro"
+			: kind === "midi"
+				? "MIDI"
+				: "Unknown";
 	});
 
 	readonly analyzedAt = computed(() => {
@@ -153,8 +155,9 @@ export class SourceReviewPageComponent implements OnInit {
 		),
 	);
 
-	readonly mappingFilter = computed<MappingReviewFilter>(() =>
-		this.selectedMappingFilter() ??
+	readonly mappingFilter = computed<MappingReviewFilter>(
+		() =>
+			this.selectedMappingFilter() ??
 			deriveDefaultMappingFilter({
 				rows: this.mappingRows(),
 				overrides: this.state().mappingOverrides,
@@ -312,7 +315,9 @@ export class SourceReviewPageComponent implements OnInit {
 	);
 
 	readonly unknownCount = computed(() => this.mappingReviewCounts().unknown);
-	readonly candidateCount = computed(() => this.mappingReviewCounts().candidates);
+	readonly candidateCount = computed(
+		() => this.mappingReviewCounts().candidates,
+	);
 	readonly ignoredKnownCount = computed(
 		() => this.mappingReviewCounts().ignoredKnown,
 	);
@@ -437,7 +442,10 @@ export class SourceReviewPageComponent implements OnInit {
 		let knownCount = 0;
 		let unknownCount = 0;
 		for (const track of this.trackRows()) {
-			if (typeof track.noteCount === "number" && Number.isFinite(track.noteCount)) {
+			if (
+				typeof track.noteCount === "number" &&
+				Number.isFinite(track.noteCount)
+			) {
 				knownTotal += track.noteCount;
 				knownCount += 1;
 			} else {
@@ -553,9 +561,7 @@ export class SourceReviewPageComponent implements OnInit {
 							piece: value as (typeof PIECES)[number],
 						},
 					};
-		this.generateState.setMappingOverrides(
-			current as ProjectMappingOverrides,
-		);
+		this.generateState.setMappingOverrides(current as ProjectMappingOverrides);
 		await this.orchestrator.mappingChanged();
 	}
 
@@ -616,9 +622,7 @@ export class SourceReviewPageComponent implements OnInit {
 	pieceLabel(piece: string): string {
 		return (
 			PIECE_LABELS[piece] ??
-			piece
-				.replace(/_/g, " ")
-				.replace(/\b\w/g, (char) => char.toUpperCase())
+			piece.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
 		);
 	}
 
@@ -655,9 +659,7 @@ export class SourceReviewPageComponent implements OnInit {
 	overrideLabelFor(key: string): string {
 		const override = this.state().mappingOverrides[key];
 		if (!override) return "";
-		return override.target.kind === "ignore"
-			? "ignore"
-			: override.target.piece;
+		return override.target.kind === "ignore" ? "ignore" : override.target.piece;
 	}
 
 	mappingSourceKind(row: MappingRow | MappingReviewRowView): "midi" | "gpif" {

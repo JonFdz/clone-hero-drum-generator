@@ -20,9 +20,7 @@ export type GenerationOutcome =
 	| { ok: false; error: string }
 	| { ok: false; needsOverwriteConfirmation: true; message: string };
 
-export type OutputFolderOutcome =
-	| { ok: true }
-	| { ok: false; error: string };
+export type OutputFolderOutcome = { ok: true } | { ok: false; error: string };
 
 /**
  * Generation orchestration service.
@@ -100,7 +98,8 @@ export class GenerationService {
 			}
 			return { ok: false, error: envelope.error.message };
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Generation failed.";
+			const message =
+				error instanceof Error ? error.message : "Generation failed.";
 			this.generateState.applyError(message);
 			return { ok: false, error: message };
 		}
@@ -119,7 +118,8 @@ export class GenerationService {
 			}
 			return { ok: true };
 		} catch (error) {
-			const message = error instanceof Error ? error.message : "Open output folder failed.";
+			const message =
+				error instanceof Error ? error.message : "Open output folder failed.";
 			this.generateState.applyError(message);
 			return { ok: false, error: message };
 		}

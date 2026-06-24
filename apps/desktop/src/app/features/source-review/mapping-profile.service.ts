@@ -13,9 +13,7 @@ export type MappingProfileResult =
  */
 @Injectable({ providedIn: "root" })
 export class MappingProfileService {
-	constructor(
-		private readonly bridge: DesktopBridgeService,
-	) {}
+	constructor(private readonly bridge: DesktopBridgeService) {}
 
 	readonly profiles = signal<MappingOverrideProfile[]>([]);
 
@@ -39,9 +37,7 @@ export class MappingProfileService {
 		return { ok: false, error: result.error.message };
 	}
 
-	async deleteProfile(
-		profileId: string,
-	): Promise<MappingProfileResult> {
+	async deleteProfile(profileId: string): Promise<MappingProfileResult> {
 		const result = await this.bridge.deleteMappingProfile?.(profileId);
 		if (result?.ok) {
 			this.profiles.set(result.data);

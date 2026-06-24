@@ -1,9 +1,5 @@
 @if (isOpen) {
-	<div
-		class="dialog-backdrop"
-		role="presentation"
-		(click)="cancelled.emit()"
-	>
+	<div class="dialog-backdrop" role="presentation" (click)="cancelled.emit()">
 		<section
 			class="dialog"
 			role="dialog"
@@ -27,7 +23,11 @@
 				/>
 			</label>
 			<div class="dialog-actions">
-				<button class="button ghost" type="button" (click)="cancelled.emit()">
+				<button
+					class="button ghost"
+					type="button"
+					(click)="cancelled.emit()"
+				>
 					{{ cancelLabel }}
 				</button>
 				<button

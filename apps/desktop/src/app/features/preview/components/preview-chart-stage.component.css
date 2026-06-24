@@ -1,5 +1,9 @@
 .chart-stage-card {
-	background: linear-gradient(180deg, rgba(12, 20, 38, 0.96), rgba(8, 13, 27, 0.92));
+	background: linear-gradient(
+		180deg,
+		rgba(12, 20, 38, 0.96),
+		rgba(8, 13, 27, 0.92)
+	);
 	border: 1px solid rgba(120, 142, 176, 0.2);
 	border-radius: 1rem;
 	display: grid;
@@ -12,26 +16,93 @@
 	justify-content: space-between;
 	gap: 1rem;
 }
-.stage-copy h2 { font-size: 1rem; margin: 0; }
-.stage-copy p { font-size: 0.82rem; margin: 0; text-align: right; }
-.stage-shell { aspect-ratio: 16 / 7; min-height: 22rem; position: relative; }
-svg { display: block; height: 100%; min-height: 22rem; width: 100%; }
-.svg-bg { fill: #020817; stroke: rgba(120, 142, 176, 0.18); stroke-width: 1; }
-.chart-bg { fill: rgba(4, 10, 24, 0.76); }
-.grid-line { stroke: rgba(220, 227, 241, 0.07); stroke-width: 1; }
-.lane-line { stroke-width: 1.25; opacity: 0.66; }
-.waveform { fill: rgba(139, 92, 246, 0.18); stroke: rgba(168, 85, 247, 0.34); stroke-width: 1; }
-.ruler-tick { stroke: rgba(208, 218, 235, 0.28); stroke-width: 1; }
-.ruler-tick.ruler-major { stroke: rgba(226, 232, 244, 0.58); stroke-width: 1.4; }
-.ruler-label { fill: #c9d1df; font-size: 15px; font-weight: 600; }
-.lane-primary { font-size: 17px; font-weight: 900; letter-spacing: 0.02em; }
-.lane-secondary { font-size: 13px; font-weight: 700; opacity: 0.9; }
-.note-fill { stroke: rgba(255, 255, 255, 0.9); stroke-width: 2; }
-.note-ring { stroke-width: 2; opacity: 0.6; }
-.playhead-line { stroke: #8b5cf6; stroke-width: 2; }
-.playhead-dot { fill: #8b5cf6; }
-.playhead-label { fill: #a855f7; font-size: 16px; font-weight: 900; }
-.seek-hit-area { cursor: ew-resize; }
+.stage-copy h2 {
+	font-size: 1rem;
+	margin: 0;
+}
+.stage-copy p {
+	font-size: 0.82rem;
+	margin: 0;
+	text-align: right;
+}
+.stage-shell {
+	aspect-ratio: 16 / 7;
+	min-height: 22rem;
+	position: relative;
+}
+svg {
+	display: block;
+	height: 100%;
+	min-height: 22rem;
+	width: 100%;
+}
+.svg-bg {
+	fill: #020817;
+	stroke: rgba(120, 142, 176, 0.18);
+	stroke-width: 1;
+}
+.chart-bg {
+	fill: rgba(4, 10, 24, 0.76);
+}
+.grid-line {
+	stroke: rgba(220, 227, 241, 0.07);
+	stroke-width: 1;
+}
+.lane-line {
+	stroke-width: 1.25;
+	opacity: 0.66;
+}
+.waveform {
+	fill: rgba(139, 92, 246, 0.18);
+	stroke: rgba(168, 85, 247, 0.34);
+	stroke-width: 1;
+}
+.ruler-tick {
+	stroke: rgba(208, 218, 235, 0.28);
+	stroke-width: 1;
+}
+.ruler-tick.ruler-major {
+	stroke: rgba(226, 232, 244, 0.58);
+	stroke-width: 1.4;
+}
+.ruler-label {
+	fill: #c9d1df;
+	font-size: 15px;
+	font-weight: 600;
+}
+.lane-primary {
+	font-size: 17px;
+	font-weight: 900;
+	letter-spacing: 0.02em;
+}
+.lane-secondary {
+	font-size: 13px;
+	font-weight: 700;
+	opacity: 0.9;
+}
+.note-fill {
+	stroke: rgba(255, 255, 255, 0.9);
+	stroke-width: 2;
+}
+.note-ring {
+	stroke-width: 2;
+	opacity: 0.6;
+}
+.playhead-line {
+	stroke: #8b5cf6;
+	stroke-width: 2;
+}
+.playhead-dot {
+	fill: #8b5cf6;
+}
+.playhead-label {
+	fill: #a855f7;
+	font-size: 16px;
+	font-weight: 900;
+}
+.seek-hit-area {
+	cursor: ew-resize;
+}
 .section-nav {
 	align-items: center;
 	background: rgba(4, 10, 24, 0.72);
@@ -42,11 +113,32 @@ svg { display: block; height: 100%; min-height: 22rem; width: 100%; }
 	justify-content: space-between;
 	padding: 0.65rem 0.75rem;
 }
-.section-nav-copy { display: grid; min-width: 8rem; }
-.section-nav-copy span { color: #a78bfa; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
-.section-nav-copy strong { color: #f8fafc; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.section-nav-controls { align-items: center; display: flex; gap: 0.4rem; min-width: 0; }
-.section-nav button, .section-nav select {
+.section-nav-copy {
+	display: grid;
+	min-width: 8rem;
+}
+.section-nav-copy span {
+	color: #a78bfa;
+	font-size: 0.68rem;
+	font-weight: 900;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+.section-nav-copy strong {
+	color: #f8fafc;
+	font-size: 0.9rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.section-nav-controls {
+	align-items: center;
+	display: flex;
+	gap: 0.4rem;
+	min-width: 0;
+}
+.section-nav button,
+.section-nav select {
 	background: rgba(15, 23, 42, 0.92);
 	border: 1px solid rgba(203, 213, 225, 0.18);
 	border-radius: 0.65rem;
@@ -56,10 +148,22 @@ svg { display: block; height: 100%; min-height: 22rem; width: 100%; }
 	font-weight: 800;
 	height: 2rem;
 }
-.section-nav button { cursor: pointer; min-width: 2rem; padding: 0 0.55rem; }
-.section-nav button:disabled { cursor: not-allowed; opacity: 0.42; }
-.section-nav select { max-width: 16rem; min-width: 10rem; padding: 0 0.55rem; }
-.waveform-message, .empty-notes {
+.section-nav button {
+	cursor: pointer;
+	min-width: 2rem;
+	padding: 0 0.55rem;
+}
+.section-nav button:disabled {
+	cursor: not-allowed;
+	opacity: 0.42;
+}
+.section-nav select {
+	max-width: 16rem;
+	min-width: 10rem;
+	padding: 0 0.55rem;
+}
+.waveform-message,
+.empty-notes {
 	background: rgba(4, 10, 24, 0.72);
 	border: 1px solid rgba(197, 209, 225, 0.12);
 	border-radius: 999px;
@@ -70,11 +174,27 @@ svg { display: block; height: 100%; min-height: 22rem; width: 100%; }
 	top: 1rem;
 	transform: translateX(-50%);
 }
-.waveform-message.warning { color: #fbbf24; }
-.empty-notes { top: 50%; }
+.waveform-message.warning {
+	color: #fbbf24;
+}
+.empty-notes {
+	top: 50%;
+}
 @media (max-width: 980px) {
-	.stage-copy, .section-nav { align-items: start; display: grid; }
-	.stage-copy p { text-align: left; }
-	.section-nav-controls { flex-wrap: wrap; }
-	.section-nav select { max-width: 100%; min-width: 0; width: 100%; }
+	.stage-copy,
+	.section-nav {
+		align-items: start;
+		display: grid;
+	}
+	.stage-copy p {
+		text-align: left;
+	}
+	.section-nav-controls {
+		flex-wrap: wrap;
+	}
+	.section-nav select {
+		max-width: 100%;
+		min-width: 0;
+		width: 100%;
+	}
 }

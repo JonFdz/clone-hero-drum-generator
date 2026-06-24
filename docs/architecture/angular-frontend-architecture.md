@@ -148,8 +148,9 @@ no longer rebuild the payload-to-workflow mapping inline.
 
 It is a transitional service: it keeps the persistence boundary focused
 (persistence hydrates `ProjectSessionStore`; the hydrator hydrates the
-generation workflow) and is removed in #76 when generation becomes a feature
-and owns its own hydration.
+generation workflow). #76 retained it because `DesktopGenerateStateService`
+still owns the workflow state; remove it only after workflow hydration moves to
+a consolidated feature-owned store.
 
 ### Legacy facade
 
@@ -284,11 +285,13 @@ transition.
   `window.prompt` for profile names is replaced by `shared/text-input-dialog`.
   The `SourceReviewOrchestratorService` (in `services/`) owns bridge-backed
   analysis/normalization. The legacy `pages/mapping/` was deleted with proof.
-- `features/generation` owns the Generate page and `GenerationService`
+- `features/generation` owns the Generate page, `GenerationService`
   (bridge-backed orchestration with typed outcomes for generation, overwrite,
-  autosave, and output-folder operations). The page is a thin coordinator with
-  computed signals. `window.confirm` for overwrite is replaced by
-  `shared/confirmation-dialog`. The page decides navigation only.
+  autosave, and output-folder operations), and focused presentation components
+  for readiness, validation report, configuration, QA checklist, generation
+  steps, log, output preview, and the action bar. The page is a thin
+  coordinator with computed signals. `window.confirm` for overwrite is replaced
+  by `shared/confirmation-dialog`. The page decides navigation only.
 - `features/preview` owns the Preview page and 4 child components
   (chart-stage, transport-card, offset-panel, footer-stats). All use external
   templates/styles and OnPush. Collection-creating template methods were

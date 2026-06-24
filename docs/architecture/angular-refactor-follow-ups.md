@@ -23,8 +23,8 @@ updated atomically.
 
 ### Remove the `DesktopProjectStateService` facade
 
-`services/desktop-project-state.service.ts` is a transitional facade. After
-# 76, consumers are:
+`services/desktop-project-state.service.ts` is a transitional facade. After #76,
+consumers are
 
 - Remaining unmigrated pages: `new-project`, `inspect-source`,
   `track-selection` (all redirect-only routes).
@@ -32,9 +32,12 @@ updated atomically.
 - `services/desktop-validation.service`, `services/desktop-preview.service`,
   `services/source-review-orchestrator.service`.
 
-Home, Projects, Project Details, Settings, Source Review, Generate, and Preview
-no longer consume this facade after #75/#76. Remove when the last unmigrated
-pages are migrated or proven dead.
+Home, Projects, Project Details, Settings, Source Review, and Preview no
+longer consume this facade after #75/#76. Generate still consumes the facade for
+output-status presentation and generation failure state while
+`DesktopGenerateStateService` remains the workflow owner. Remove the facade only
+when Generate and the remaining legacy pages/services move to a consolidated
+feature-owned workflow/session store.
 
 ### Remove `DesktopGenerateStateService` (transitional)
 
@@ -42,12 +45,13 @@ pages are migrated or proven dead.
 (source/audio/metadata/inspection/normalization/mapping/generation result).
 After #76, it is consumed by `GenerationService`,
 `SourceReviewOrchestratorService`, `DesktopPreviewService`,
-`DesktopValidationService`, and the feature page components (via `inject()`).
-Consolidation into a feature-owned workflow store is deferred until the
-remaining legacy pages and services are migrated. The `GenerationService` and
-`SourceReviewOrchestratorService` already provide typed-outcome abstractions
-over the workflow state; future consolidation should move the state into a
-feature store and remove `DesktopGenerateStateService`.
+`DesktopValidationService`, and the Source Review / Generate feature page
+components (via `inject()`). Consolidation into a feature-owned workflow store
+is deferred until the remaining legacy pages and services are migrated. The
+`GenerationService`, `MappingProfileService`, and
+`SourceReviewOrchestratorService` already provide typed-outcome/service
+abstractions over the workflow state; future consolidation should move the
+state into a feature store and remove `DesktopGenerateStateService`.
 
 ### Remove `ProjectWorkflowHydrator` (transitional)
 

@@ -139,8 +139,7 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 
 	private clampTime(value: number, duration: number): number {
 		if (!Number.isFinite(value)) return 0;
-		if (!Number.isFinite(duration) || duration <= 0)
-			return Math.max(0, value);
+		if (!Number.isFinite(duration) || duration <= 0) return Math.max(0, value);
 		return Math.min(Math.max(value, 0), duration);
 	}
 }
