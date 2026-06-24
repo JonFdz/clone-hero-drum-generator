@@ -18,6 +18,19 @@ describe("highway-projection", () => {
 		expect(notes.map((note) => note.id)).toEqual(["192-2-0", "192-2-1"]);
 	});
 
+	it("drops invalid fractional or out-of-range lanes", () => {
+		const notes = buildHighwaySourceNotes([
+			{ tick: 100, lane: 2.5, seconds: 1 },
+			{ tick: 101, lane: -1, seconds: 1 },
+			{ tick: 102, lane: 5, seconds: 1 },
+			{ tick: 103, lane: Number.NaN, seconds: 1 },
+			{ tick: 104, lane: Number.POSITIVE_INFINITY, seconds: 1 },
+			{ tick: 105, lane: 2, seconds: 1 },
+		]);
+		expect(notes).toHaveLength(1);
+		expect(notes[0]?.lane).toBe(2);
+	});
+
 	it("filters visible notes inside the chart-time window", () => {
 		const notes = buildHighwaySourceNotes([
 			{ tick: 0, lane: 1, seconds: 0.4 },

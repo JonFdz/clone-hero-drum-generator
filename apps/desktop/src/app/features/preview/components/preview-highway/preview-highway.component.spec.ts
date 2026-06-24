@@ -147,4 +147,61 @@ describe("PreviewHighwayComponent", () => {
 		expect(component.accessibleSummary()).toContain("Tick unavailable");
 		vi.unstubAllGlobals();
 	});
+
+	it("does not continuously redraw from currentTime updates during reduced-motion playback", () => {
+		vi.stubGlobal("ResizeObserver", FakeResizeObserver as never);
+		const { component, context } = createComponent({
+			matchMediaMatches: true,
+		});
+		component.chartData = {
+			resolution: 192,
+			offsetSeconds: 0,
+			hasAccurateTiming: true,
+			limitations: [],
+			noteEvents: [{ tick: 192, lane: 1, seconds: 1 }],
+			sectionEvents: [],
+			timing: {
+				resolution: 192,
+				offsetSeconds: 0,
+				hasAccurateTiming: true,
+				tempos: [{ tick: 0, bpm: 120, seconds: 0, source: "generated-chart" }],
+				timeSignatures: [
+					{
+						tick: 0,
+						numerator: 4,
+						denominator: 4,
+						seconds: 0,
+						source: "generated-chart",
+					},
+				],
+				sections: [],
+				notes: { count: 1, firstTick: 192, lastTick: 192, firstSeconds: 1, lastSeconds: 1 },
+				diagnostics: [],
+				summary: {
+					status: "ok",
+					label: "ok",
+					errorCount: 0,
+					warningCount: 0,
+					infoCount: 0,
+					importantMessages: [],
+				},
+			},
+		} as never;
+		component.ngAfterViewInit();
+		const initialDraws = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+
+		component.isPlaying = true;
+		const drawsAfterPlay = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		for (const time of [0.1, 0.2, 0.3, 0.4, 0.5]) {
+			component.currentTime = time;
+		}
+		const drawsAfterPlaybackTicks = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		component.seekEpoch = 1;
+		const drawsAfterSeek = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+
+		expect(drawsAfterPlay).toBe(initialDraws + 1);
+		expect(drawsAfterPlaybackTicks).toBe(drawsAfterPlay);
+		expect(drawsAfterSeek).toBe(drawsAfterPlaybackTicks + 1);
+		vi.unstubAllGlobals();
+	});
 });

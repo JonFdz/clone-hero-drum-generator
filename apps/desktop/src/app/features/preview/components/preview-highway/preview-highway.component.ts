@@ -52,6 +52,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private readonly _currentTime = signal(0);
 	private readonly _previewOffsetMs = signal(0);
 	private readonly _isPlaying = signal(false);
+	private readonly _seekEpoch = signal(0);
 	private readonly _preset = signal<HighwaySpeedPresetId>("normal");
 	private readonly _hudEnabled = signal(true);
 	private readonly fps = signal<number | null>(null);
@@ -84,8 +85,12 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	}
 
 	@Input() set currentTime(value: number) {
-		this._currentTime.set(Number.isFinite(value) ? Math.max(0, value) : 0);
-		this.requestSingleRender();
+		const nextTime = Number.isFinite(value) ? Math.max(0, value) : 0;
+		const previousTime = this._currentTime();
+		this._currentTime.set(nextTime);
+		if (this.shouldRenderForCurrentTimeChange(previousTime, nextTime)) {
+			this.requestSingleRender();
+		}
 	}
 
 	@Input() set previewOffsetMs(value: number) {
@@ -96,6 +101,11 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	@Input() set isPlaying(value: boolean) {
 		this._isPlaying.set(value);
 		this.syncAnimationLoop();
+		this.requestSingleRender();
+	}
+
+	@Input() set seekEpoch(value: number) {
+		this._seekEpoch.set(value);
 		this.requestSingleRender();
 	}
 
@@ -201,6 +211,15 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private requestSingleRender(): void {
 		if (this.animationFrameId !== null && !this.reducedMotion()) return;
 		this.renderFrame();
+	}
+
+	private shouldRenderForCurrentTimeChange(
+		previousTime: number,
+		nextTime: number,
+	): boolean {
+		if (!this.reducedMotion()) return true;
+		if (!this._isPlaying()) return true;
+		return previousTime === nextTime;
 	}
 
 	private renderFrame(): void {

@@ -30,6 +30,7 @@ export type HighwayTimingMap = {
 	meterSegments: readonly HighwayMeterSegment[];
 	hasMeterData: boolean;
 	meterLimitation: string | null;
+	meterValidUntilTick: number | null;
 };
 
 export type MusicalPosition = {
@@ -88,11 +89,13 @@ export function buildHighwayTimingMap(input: {
 			hasMeterData: false,
 			meterLimitation:
 				"Beat and measure data are unavailable because the timing map has no valid time signature at tick 0.",
+			meterValidUntilTick: null,
 		};
 	}
 
 	const meterSegments: HighwayMeterSegment[] = [];
 	let meterLimitation: string | null = null;
+	let meterValidUntilTick: number | null = null;
 	for (let index = 0; index < sanitizedSignatures.length; index += 1) {
 		const signature = sanitizedSignatures[index];
 		const ticksPerBeat = (resolution * 4) / signature.denominator;
@@ -119,6 +122,7 @@ export function buildHighwayTimingMap(input: {
 		if (deltaTicks < 0 || deltaTicks % previous.ticksPerMeasure !== 0) {
 			meterLimitation =
 				"Beat and measure data are unavailable after a time-signature change that does not begin on a measure boundary.";
+			meterValidUntilTick = signature.tick;
 			break;
 		}
 		meterSegments.push({
@@ -137,6 +141,7 @@ export function buildHighwayTimingMap(input: {
 		meterSegments,
 		hasMeterData: meterSegments.length > 0,
 		meterLimitation,
+		meterValidUntilTick,
 	};
 }
 
@@ -167,6 +172,12 @@ export function musicalPositionAtTick(
 	tick: number,
 ): MusicalPosition | null {
 	if (!map.hasMeterData || map.meterSegments.length === 0) return null;
+	if (
+		map.meterValidUntilTick !== null &&
+		tick >= map.meterValidUntilTick
+	) {
+		return null;
+	}
 	const segment = findMeterSegmentByTick(map.meterSegments, tick);
 	if (!segment) return null;
 
@@ -204,6 +215,12 @@ export function enumerateMusicalLines(
 	const endSeconds = Math.max(startSeconds, input.endSeconds + paddingSeconds);
 	const startTick = tickAtChartSeconds(map, startSeconds);
 	const endTick = tickAtChartSeconds(map, endSeconds);
+	if (
+		map.meterValidUntilTick !== null &&
+		startTick >= map.meterValidUntilTick
+	) {
+		return [];
+	}
 	const firstPosition = musicalPositionAtTick(map, startTick);
 	if (!firstPosition) return [];
 

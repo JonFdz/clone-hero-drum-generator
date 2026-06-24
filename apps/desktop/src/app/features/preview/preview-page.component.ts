@@ -41,6 +41,7 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 	readonly highwayPreset = signal<HighwaySpeedPresetId>("normal");
 	readonly highwayHudEnabled = signal(true);
 	readonly highwayPresets = HIGHWAY_SPEED_PRESETS;
+	readonly previewSeekEpoch = signal(0);
 	private animationFrameId: number | null = null;
 
 	constructor(readonly preview: DesktopPreviewService) {}
@@ -69,6 +70,7 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 			const clamped = this.clampTime(value, duration);
 			this.audioRef.nativeElement.currentTime = clamped;
 			this.preview.currentTime.set(clamped);
+			this.previewSeekEpoch.update((epoch) => epoch + 1);
 		}
 	}
 

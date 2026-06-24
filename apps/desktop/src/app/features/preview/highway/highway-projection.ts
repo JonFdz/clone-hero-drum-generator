@@ -200,7 +200,7 @@ function upperBound(
 }
 
 function isHighwayLane(lane: number): lane is HighwayLaneId {
-	return lane >= 0 && lane <= 4;
+	return Number.isFinite(lane) && Number.isInteger(lane) && lane >= 0 && lane <= 4;
 }
 
 function isValidHighwayNoteEvent(event: {

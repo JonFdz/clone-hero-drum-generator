@@ -17,6 +17,9 @@
   - visual mode switch (`Chart view` / `Highway (experimental)`);
   - highway speed preset (`Fast`, `Normal`, `Slow`);
   - HUD visibility toggle.
+- Corrected reduced-motion behavior so playback-time updates no longer trigger continuous redraws while audio advances.
+- Corrected timing validity so invalid mid-measure time-signature changes cut beat/measure and musical lines only from the first invalid tick onward.
+- Corrected lane validation so only finite integer lanes `0..4` are accepted; fractional lanes are discarded.
 
 ## Architecture
 
@@ -50,10 +53,12 @@
 
 ### Automated
 
+- ✅ Focused highway follow-up tests
+  - Result: `4 passed`, `21 passed`
 - ✅ `node ./node_modules/vitest/vitest.mjs run` from `/Users/jonfdz/Projects/clone-hero-drum-generator/apps/desktop`
-  - Result: `73 passed`, `361 passed`
+  - Result: `73 passed`, `365 passed`
 - ✅ `node ./node_modules/vitest/vitest.mjs run` from repo root
-  - Result: `113 passed`, `760 passed`
+  - Result: `113 passed`, `764 passed`
 - ✅ `node ./node_modules/typescript/bin/tsc -p tsconfig.electron.json --noEmit`
 - ✅ `node ./node_modules/@angular/cli/bin/ng.js build --configuration development`
 - ✅ `node ./node_modules/@angular/cli/bin/ng.js build --configuration production`
@@ -69,13 +74,13 @@
   - In this environment, bundled `pnpm` aborted with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`.
   - Equivalent validation was run with the workspace-local Vitest entrypoint and bundled Node runtime instead.
 - ⚠️ `pnpm --filter @chdg/desktop typecheck`
-  - In this environment, bundled `pnpm` aborted with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`.
-  - Equivalent validation was run with direct Angular build + Electron TypeScript commands.
+  - In this environment, bundled `pnpm` triggered an install/status path that failed with `ERR_PNPM_IGNORED_BUILDS`.
+  - Equivalent validation was run with direct Angular development build + Electron TypeScript commands.
 - ⚠️ `pnpm --filter @chdg/desktop build`
-  - In this environment, bundled `pnpm` aborted with `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`.
-  - Equivalent validation was run with direct Angular production build.
+  - In this environment, bundled `pnpm` triggered an install/status path that failed with `ERR_PNPM_IGNORED_BUILDS`.
+  - Equivalent validation was run with the direct Angular production build instead.
 - ⚠️ `pnpm test`
-  - Same `pnpm` no-TTY modules purge limitation as above.
+  - In this environment, bundled `pnpm` triggered the same install/status path limitations instead of running the requested script directly.
   - Equivalent repo-root Vitest validation was run directly.
 
 ## Manual validation

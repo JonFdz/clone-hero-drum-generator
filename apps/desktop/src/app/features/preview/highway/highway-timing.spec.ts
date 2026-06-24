@@ -82,6 +82,57 @@ describe("highway-timing", () => {
 		});
 	});
 
+	it("keeps meter data valid across a time-signature change at a measure boundary", () => {
+		const map = buildHighwayTimingMap({
+			resolution: 192,
+			tempos: [{ tick: 0, bpm: 120, seconds: 0 }],
+			timeSignatures: [
+				{ tick: 0, numerator: 4, denominator: 4, seconds: 0 },
+				{ tick: 768, numerator: 3, denominator: 4, seconds: 2 },
+			],
+		});
+		expect(map?.meterValidUntilTick).toBeNull();
+		expect(musicalPositionAtTick(map!, 767)).toMatchObject({
+			measure: 1,
+		});
+		expect(musicalPositionAtTick(map!, 768)).toMatchObject({
+			measure: 2,
+			beat: 1,
+		});
+	});
+
+	it("cuts beat and measure validity only from the first invalid meter tick", () => {
+		const map = buildHighwayTimingMap({
+			resolution: 192,
+			tempos: [{ tick: 0, bpm: 120, seconds: 0 }],
+			timeSignatures: [
+				{ tick: 0, numerator: 4, denominator: 4, seconds: 0 },
+				{ tick: 500, numerator: 3, denominator: 4, seconds: 500 / 384 },
+			],
+		});
+		expect(map?.meterValidUntilTick).toBe(500);
+		expect(musicalPositionAtTick(map!, 384)).toMatchObject({
+			measure: 1,
+			beat: 3,
+		});
+		expect(musicalPositionAtTick(map!, 499)).not.toBeNull();
+		expect(musicalPositionAtTick(map!, 500)).toBeNull();
+		expect(musicalPositionAtTick(map!, 700)).toBeNull();
+
+		const linesBeforeCutoff = enumerateMusicalLines(map!, {
+			startSeconds: 0,
+			endSeconds: 1.2,
+		});
+		expect(linesBeforeCutoff.length).toBeGreaterThan(0);
+		expect(linesBeforeCutoff.every((line) => line.tick < 500)).toBe(true);
+
+		const linesAfterCutoff = enumerateMusicalLines(map!, {
+			startSeconds: 1.31,
+			endSeconds: 3,
+		});
+		expect(linesAfterCutoff).toEqual([]);
+	});
+
 	it("omits measure output when time signature data is incomplete", () => {
 		const map = buildHighwayTimingMap({
 			resolution: 192,
