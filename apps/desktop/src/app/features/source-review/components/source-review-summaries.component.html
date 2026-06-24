@@ -1,0 +1,66 @@
+<div class="summary-grid">
+	<section class="card summary-card">
+		<h2>Source Summary</h2>
+		<dl class="summary-list compact icon-list">
+			@for (fact of sourceFacts; track fact.label) {
+				<div>
+					<dt>
+						<span aria-hidden="true">{{ fact.icon }}</span
+						>{{ fact.label }}
+					</dt>
+					<dd>{{ fact.value }}</dd>
+				</div>
+			}
+		</dl>
+	</section>
+
+	<section class="card summary-card">
+		<h2>
+			Combined Summary <span class="help-dot" aria-hidden="true">?</span>
+		</h2>
+		@if (hasPreview) {
+			<dl class="summary-list compact icon-list">
+				<div>
+					<dt><span aria-hidden="true">☌</span>Selected Tracks</dt>
+					<dd>{{ combined.selectedTracks }}</dd>
+				</div>
+				<div>
+					<dt><span aria-hidden="true">✣</span>Combined Hits</dt>
+					<dd>{{ combined.hitCountLabel }}</dd>
+				</div>
+				<div>
+					<dt><span aria-hidden="true">▤</span>Duplicates Removed</dt>
+					<dd>{{ combined.duplicatesLabel }}</dd>
+				</div>
+				<div>
+					<dt><span aria-hidden="true">?</span>Unknowns</dt>
+					<dd>{{ combined.unknownCountLabel }}</dd>
+				</div>
+				<div>
+					<dt class="warning-label">
+						<span aria-hidden="true">△</span>Warnings
+					</dt>
+					<dd>{{ combined.warningCountLabel }}</dd>
+				</div>
+			</dl>
+		} @else {
+			<p>{{ buildingMessage }}</p>
+		}
+	</section>
+
+	<section class="card summary-card piece-summary-card">
+		<h2>
+			Piece Summary Preview
+			<span class="help-dot" aria-hidden="true">?</span>
+		</h2>
+		<div class="piece-summary">
+			@for (piece of pieceEntries; track piece.label) {
+				<div class="piece-item" [ngClass]="piece.kind">
+					<span class="piece-icon" aria-hidden="true"><i></i></span>
+					<strong>{{ piece.label }}</strong>
+					<span>{{ piece.count }}</span>
+				</div>
+			}
+		</div>
+	</section>
+</div>

@@ -278,13 +278,19 @@ transition.
 
 ## Migrated feature ownership (#76)
 
-- `features/source-review` owns the Source Review page, mapping model
-  (`mapping.model.ts`), mapping-profile CRUD service
-  (`mapping-profile.service.ts`), and integrated mapping review. The page is a
-  thin coordinator with computed signals for all derived presentation state.
-  `window.prompt` for profile names is replaced by `shared/text-input-dialog`.
-  The `SourceReviewOrchestratorService` (in `services/`) owns bridge-backed
-  analysis/normalization. The legacy `pages/mapping/` was deleted with proof.
+- `features/source-review` owns the Source Review page, feature-local mapping
+  models (`mapping.model.ts`, `source-review-view.model.ts`,
+  `source-review-format.util.ts`), mapping-profile CRUD service
+  (`mapping-profile.service.ts`), integrated mapping review, and focused
+  presentational components for selected source summary, source/combined
+  summaries, track candidates, mapping review, mapping profiles, issues,
+  advanced JSON, and the action area. The page is a thin coordinator with
+  computed signals for all derived presentation state.
+  `window.prompt`/metadata editing for mapping profiles is replaced by the
+  feature-local two-field `profile-metadata-dialog`; delete confirmation uses
+  `shared/confirmation-dialog`. The `SourceReviewOrchestratorService` (in
+  `services/`) owns bridge-backed analysis/normalization. The legacy
+  `pages/mapping/` was deleted with proof.
 - `features/generation` owns the Generate page, `GenerationService`
   (bridge-backed orchestration with typed outcomes for generation, overwrite,
   autosave, and output-folder operations), and focused presentation components
@@ -300,8 +306,10 @@ transition.
   owns bridge-backed preview operations.
 - `shared/confirmation-dialog` is the accessible Angular confirmation dialog
   used by Generate for overwrite confirmation.
-- `shared/text-input-dialog` is the accessible text input dialog used by Source
-  Review for mapping profile naming.
+- `shared/text-input-dialog` remains available as the shared one-field text
+  input primitive. Source Review no longer uses it after the review fix because
+  profile creation/editing requires both name and description, which is handled
+  by the feature-local `profile-metadata-dialog`.
 - All `window.confirm` and `window.prompt` usage is eliminated from Angular
   code. The architecture gate enforces this.
 - No migrated component imports `DesktopBridgeService`; feature services own

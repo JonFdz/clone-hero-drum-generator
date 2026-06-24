@@ -1,0 +1,62 @@
+<section class="card table-card track-card">
+	<div class="split-row table-header">
+		<div>
+			<h2>Track Candidates</h2>
+			<p>Select one or more complementary drum tracks.</p>
+		</div>
+		<span class="selected-count">{{ selectedCountLabel }}</span>
+	</div>
+	<div class="table-frame">
+		<table>
+			<thead>
+				<tr>
+					<th><span class="sr-only">Selected</span></th>
+					<th>Track</th>
+					<th>Name</th>
+					<th>Notes</th>
+					<th>Confidence</th>
+					<th>Status</th>
+				</tr>
+			</thead>
+			<tbody>
+				@for (track of rows; track track.index) {
+					<tr [class.selected-row]="track.selected">
+						<td>
+							<input
+								type="checkbox"
+								[checked]="track.selected"
+								(change)="toggleTrack.emit(track.index)"
+							/>
+						</td>
+						<td>{{ track.index }}</td>
+						<td>{{ track.name }}</td>
+						<td>{{ track.noteCountLabel }}</td>
+						<td>
+							<span
+								class="pill confidence-pill"
+								[class.strong]="
+									track.confidenceClass === 'strong'
+								"
+								[class.weak]="track.confidenceClass === 'weak'"
+								[class.na]="track.confidenceClass === 'unknown'"
+								>{{ track.confidenceLabel }}</span
+							>
+						</td>
+						<td>
+							<span
+								class="status-badge"
+								[class.auto]="track.statusClass === 'auto'"
+								[class.low]="track.statusClass === 'weak'"
+								>{{ track.statusLabel }}</span
+							>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+	<div class="track-table-footer">
+		<span>{{ selectedCountLabel }}</span
+		><span>{{ notesSummaryLabel }}</span>
+	</div>
+</section>

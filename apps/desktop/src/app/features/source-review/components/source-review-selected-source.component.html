@@ -1,0 +1,45 @@
+<section class="card selected-source-card">
+	<div
+		class="file-icon"
+		[class.gp]="view.sourceKind === 'gpif'"
+		[class.midi]="view.sourceKind === 'midi'"
+	>
+		<span>{{ view.sourceKind === "gpif" ? "GP" : "MIDI" }}</span>
+	</div>
+	<div class="selected-source-copy">
+		<p class="eyebrow">Selected Source</p>
+		<div class="source-name-row">
+			<h2>{{ view.fileName }}</h2>
+			<span class="source-kind-chip">{{ view.sourceKindLabel }}</span>
+		</div>
+		<p class="source-path">{{ view.filePath }}</p>
+	</div>
+	<dl class="source-meta">
+		<div>
+			<dt>Source Kind</dt>
+			<dd>{{ view.sourceKindLabel }}</dd>
+		</div>
+		<div>
+			<dt>Last Analyzed</dt>
+			<dd>{{ view.analyzedAt }}</dd>
+		</div>
+	</dl>
+	<div class="source-card-side">
+		<div class="source-actions">
+			<button
+				class="button secondary small"
+				type="button"
+				(click)="refresh.emit()"
+			>
+				<span aria-hidden="true">↻</span> Refresh Analysis
+			</button>
+			<button
+				class="button secondary small"
+				type="button"
+				(click)="toggleJson.emit()"
+			>
+				View JSON
+			</button>
+		</div>
+	</div>
+</section>

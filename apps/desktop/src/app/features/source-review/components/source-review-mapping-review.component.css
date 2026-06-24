@@ -1,0 +1,306 @@
+.accordion-card {
+	margin-bottom: 0.85rem;
+	padding: 0.9rem 1rem;
+	box-shadow: 0 16px 52px rgba(0, 0, 0, 0.22);
+}
+.accordion-card.open {
+	border-color: rgba(166, 108, 255, 0.3);
+}
+.accordion-card.attention {
+	border-color: rgba(246, 180, 80, 0.22);
+}
+.accordion-header {
+	align-items: center;
+	display: flex;
+	gap: var(--space-4);
+	justify-content: space-between;
+	min-height: 2.6rem;
+}
+.accordion-copy {
+	min-width: 0;
+}
+.accordion-title-row {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+.accordion-card h2 {
+	font-size: 1rem;
+	letter-spacing: -0.01em;
+	margin: 0;
+}
+.accordion-copy p {
+	color: var(--color-text-soft);
+	font-size: 0.86rem;
+	margin-top: 0.25rem;
+}
+.profile-line {
+	color: var(--color-muted) !important;
+	margin-top: 0.05rem !important;
+}
+.review-badge {
+	color: var(--color-success);
+	font-size: 0.82rem;
+	font-weight: 800;
+	align-items: center;
+	border-radius: 999px;
+	display: inline-flex;
+	gap: 0.45rem;
+	white-space: nowrap;
+}
+.review-badge > span {
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	display: inline-grid;
+	height: 1.18rem;
+	place-items: center;
+	width: 1.18rem;
+}
+.review-badge.warning {
+	color: var(--color-warning);
+}
+.accordion-actions {
+	align-items: center;
+	display: flex;
+	gap: 0.7rem;
+}
+.chevron-button {
+	background: transparent;
+	border: 0;
+	color: var(--color-text-soft);
+	min-height: 2rem;
+	min-width: 2rem;
+	padding: 0.2rem;
+}
+.button.small {
+	min-height: 2.35rem;
+	padding: 0.48rem 0.75rem;
+}
+.mapping-review-panel {
+	display: grid;
+	gap: 0.85rem;
+	margin-top: 0.85rem;
+}
+.mapping-copy-stack {
+	display: grid;
+	gap: 0.25rem;
+}
+.mapping-copy-stack p {
+	color: var(--color-text-soft);
+	font-size: 0.84rem;
+	margin: 0;
+}
+.mapping-filter-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+.filter-chip {
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid rgba(197, 209, 225, 0.1);
+	border-radius: 999px;
+	color: var(--color-text-soft);
+	font-size: 0.78rem;
+	min-height: 2rem;
+	padding: 0.35rem 0.7rem;
+}
+.filter-chip span {
+	color: var(--color-muted);
+	margin-left: 0.25rem;
+}
+.filter-chip.active {
+	background: rgba(151, 83, 229, 0.2);
+	border-color: rgba(151, 83, 229, 0.38);
+	color: var(--color-accent-soft);
+}
+.mapping-empty {
+	background: rgba(255, 255, 255, 0.025);
+	border: 1px solid rgba(197, 209, 225, 0.08);
+	border-radius: 0.58rem;
+	color: var(--color-muted);
+	margin: 0;
+	padding: 0.8rem;
+}
+.mapping-row-list {
+	display: grid;
+	gap: 0.5rem;
+}
+.mapping-review-row {
+	align-items: center;
+	background: rgba(255, 255, 255, 0.025);
+	border: 1px solid rgba(197, 209, 225, 0.09);
+	border-radius: 0.7rem;
+	display: grid;
+	gap: 0.75rem;
+	grid-template-columns: minmax(13rem, 0.95fr) minmax(15rem, 1.35fr) minmax(
+			18rem,
+			auto
+		);
+	padding: 0.62rem 0.7rem;
+}
+.mapping-review-row.candidate {
+	border-color: rgba(246, 180, 80, 0.18);
+}
+.mapping-review-row.unknown {
+	border-color: rgba(255, 107, 122, 0.26);
+}
+.mapping-review-row.override {
+	border-color: rgba(151, 83, 229, 0.34);
+}
+.mapping-review-row.ignored-known {
+	opacity: 0.9;
+}
+.mapping-row-identity,
+.mapping-row-decision,
+.mapping-row-control {
+	min-width: 0;
+}
+.mapping-row-identity {
+	display: grid;
+	gap: 0.18rem;
+}
+.mapping-row-identity strong {
+	color: var(--color-text);
+	font-size: 0.9rem;
+	line-height: 1.2;
+}
+.mapping-row-identity span {
+	color: var(--color-muted);
+	font-size: 0.74rem;
+	line-height: 1.25;
+}
+.mapping-row-decision {
+	display: grid;
+	gap: 0.16rem;
+}
+.mapping-row-control {
+	align-items: end;
+	display: grid;
+	gap: 0.42rem;
+	justify-items: end;
+}
+.mapping-current,
+.mapping-detail {
+	color: var(--color-text-soft);
+	font-size: 0.8rem;
+	line-height: 1.25;
+	margin: 0;
+}
+.mapping-detail.subtle {
+	color: var(--color-muted);
+	display: grid;
+	gap: 0.1rem;
+}
+.mapping-detail.override-copy {
+	color: var(--color-accent-soft);
+}
+.mapping-row-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.38rem;
+	justify-content: end;
+}
+.mapping-static-action {
+	background: rgba(148, 163, 184, 0.1);
+	border: 1px solid rgba(148, 163, 184, 0.14);
+	border-radius: 0.4rem;
+	color: var(--color-muted);
+	font-size: 0.74rem;
+	font-weight: 800;
+	padding: 0.34rem 0.55rem;
+}
+.mapping-piece-select {
+	align-items: center;
+	color: var(--color-muted);
+	display: inline-flex;
+	font-size: 0.74rem;
+	gap: 0.35rem;
+}
+.mapping-piece-select select {
+	min-height: 2.05rem;
+	min-width: 8.8rem;
+	padding: 0.3rem 0.58rem;
+}
+.ignore-action.quiet {
+	background: transparent;
+	border-color: rgba(148, 163, 184, 0.14);
+	color: var(--color-muted);
+}
+.mapping-status {
+	border-radius: 0.38rem;
+	display: inline-flex;
+	font-size: 0.76rem;
+	font-weight: 800;
+	padding: 0.18rem 0.55rem;
+	background: rgba(148, 163, 184, 0.1);
+	color: var(--color-text-soft);
+}
+.mapping-status.success {
+	background: rgba(101, 222, 119, 0.12);
+	color: var(--color-success);
+}
+.mapping-status.review {
+	background: rgba(246, 180, 80, 0.14);
+	color: var(--color-warning);
+}
+.mapping-status.info {
+	background: rgba(148, 163, 184, 0.12);
+	color: var(--color-muted);
+}
+.mapping-status.warning {
+	background: rgba(255, 107, 122, 0.14);
+	color: var(--color-danger);
+}
+.mapping-status.accent {
+	background: rgba(151, 83, 229, 0.16);
+	color: var(--color-accent-soft);
+}
+.mapping-details-grid {
+	display: grid;
+	gap: 0.85rem;
+	grid-template-columns: 1fr;
+	margin-top: 0.85rem;
+}
+.mini-card h3 {
+	font-size: 0.95rem;
+	margin: 0 0 0.75rem;
+}
+.override-metrics {
+	display: grid;
+	gap: 0.55rem;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.override-metrics span {
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid rgba(197, 209, 225, 0.09);
+	border-radius: 0.5rem;
+	color: var(--color-muted);
+	display: grid;
+	font-size: 0.74rem;
+	gap: 0.15rem;
+	padding: 0.55rem;
+	text-align: center;
+}
+.override-metrics strong {
+	color: var(--color-text);
+	font-size: 1.15rem;
+}
+.overrides-summary p {
+	font-size: 0.82rem;
+	margin: 0.65rem 0 0;
+}
+@media (max-width: 1180px) {
+	.mapping-details-grid,
+	.mapping-review-row {
+		grid-template-columns: 1fr;
+	}
+	.mapping-row-control {
+		align-items: start;
+		justify-items: start;
+	}
+	.mapping-row-actions {
+		justify-content: start;
+	}
+}

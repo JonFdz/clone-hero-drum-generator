@@ -62,6 +62,17 @@ After #76, it is consumed by `app.component`, `home`, `projects`, and
 until the generation feature owns its own hydration from the project-session
 payload, which requires consolidating `DesktopGenerateStateService` first.
 
+### Retained `services/source-review-model.ts` helpers
+
+The larger `services/source-review-model.ts` helper module remains in
+`services/` for now because it is still consumed by the transitional
+`SourceReviewOrchestratorService` and `DesktopPreviewService`, not only by the
+Source Review feature. Moving it fully into `features/source-review/` would
+invert dependency direction and widen churn while those services remain
+transitional. The clearly Source Review-owned `mapping.model.ts`,
+`source-review-view.model.ts`, and `source-review-format.util.ts` now live in
+`features/source-review/`.
+
 ### Full-app lint enablement
 
 ESLint covers `core/`, `shared/`, `features/`, the shell, and routes. Legacy
@@ -105,9 +116,13 @@ All `window.confirm` and `window.prompt` usage has been removed from Angular
 code. Replaced with:
 
 - `shared/confirmation-dialog` — accessible confirmation dialog (used by
-  Generate for overwrite confirmation).
-- `shared/text-input-dialog` — accessible text input dialog (used by Source
-  Review for mapping profile name).
+  Generate for overwrite confirmation and Source Review profile deletion).
+- `features/source-review/components/profile-metadata-dialog` — feature-local
+  accessible two-field dialog for mapping profile create/edit (name + optional
+  description).
+- `shared/text-input-dialog` remains the shared one-field primitive but is not
+  used by Source Review after the review fix because profile metadata requires
+  two fields.
 
 The architecture gate enforces this across all audited scope.
 
@@ -127,11 +142,52 @@ The architecture gate enforces this across all audited scope.
 The `buildMappingRows` function and `MappingRow` type now live in
 `features/source-review/mapping.model.ts` as a feature-owned shared model.
 
-### Build budget warnings — RESOLVED
+### Build budget warnings — RE-EVALUATED
 
-The `anyComponentStyle` budget was increased from 8 kB to 16 kB (warning) and
-32 kB (error) to accommodate the migrated external stylesheets for
-`source-review-page` (15.4 kB) and `generate-page` (8.2 kB). No warnings remain.
+After the Source Review split, no Source Review component needs the relaxed
+budget anymore; the largest Source Review stylesheet is now the extracted
+`source-review-mapping-review.component.css` at ~5.8 kB.
+
+However, the stricter pre-#76 `anyComponentStyle` warning budget (8 kB) still
+cannot be restored yet because `features/generation/generate-page.component.css`
+remains ~9.8 kB after the approved #76 Generate split. The current production
+budget therefore remains at:
+
+- warning: `16kb`
+- error: `32kb`
+
+Keep the raised threshold only until Generate is reduced further; re-tighten it
+when the largest remaining component stylesheet drops below the stricter target.
+
+### Source Review component split + Mapping Profiles CRUD — RESOLVED
+
+Source Review is no longer a single UI monolith. It is split into focused
+feature-owned presentational components for:
+
+1. selected source summary;
+2. source / combined summaries;
+3. track candidates;
+4. mapping review;
+5. mapping profiles;
+6. issues / warnings;
+7. advanced JSON;
+8. action area.
+
+The page now acts as a thin coordinator and converts workflow/service state into
+presentation-ready view models. Mapping Profile behavior has been restored
+inside Source Review without reviving the legacy Mapping page:
+
+- list all profiles;
+- select a profile;
+- show selected name/description/override count;
+- choose `merge` or `replace`;
+- apply the selected profile (never the first profile by accident);
+- create from current overrides;
+- update selected profile from current overrides;
+- edit selected profile metadata;
+- delete with confirmation;
+- surface typed profile-operation failures;
+- call the orchestration renormalization path after profile apply / override changes.
 
 ### Source Review `mapping-page.model` import — RESOLVED
 

@@ -1,0 +1,83 @@
+<section
+	class="card accordion-card issues-card"
+	[class.open]="open"
+	[class.attention]="needAttention || warningCount > 0"
+>
+	<div class="accordion-header issues-header">
+		<div class="issue-icon" aria-hidden="true">△</div>
+		<div class="accordion-copy">
+			<h2>Issues & Warnings</h2>
+			<p>{{ summary }}</p>
+			@if (!open && preview) {
+				<p class="issue-preview">{{ preview }}</p>
+			}
+		</div>
+		<div class="accordion-actions">
+			<button
+				class="button secondary small"
+				type="button"
+				(click)="toggleOpen.emit()"
+			>
+				{{ actionLabel }}
+			</button>
+			<button
+				class="chevron-button"
+				type="button"
+				(click)="toggleOpen.emit()"
+				[attr.aria-label]="actionLabel"
+			>
+				{{ open ? "⌃" : "⌄" }}
+			</button>
+		</div>
+	</div>
+	@if (open) {
+		<div class="issues-panel">
+			<section class="issue-group warnings-group">
+				<h3>Warnings</h3>
+				@if (warningIssues.length === 0) {
+					<p class="empty-group">No warnings.</p>
+				}
+				<ul class="issues-list">
+					@for (
+						issue of warningIssues;
+						track issue.severity + issue.code + issue.message
+					) {
+						<li
+							[class.warning]="issue.severity === 'warning'"
+							[class.error]="issue.severity === 'error'"
+						>
+							<strong>{{ issue.label }}</strong
+							><span>{{ issue.message }}</span>
+							@if (issue.isMapping) {
+								<button
+									class="button ghost small"
+									type="button"
+									(click)="reviewInMapping.emit()"
+								>
+									Review in Mapping Review
+								</button>
+							}
+						</li>
+					}
+				</ul>
+			</section>
+			<section class="issue-group info-group">
+				<h3>Unknowns / Info</h3>
+				@if (infoIssues.length === 0) {
+					<p class="empty-group">No info messages.</p>
+				}
+				<ul class="issues-list">
+					@for (
+						issue of infoIssues;
+						track issue.severity + issue.code + issue.message
+					) {
+						<li class="info">
+							<strong>{{ issue.label }}</strong
+							><span>{{ issue.message }}</span>
+						</li>
+					}
+				</ul>
+			</section>
+		</div>
+	}
+</section>

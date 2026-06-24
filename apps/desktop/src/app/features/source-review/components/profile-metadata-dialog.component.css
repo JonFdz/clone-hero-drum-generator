@@ -1,0 +1,67 @@
+.dialog-backdrop {
+	align-items: center;
+	background: rgba(3, 6, 10, 0.72);
+	display: grid;
+	inset: 0;
+	justify-items: center;
+	padding: 1.5rem;
+	position: fixed;
+	z-index: 30;
+}
+.dialog {
+	background: linear-gradient(
+		180deg,
+		rgba(28, 36, 47, 0.98),
+		rgba(13, 17, 23, 0.98)
+	);
+	border: 1px solid rgba(197, 209, 225, 0.18);
+	border-radius: 1rem;
+	box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46);
+	max-width: 42rem;
+	padding: 1.5rem;
+	width: min(100%, 42rem);
+}
+h2 {
+	font-size: 1.35rem;
+	margin-bottom: 0.75rem;
+}
+p {
+	color: var(--color-text-soft);
+	margin: 0.35rem 0;
+}
+.field {
+	display: grid;
+	gap: 0.4rem;
+	margin: 0.75rem 0;
+}
+.field-label {
+	color: var(--color-muted);
+	font-size: 0.82rem;
+}
+.field-input {
+	background: rgba(255, 255, 255, 0.035);
+	border: 1px solid var(--color-border);
+	border-radius: 0.6rem;
+	color: var(--color-text);
+	font-size: 1rem;
+	padding: 0.6rem 0.75rem;
+}
+.field-input:focus-visible {
+	border-color: var(--color-accent, #6ea8ff);
+	outline: 2px solid var(--color-accent, #6ea8ff);
+}
+.dialog-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	justify-content: end;
+	margin-top: 1rem;
+}
+.button:disabled {
+	opacity: 0.5;
+}
+.button.ghost {
+	background: transparent;
+	border-color: var(--color-border);
+	color: var(--color-text-soft);
+}

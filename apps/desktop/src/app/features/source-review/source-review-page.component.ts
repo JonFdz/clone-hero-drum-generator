@@ -10,15 +10,14 @@ import {
 import { FormsModule } from "@angular/forms";
 import { Router, RouterModule } from "@angular/router";
 import type {
+	MappingOverrideProfile,
 	MappingProfileApplyMode,
 	ProjectIssue,
 	ProjectMappingOverrides,
-	TrackCandidate,
 } from "@chdg/project/browser";
 import { applyMappingProfile } from "@chdg/project/browser";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { SourceReviewOrchestratorService } from "../../services/source-review-orchestrator.service";
-import { formatTrackNoteCount } from "../../services/track-note-count";
 import {
 	MAPPING_REVIEW_FILTERS,
 	buildMappingReviewRowView,
@@ -34,51 +33,68 @@ import {
 } from "../../services/source-review-model";
 import { buildMappingRows, type MappingRow } from "./mapping.model";
 import { MappingProfileService } from "./mapping-profile.service";
-import { TextInputDialogComponent } from "../../shared/text-input-dialog/text-input-dialog.component";
+import {
+	APPLY_MODE_OPTIONS,
+	type ApplyModeOption,
+	type CombinedSummaryView,
+	type DisplayIssueView,
+	type MappingFilterOption,
+	type MappingProfileView,
+	type MappingReviewRowViewWithControls,
+	type PieceSummaryEntry,
+	type SelectedSourceView,
+	type SummaryFact,
+	type TrackRowView,
+} from "./source-review-view.model";
+import {
+	MAPPING_PIECE_OPTIONS,
+	MAPPING_PIECES,
+	compactFileName,
+	confidenceLabel,
+	issueGroupKey,
+	issueLabel,
+	isMappingIssue,
+	mappingSourceKind,
+	noteCountLabel,
+} from "./source-review-format.util";
+import { ConfirmationDialogComponent } from "../../shared/confirmation-dialog/confirmation-dialog.component";
+import { ProfileMetadataDialogComponent } from "./components/profile-metadata-dialog.component";
+import { SourceReviewSelectedSourceComponent } from "./components/source-review-selected-source.component";
+import { SourceReviewSummariesComponent } from "./components/source-review-summaries.component";
+import { SourceReviewTrackListComponent } from "./components/source-review-track-list.component";
+import { SourceReviewMappingReviewComponent } from "./components/source-review-mapping-review.component";
+import { SourceReviewMappingProfilesComponent } from "./components/source-review-mapping-profiles.component";
+import { SourceReviewIssuesComponent } from "./components/source-review-issues.component";
+import { SourceReviewAdvancedComponent } from "./components/source-review-advanced.component";
+import { SourceReviewActionAreaComponent } from "./components/source-review-action-area.component";
 
-const PIECES = [
-	"kick",
-	"snare",
-	"hihat_closed",
-	"hihat_open",
-	"crash",
-	"ride",
-	"tom_high",
-	"tom_mid",
-	"tom_floor",
-] as const;
+type IssueSeverityCounts = { errors: number; warnings: number; info: number };
 
-type IssueSeverityCounts = {
-	errors: number;
-	warnings: number;
-	info: number;
+const severityRank: Record<ProjectIssue["severity"], number> = {
+	error: 0,
+	warning: 1,
+	info: 2,
 };
-
-type DisplayIssue = ProjectIssue & {
-	count: number;
-};
-
-const PIECE_LABELS: Record<string, string> = {
-	kick: "Kick",
-	snare: "Snare",
-	hihat_closed: "Closed Hi-Hat",
-	hihat_open: "Open Hi-Hat",
-	crash: "Crash",
-	ride: "Ride",
-	tom_high: "High Tom",
-	tom_mid: "Mid Tom",
-	tom_floor: "Floor Tom",
-};
-
-function formatNumber(value: number): string {
-	return new Intl.NumberFormat().format(value);
-}
 
 @Component({
 	selector: "chdg-source-review-page",
 	standalone: true,
 	changeDetection: ChangeDetectionStrategy.OnPush,
-	imports: [CommonModule, FormsModule, RouterModule, TextInputDialogComponent],
+	imports: [
+		CommonModule,
+		FormsModule,
+		RouterModule,
+		ConfirmationDialogComponent,
+		ProfileMetadataDialogComponent,
+		SourceReviewSelectedSourceComponent,
+		SourceReviewSummariesComponent,
+		SourceReviewTrackListComponent,
+		SourceReviewMappingReviewComponent,
+		SourceReviewMappingProfilesComponent,
+		SourceReviewIssuesComponent,
+		SourceReviewAdvancedComponent,
+		SourceReviewActionAreaComponent,
+	],
 	templateUrl: "./source-review-page.component.html",
 	styleUrl: "./source-review-page.component.css",
 })
@@ -90,18 +106,28 @@ export class SourceReviewPageComponent implements OnInit {
 
 	readonly state = this.generateState.state;
 	readonly status = this.orchestrator.status;
-	readonly pieces = PIECES;
-	readonly mappingFilters = MAPPING_REVIEW_FILTERS;
 	readonly profiles = this.mappingProfileService.profiles;
+	readonly profileError = this.mappingProfileService.profileError;
+	readonly pieces = MAPPING_PIECES;
+	readonly pieceOptions = MAPPING_PIECE_OPTIONS;
+	readonly mappingFilters: MappingFilterOption[] = MAPPING_REVIEW_FILTERS.map(
+		(f) => ({ id: f.id, label: f.label }),
+	);
+	readonly applyModeOptions: ApplyModeOption[] = APPLY_MODE_OPTIONS;
 
+	readonly selectedProfileId = signal<string | null>(null);
+	readonly applyMode = signal<MappingProfileApplyMode>("merge");
+	readonly jsonOpen = signal(false);
 	readonly mappingUserOpen = signal(false);
 	readonly issuesUserOpen = signal(false);
-	readonly jsonOpen = signal(false);
 	readonly selectedMappingFilter = signal<MappingReviewFilter | undefined>(
 		undefined,
 	);
-	readonly applyMode: MappingProfileApplyMode = "merge";
-	readonly showProfileDialog = signal(false);
+
+	// Profile dialog state
+	readonly showCreateProfileDialog = signal(false);
+	readonly showEditProfileDialog = signal(false);
+	readonly showDeleteProfileConfirm = signal(false);
 
 	// --- Computed presentation state ---
 
@@ -135,12 +161,97 @@ export class SourceReviewPageComponent implements OnInit {
 				: "Unknown";
 	});
 
-	readonly analyzedAt = computed(() => {
-		const value =
-			this.state().analysisCache?.normalizedAt ??
-			this.state().analysisCache?.inspectedAt;
-		return value ? new Date(value).toLocaleString() : "Not analyzed yet";
+	readonly selectedSource = computed<SelectedSourceView>(() => ({
+		sourceKind: this.state().sourceKind,
+		sourceKindLabel: this.sourceKindLabel(),
+		fileName: compactFileName(this.state().sourcePath),
+		filePath: this.state().sourcePath ?? "",
+		analyzedAt:
+			(this.state().analysisCache?.normalizedAt ??
+			this.state().analysisCache?.inspectedAt)
+				? new Date(
+						this.state().analysisCache?.normalizedAt ??
+							this.state().analysisCache?.inspectedAt ??
+							"",
+					).toLocaleString()
+				: "Not analyzed yet",
+	}));
+
+	readonly sourceSummaryFacts = computed<SummaryFact[]>(() => {
+		const inspection = this.state().inspection;
+		return [
+			{ icon: "▧", label: "Source Type", value: this.sourceKindLabel() },
+			{
+				icon: "♬",
+				label: "Resolution (PPQ)",
+				value: String(inspection?.resolution ?? "n/a"),
+			},
+			{
+				icon: "⌁",
+				label: "Tempo Count",
+				value: String(inspection?.tempos?.length ?? "n/a"),
+			},
+			{
+				icon: "♯",
+				label: "Time Signatures",
+				value: String(inspection?.timeSignatures?.length ?? "n/a"),
+			},
+			{ icon: "◴", label: "Sections", value: this.sectionsLabel() },
+			{
+				icon: "☷",
+				label: "Total Tracks",
+				value: String(inspection?.tracks?.length ?? "n/a"),
+			},
+		];
 	});
+
+	readonly combinedSummary = computed<CombinedSummaryView>(() => {
+		const preview = this.state().normalizationPreview;
+		const summary = preview?.mergeSummary;
+		const duplicatePercent =
+			summary && summary.inputHitCount > 0
+				? (summary.duplicateHitCount / summary.inputHitCount) * 100
+				: 0;
+		return {
+			selectedTracks: this.state().selectedTracks.length,
+			hitCountLabel: preview ? String(preview.hitCount) : "0",
+			duplicatesLabel: summary
+				? `${summary.duplicateHitCount} (${duplicatePercent.toFixed(1)}%)`
+				: "0",
+			unknownCountLabel: String(this.unknownCount()),
+			warningCountLabel: `${this.warningCount()} issues`,
+		};
+	});
+
+	readonly pieceEntries = computed<PieceSummaryEntry[]>(() => {
+		const summary = this.state().normalizationPreview?.pieceSummary ?? {};
+		const fmt = (n: number) => new Intl.NumberFormat().format(n);
+		return [
+			["kick", "Kick"],
+			["snare", "Snare"],
+			["hihat_closed", "Hi-Hat Closed"],
+			["hihat_open", "Hi-Hat Open"],
+			["crash", "Crash"],
+			["ride", "Ride"],
+			["toms", "Toms"],
+		].map(([key, label]) => ({
+			kind: key,
+			label,
+			count: fmt(
+				key === "toms"
+					? (summary["tom_high"] ?? 0) +
+							(summary["tom_mid"] ?? 0) +
+							(summary["tom_floor"] ?? 0)
+					: (summary[key as keyof typeof summary] ?? 0),
+			),
+		}));
+	});
+
+	readonly buildingMessage = computed(() =>
+		this.state().status === "normalizing"
+			? "Building normalized preview…"
+			: "Waiting for normalized preview…",
+	);
 
 	readonly mappingRows = computed<MappingRow[]>(() =>
 		buildMappingRows(
@@ -164,12 +275,18 @@ export class SourceReviewPageComponent implements OnInit {
 			}),
 	);
 
-	readonly filteredMappingRows = computed<MappingReviewRowView[]>(() =>
-		filterMappingReviewRows(
-			this.mappingRows(),
-			this.state().mappingOverrides,
-			this.mappingFilter(),
-		),
+	readonly filteredMappingRows = computed<MappingReviewRowViewWithControls[]>(
+		() =>
+			filterMappingReviewRows(
+				this.mappingRows(),
+				this.state().mappingOverrides,
+				this.mappingFilter(),
+			).map((row) => ({
+				...row,
+				selectValue: this.overrideSelectValue(row.key),
+				selectOptions: this.pieceOptions,
+				showIgnoreAction: this.showIgnoreAction(row),
+			})),
 	);
 
 	readonly mappingFilterCountRecord = computed<Record<string, number>>(() => {
@@ -186,18 +303,54 @@ export class SourceReviewPageComponent implements OnInit {
 		return record;
 	});
 
-	readonly trackRows = computed<TrackCandidate[]>(() => {
+	readonly trackRows = computed<TrackRowView[]>(() => {
 		const selected = new Set(this.state().selectedTracks);
-		return [...(this.state().inspection?.tracks ?? [])].sort((left, right) => {
-			const leftSelected = selected.has(left.index) ? 0 : 1;
-			const rightSelected = selected.has(right.index) ? 0 : 1;
-			return leftSelected - rightSelected || left.index - right.index;
-		});
+		return [...(this.state().inspection?.tracks ?? [])]
+			.sort((left, right) => {
+				const leftSelected = selected.has(left.index) ? 0 : 1;
+				const rightSelected = selected.has(right.index) ? 0 : 1;
+				return leftSelected - rightSelected || left.index - right.index;
+			})
+			.map((track) => ({
+				index: track.index,
+				name: track.name || "Untitled",
+				noteCountLabel: noteCountLabel(track.noteCount),
+				confidenceLabel: confidenceLabel(track.strength),
+				confidenceClass: track.strength,
+				statusLabel: this.trackStatusLabel(
+					track.index,
+					selected.has(track.index),
+				),
+				statusClass: selected.has(track.index) ? "auto" : track.strength,
+				selected: selected.has(track.index),
+			}));
 	});
 
 	readonly selectedTrackCountLabel = computed(() => {
 		const count = this.state().selectedTracks.length;
 		return count === 1 ? "1 track selected" : `${count} tracks selected`;
+	});
+
+	readonly trackNotesSummaryLabel = computed(() => {
+		let knownTotal = 0;
+		let knownCount = 0;
+		let unknown = 0;
+		for (const track of this.trackRows()) {
+			const noteCount = this.state().inspection?.tracks?.find(
+				(t) => t.index === track.index,
+			)?.noteCount;
+			if (typeof noteCount === "number" && Number.isFinite(noteCount)) {
+				knownTotal += noteCount;
+				knownCount += 1;
+			} else {
+				unknown += 1;
+			}
+		}
+		if (unknown === 0)
+			return `Total Notes: ${new Intl.NumberFormat().format(knownTotal)}`;
+		if (knownCount > 0)
+			return `Known Notes: ${new Intl.NumberFormat().format(knownTotal)}`;
+		return "Total Notes: n/a";
 	});
 
 	readonly reviewIssues = computed<ProjectIssue[]>(() => [
@@ -206,39 +359,39 @@ export class SourceReviewPageComponent implements OnInit {
 		...(this.state().normalizationPreview?.mergeSummary?.issues ?? []),
 	]);
 
-	readonly sortedReviewIssues = computed<ProjectIssue[]>(() => {
-		const severityRank: Record<ProjectIssue["severity"], number> = {
-			error: 0,
-			warning: 1,
-			info: 2,
-		};
-		return [...this.reviewIssues()].sort(
-			(left, right) =>
-				severityRank[left.severity] - severityRank[right.severity] ||
-				left.code.localeCompare(right.code) ||
-				left.message.localeCompare(right.message),
+	readonly displayIssues = computed<DisplayIssueView[]>(() => {
+		const sorted = [...this.reviewIssues()].sort(
+			(a, b) =>
+				severityRank[a.severity] - severityRank[b.severity] ||
+				a.code.localeCompare(b.code) ||
+				a.message.localeCompare(b.message),
 		);
-	});
-
-	readonly displayIssues = computed<DisplayIssue[]>(() => {
-		const grouped = new Map<string, DisplayIssue>();
-		for (const issue of this.sortedReviewIssues()) {
-			const key = this.issueGroupKey(issue);
+		const grouped = new Map<string, DisplayIssueView>();
+		for (const issue of sorted) {
+			const key = issueGroupKey(issue);
 			const existing = grouped.get(key);
 			if (existing) {
 				existing.count += 1;
 			} else {
-				grouped.set(key, { ...issue, count: 1 });
+				grouped.set(key, {
+					severity: issue.severity,
+					code: issue.code,
+					message: issue.message,
+					count: 1,
+					label: "",
+					isMapping: isMappingIssue(issue),
+				});
 			}
 		}
-		return Array.from(grouped.values());
+		const rows = Array.from(grouped.values());
+		for (const row of rows) row.label = issueLabel(row);
+		return rows;
 	});
 
-	readonly warningIssues = computed<DisplayIssue[]>(() =>
+	readonly warningIssues = computed<DisplayIssueView[]>(() =>
 		this.displayIssues().filter((issue) => issue.severity !== "info"),
 	);
-
-	readonly infoIssues = computed<DisplayIssue[]>(() =>
+	readonly infoIssues = computed<DisplayIssueView[]>(() =>
 		this.displayIssues().filter((issue) => issue.severity === "info"),
 	);
 
@@ -278,10 +431,11 @@ export class SourceReviewPageComponent implements OnInit {
 	});
 
 	readonly issuePreview = computed<string | undefined>(() => {
-		const issue = this.sortedReviewIssues().find(
-			(item) => item.severity === "error" || item.severity === "warning",
-		);
-		if (issue) return `${issue.code} — ${issue.message}`;
+		const issue = [...this.reviewIssues()].sort(
+			(a, b) => severityRank[a.severity] - severityRank[b.severity],
+		)[0];
+		if (issue && (issue.severity === "error" || issue.severity === "warning"))
+			return `${issue.code} — ${issue.message}`;
 		const info = this.issueSeverityCounts().info;
 		return info > 0 ? `No blocking issues · ${info} info messages` : undefined;
 	});
@@ -289,11 +443,9 @@ export class SourceReviewPageComponent implements OnInit {
 	readonly issuesNeedAttention = computed(() =>
 		this.reviewIssues().some((issue) => issue.severity === "error"),
 	);
-
 	readonly issuesOpen = computed(
 		() => this.issuesNeedAttention() || this.issuesUserOpen(),
 	);
-
 	readonly issuesActionLabel = computed(() =>
 		this.issuesOpen() && !this.issuesNeedAttention()
 			? "Hide Details"
@@ -306,14 +458,12 @@ export class SourceReviewPageComponent implements OnInit {
 			overrides: this.state().mappingOverrides,
 		}),
 	);
-
 	readonly mappingAttentionState = computed(() =>
 		mappingAttentionState({
 			rows: this.mappingRows(),
 			overrides: this.state().mappingOverrides,
 		}),
 	);
-
 	readonly unknownCount = computed(() => this.mappingReviewCounts().unknown);
 	readonly candidateCount = computed(
 		() => this.mappingReviewCounts().candidates,
@@ -321,29 +471,25 @@ export class SourceReviewPageComponent implements OnInit {
 	readonly ignoredKnownCount = computed(
 		() => this.mappingReviewCounts().ignoredKnown,
 	);
-
-	readonly mappingNeedsAttention = computed(() => {
-		const state = this.mappingAttentionState();
-		return state === "manual-mapping-needed" || state === "review-recommended";
-	});
-
+	readonly mappingNeedsAttention = computed(
+		() =>
+			this.mappingAttentionState() === "manual-mapping-needed" ||
+			this.mappingAttentionState() === "review-recommended",
+	);
 	readonly mappingShouldOpen = computed(() =>
 		shouldExpandMappingReview({
 			normalizationPreview: this.state().normalizationPreview,
 			overrides: this.state().mappingOverrides,
 		}),
 	);
-
 	readonly mappingOpen = computed(
 		() => this.mappingShouldOpen() || this.mappingUserOpen(),
 	);
-
 	readonly mappingActionLabel = computed(() =>
 		this.mappingOpen() && !this.mappingShouldOpen()
 			? "Hide Mapping"
 			: "Review Mapping",
 	);
-
 	readonly mappingStatusLabel = computed(() => {
 		switch (this.mappingAttentionState()) {
 			case "manual-mapping-needed":
@@ -356,112 +502,87 @@ export class SourceReviewPageComponent implements OnInit {
 				return "Automatic mapping ready";
 		}
 	});
-
 	readonly mappingSummary = computed(() => {
 		const coverage = this.state().normalizationPreview?.mappingCoverage;
 		const overrides = this.overrideCount();
 		const pending = this.mappingReviewCounts();
+		const fmt = (n: number) => new Intl.NumberFormat().format(n);
 		const pendingLabel =
 			pending.unresolvedCandidates > 0 || pending.unresolvedUnknown > 0
-				? ` · Pending review: ${formatNumber(pending.unresolvedCandidates)} candidates · ${formatNumber(pending.unresolvedUnknown)} unknown`
+				? ` · Pending review: ${fmt(pending.unresolvedCandidates)} candidates · ${fmt(pending.unresolvedUnknown)} unknown`
 				: "";
 		if (coverage) {
-			return `Mapped events ${formatNumber(coverage.mappedEventCount)} · Candidate events ${formatNumber(coverage.candidateEventCount)} · Ignored known events ${formatNumber(coverage.ignoredEventCount)} · Unknown events ${formatNumber(coverage.unknownEventCount)} · ${overrides} overrides${pendingLabel}`;
+			return `Mapped events ${fmt(coverage.mappedEventCount)} · Candidate events ${fmt(coverage.candidateEventCount)} · Ignored known events ${fmt(coverage.ignoredEventCount)} · Unknown events ${fmt(coverage.unknownEventCount)} · ${overrides} overrides${pendingLabel}`;
 		}
 		const rows = this.mappingRows();
 		const unknown = this.unknownCount();
 		return `${rows.length - unknown} mapped sources · ${unknown} unknown · ${overrides} overrides${pendingLabel}`;
 	});
-
 	readonly mappingCoverageSummary = computed<string | undefined>(() => {
 		const coverage = this.state().normalizationPreview?.mappingCoverage;
 		if (!coverage) return undefined;
 		return `Atlas ${coverage.atlasVersion} · Sources: ${coverage.mappedSourceCount} mapped, ${coverage.candidateSourceCount} candidates, ${coverage.ignoredSourceCount} ignored known, ${coverage.unknownSourceCount} unknown`;
 	});
-
 	readonly mappingEmptyFilterMessage = computed(() =>
 		this.mappingFilter() === "needs-review"
 			? "All mapping decisions are resolved."
 			: "No rows match this filter.",
 	);
+	readonly rowsEmpty = computed(() => this.mappingRows().length === 0);
 
 	readonly overrideCount = computed(
 		() => Object.keys(this.state().mappingOverrides).length,
 	);
-
 	readonly ignoredCount = computed(
 		() =>
 			Object.values(this.state().mappingOverrides).filter(
 				(override) => override.target.kind === "ignore",
 			).length,
 	);
-
 	readonly changedMappingCount = computed(
 		() =>
 			Object.values(this.state().mappingOverrides).filter(
 				(override) => override.target.kind === "piece",
 			).length,
 	);
-
 	readonly warningCount = computed(() => this.issueSeverityCounts().warnings);
 
-	readonly duplicateLabel = computed(() => {
-		const summary = this.state().normalizationPreview?.mergeSummary;
-		if (!summary) return "0";
-		const percent =
-			summary.inputHitCount > 0
-				? (summary.duplicateHitCount / summary.inputHitCount) * 100
-				: 0;
-		return `${formatNumber(summary.duplicateHitCount)} (${percent.toFixed(1)}%)`;
-	});
+	// --- Mapping profile state ---
 
-	readonly pieceEntries = computed(() => {
-		const summary = this.state().normalizationPreview?.pieceSummary ?? {};
-		return [
-			["kick", "Kick"],
-			["snare", "Snare"],
-			["hihat_closed", "Hi-Hat Closed"],
-			["hihat_open", "Hi-Hat Open"],
-			["crash", "Crash"],
-			["ride", "Ride"],
-			["toms", "Toms"],
-		].map(([key, label]) => ({
-			kind: key,
-			label,
-			count:
-				key === "toms"
-					? (summary["tom_high"] ?? 0) +
-						(summary["tom_mid"] ?? 0) +
-						(summary["tom_floor"] ?? 0)
-					: (summary[key] ?? 0),
-		}));
-	});
-
-	readonly trackNotesSummaryLabel = computed(() => {
-		let knownTotal = 0;
-		let knownCount = 0;
-		let unknownCount = 0;
-		for (const track of this.trackRows()) {
-			if (
-				typeof track.noteCount === "number" &&
-				Number.isFinite(track.noteCount)
-			) {
-				knownTotal += track.noteCount;
-				knownCount += 1;
-			} else {
-				unknownCount += 1;
-			}
-		}
-		if (unknownCount === 0) return `Total Notes: ${formatNumber(knownTotal)}`;
-		if (knownCount > 0) return `Known Notes: ${formatNumber(knownTotal)}`;
-		return "Total Notes: n/a";
-	});
-
-	readonly profileStatus = computed(() =>
-		this.profiles().length === 0
-			? "No profile applied"
-			: `${this.profiles().length} local profiles available`,
+	readonly profileViews = computed<MappingProfileView[]>(() =>
+		this.profiles().map((profile) => ({
+			id: profile.id,
+			name: profile.name,
+			description: profile.description,
+			overrideCount: this.mappingProfileService.overrideCountOf(profile),
+		})),
 	);
+
+	readonly selectedProfile = computed<MappingOverrideProfile | null>(() => {
+		const id = this.selectedProfileId();
+		if (id === null) return null;
+		return this.profiles().find((p) => p.id === id) ?? null;
+	});
+
+	readonly selectedProfileView = computed<MappingProfileView | null>(() => {
+		const id = this.selectedProfileId();
+		if (id === null) return null;
+		return this.profileViews().find((p) => p.id === id) ?? null;
+	});
+
+	readonly profileStatus = computed(() => {
+		const profiles = this.profiles();
+		const selected = this.selectedProfile();
+		if (selected) return `Selected: ${selected.name}`;
+		return profiles.length === 0
+			? "No profile selected"
+			: `${profiles.length} local profile(s) available`;
+	});
+
+	readonly editProfileInitial = computed(() => ({
+		name: this.selectedProfile()?.name ?? "",
+		description: this.selectedProfile()?.description ?? "",
+	}));
 
 	readonly analysisJson = computed(() =>
 		JSON.stringify(
@@ -488,31 +609,23 @@ export class SourceReviewPageComponent implements OnInit {
 
 	async ngOnInit(): Promise<void> {
 		await this.mappingProfileService.loadProfiles();
+		this.syncSelectedProfile();
 		await this.orchestrator.reviewCurrentSource();
 	}
 
 	// --- Event handlers ---
 
-	async refreshAnalysis(): Promise<void> {
+	refreshAnalysis(): void {
 		this.generateState.setAnalysisCache(undefined);
-		await this.orchestrator.reviewCurrentSource();
+		void this.orchestrator.reviewCurrentSource();
+	}
+
+	toggleJson(): void {
+		this.jsonOpen.update((open) => !open);
 	}
 
 	async toggleTrack(trackIndex: number): Promise<void> {
 		await this.orchestrator.toggleTrack(trackIndex);
-	}
-
-	isSelected(trackIndex: number): boolean {
-		return this.state().selectedTracks.includes(trackIndex);
-	}
-
-	trackStatus(trackIndex: number, strength: string): string {
-		if (this.isSelected(trackIndex)) {
-			return this.state().selectedTracks.length === 1
-				? "Auto-selected"
-				: "Selected";
-		}
-		return strength === "weak" ? "Low confidence" : "Available";
 	}
 
 	setMappingFilter(filter: MappingReviewFilter): void {
@@ -536,10 +649,11 @@ export class SourceReviewPageComponent implements OnInit {
 	}
 
 	async setOverride(
-		row: MappingRow | MappingReviewRowView,
+		row: MappingRow | MappingReviewRowViewWithControls,
 		value: string,
 	): Promise<void> {
 		const current = { ...this.state().mappingOverrides };
+		const sourceKind = mappingSourceKind(row);
 		if (!value) {
 			delete current[row.key];
 			this.generateState.setMappingOverrides(current);
@@ -549,148 +663,192 @@ export class SourceReviewPageComponent implements OnInit {
 		current[row.key] =
 			value === "ignore"
 				? {
-						sourceKind: row.sourceKind ?? this.mappingSourceKind(row),
+						sourceKind,
 						key: row.key,
 						target: { kind: "ignore" as const },
 					}
 				: {
-						sourceKind: row.sourceKind ?? this.mappingSourceKind(row),
+						sourceKind,
 						key: row.key,
 						target: {
 							kind: "piece" as const,
-							piece: value as (typeof PIECES)[number],
+							piece: value as (typeof MAPPING_PIECES)[number],
 						},
 					};
 		this.generateState.setMappingOverrides(current as ProjectMappingOverrides);
 		await this.orchestrator.mappingChanged();
 	}
 
-	async applySuggestion(row: MappingReviewRowView): Promise<void> {
+	async applySuggestion(row: MappingReviewRowViewWithControls): Promise<void> {
 		if (!row.suggestedPiece) return;
 		await this.setOverride(row, row.suggestedPiece);
 	}
 
-	async ignoreRow(row: MappingReviewRowView): Promise<void> {
+	async ignoreRow(row: MappingReviewRowViewWithControls): Promise<void> {
 		await this.setOverride(row, "ignore");
 	}
 
-	async mapRow(row: MappingReviewRowView, piece: string): Promise<void> {
-		if (!piece) return;
-		await this.setOverride(row, piece);
+	async mapRow(
+		row: MappingReviewRowViewWithControls,
+		value: string,
+	): Promise<void> {
+		if (!value) return;
+		await this.setOverride(row, value);
 	}
 
-	async resetOverride(row: MappingReviewRowView): Promise<void> {
+	async resetOverride(row: MappingReviewRowViewWithControls): Promise<void> {
 		await this.setOverride(row, "");
 	}
 
-	openProfileDialog(): void {
-		this.showProfileDialog.set(true);
+	// --- Mapping profile handlers ---
+
+	selectProfile(profileId: string): void {
+		this.selectedProfileId.set(profileId);
 	}
 
-	cancelProfileDialog(): void {
-		this.showProfileDialog.set(false);
+	setApplyMode(mode: MappingProfileApplyMode): void {
+		this.applyMode.set(mode);
 	}
 
-	async confirmSaveProfile(name: string): Promise<void> {
-		this.showProfileDialog.set(false);
-		if (!name) return;
+	openCreateProfileDialog(): void {
+		this.showCreateProfileDialog.set(true);
+	}
+
+	cancelCreateProfileDialog(): void {
+		this.showCreateProfileDialog.set(false);
+	}
+
+	async confirmCreateProfile(intent: {
+		name: string;
+		description?: string;
+	}): Promise<void> {
+		this.showCreateProfileDialog.set(false);
+		if (!intent.name) return;
 		const now = new Date().toISOString();
-		await this.mappingProfileService.saveProfile({
+		const result = await this.mappingProfileService.saveProfile({
 			id: crypto.randomUUID(),
-			name,
+			name: intent.name,
+			description: intent.description,
 			overrides: { ...this.state().mappingOverrides },
 			createdAt: now,
 			updatedAt: now,
 		});
+		if (result.ok) this.syncSelectedProfile(intent.name);
 	}
 
-	async applyFirstProfile(): Promise<void> {
-		const profile = this.profiles()[0];
+	openEditProfileDialog(): void {
+		if (!this.selectedProfile()) return;
+		this.showEditProfileDialog.set(true);
+	}
+
+	cancelEditProfileDialog(): void {
+		this.showEditProfileDialog.set(false);
+	}
+
+	async confirmEditProfile(intent: {
+		name: string;
+		description?: string;
+	}): Promise<void> {
+		this.showEditProfileDialog.set(false);
+		const profile = this.selectedProfile();
+		if (!profile || !intent.name) return;
+		await this.mappingProfileService.saveProfile({
+			...profile,
+			name: intent.name,
+			description: intent.description,
+			updatedAt: new Date().toISOString(),
+		});
+	}
+
+	async updateSelectedFromCurrent(): Promise<void> {
+		const profile = this.selectedProfile();
+		if (!profile) return;
+		await this.mappingProfileService.saveProfile({
+			...profile,
+			overrides: { ...this.state().mappingOverrides },
+			updatedAt: new Date().toISOString(),
+		});
+	}
+
+	requestDeleteProfile(): void {
+		if (!this.selectedProfile()) return;
+		this.showDeleteProfileConfirm.set(true);
+	}
+
+	cancelDeleteProfile(): void {
+		this.showDeleteProfileConfirm.set(false);
+	}
+
+	async confirmDeleteProfile(): Promise<void> {
+		this.showDeleteProfileConfirm.set(false);
+		const profile = this.selectedProfile();
+		if (!profile) return;
+		const result = await this.mappingProfileService.deleteProfile(profile.id);
+		if (result.ok) this.selectedProfileId.set(null);
+	}
+
+	async applySelectedProfile(): Promise<void> {
+		const profile = this.selectedProfile();
 		if (!profile) return;
 		const result = applyMappingProfile({
 			projectOverrides: this.state().mappingOverrides,
 			profileOverrides: profile.overrides,
-			mode: this.applyMode,
+			mode: this.applyMode(),
 		});
 		this.generateState.setMappingOverrides(result.overrides);
 		this.mappingUserOpen.set(true);
 		await this.orchestrator.mappingChanged();
 	}
 
-	// --- Pure formatting helpers (used by template, like pipes) ---
-
-	pieceLabel(piece: string): string {
-		return (
-			PIECE_LABELS[piece] ??
-			piece.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
-		);
+	async continueToGenerate(): Promise<void> {
+		if (this.canContinue()) await this.router.navigateByUrl("/generate");
 	}
 
-	formatNumberValue(value: number): string {
-		return formatNumber(value);
+	goBack(): void {
+		void this.router.navigateByUrl("/projects/details");
 	}
 
-	filePath(filePath: string | undefined): string {
-		return filePath?.split(/[\\/]/).pop() ?? "";
-	}
+	// --- Private helpers (presentation VM derivation, NOT template methods) ---
 
-	confidenceLabel(value: string): string {
-		return value === "unknown"
-			? "N/A"
-			: value.charAt(0).toUpperCase() + value.slice(1);
-	}
-
-	noteCountLabel(noteCount: number | null | undefined): string {
-		return formatTrackNoteCount(noteCount);
-	}
-
-	// --- Per-item helpers (pure, take loop parameters) ---
-
-	pieceOverrideValue(key: string): string {
+	private overrideSelectValue(key: string): string {
 		const override = this.state().mappingOverrides[key];
 		return override?.target.kind === "piece" ? override.target.piece : "";
 	}
 
-	showIgnoreAction(row: MappingReviewRowView): boolean {
+	private showIgnoreAction(row: MappingReviewRowView): boolean {
 		if (row.action === "ignore" && !row.hasOverride) return false;
 		return this.overrideLabelFor(row.key) !== "ignore";
 	}
 
-	overrideLabelFor(key: string): string {
+	private overrideLabelFor(key: string): string {
 		const override = this.state().mappingOverrides[key];
 		if (!override) return "";
 		return override.target.kind === "ignore" ? "ignore" : override.target.piece;
 	}
 
-	mappingSourceKind(row: MappingRow | MappingReviewRowView): "midi" | "gpif" {
-		return row.sourceKind ?? (row.key.startsWith("gpif:") ? "gpif" : "midi");
+	private trackStatusLabel(index: number, selected: boolean): string {
+		if (selected)
+			return this.state().selectedTracks.length === 1
+				? "Auto-selected"
+				: "Selected";
+		const strength =
+			this.state().inspection?.tracks?.find((t) => t.index === index)
+				?.strength ?? "unknown";
+		return strength === "weak" ? "Low confidence" : "Available";
 	}
 
-	isMappingIssue(issue: ProjectIssue): boolean {
-		if (issue.severity === "info") return false;
-		return (
-			/unknown|unmapped|mapping/i.test(issue.code) ||
-			/(unknown|unmapped|mapping|articulation|rimshot|side[- ]?stick|midi note|note \d+)/i.test(
-				issue.message,
-			) ||
-			Boolean(
-				issue.details?.["notes"] || issue.details?.["unknownArticulations"],
-			)
-		);
-	}
-
-	issueLabel(issue: DisplayIssue): string {
-		const base = `${issue.severity} · ${issue.code}`;
-		return issue.count > 1 ? `${base} · ${issue.count} similar` : base;
-	}
-
-	private issueGroupKey(issue: ProjectIssue): string {
-		if (issue.severity !== "info")
-			return `${issue.severity}:${issue.code}:${issue.message}`;
-		return `${issue.severity}:${issue.code}:${issue.message.replace(/\d+/g, "#")}`;
-	}
-
-	async continueToGenerate(): Promise<void> {
-		if (this.canContinue()) await this.router.navigateByUrl("/generate");
+	private syncSelectedProfile(preferName?: string): void {
+		const profiles = this.profiles();
+		if (profiles.length === 0) {
+			this.selectedProfileId.set(null);
+			return;
+		}
+		const current = this.selectedProfileId();
+		const stillExists = profiles.some((p) => p.id === current);
+		if (stillExists) return;
+		const byName = preferName
+			? profiles.find((p) => p.name === preferName)
+			: undefined;
+		this.selectedProfileId.set((byName ?? profiles[0]).id);
 	}
 }

@@ -27,51 +27,11 @@
 		>
 	</section>
 } @else {
-	<section class="card selected-source-card">
-		<div
-			class="file-icon"
-			[class.gp]="state().sourceKind === 'gpif'"
-			[class.midi]="state().sourceKind === 'midi'"
-		>
-			<span>{{ state().sourceKind === "gpif" ? "GP" : "MIDI" }}</span>
-		</div>
-		<div class="selected-source-copy">
-			<p class="eyebrow">Selected Source</p>
-			<div class="source-name-row">
-				<h2>{{ filePath(state().sourcePath) }}</h2>
-				<span class="source-kind-chip">{{ sourceKindLabel() }}</span>
-			</div>
-			<p class="source-path">{{ state().sourcePath }}</p>
-		</div>
-		<dl class="source-meta">
-			<div>
-				<dt>Source Kind</dt>
-				<dd>{{ sourceKindLabel() }}</dd>
-			</div>
-			<div>
-				<dt>Last Analyzed</dt>
-				<dd>{{ analyzedAt() }}</dd>
-			</div>
-		</dl>
-		<div class="source-card-side">
-			<div class="source-actions">
-				<button
-					class="button secondary small"
-					type="button"
-					(click)="refreshAnalysis()"
-				>
-					<span aria-hidden="true">↻</span> Refresh Analysis
-				</button>
-				<button
-					class="button secondary small"
-					type="button"
-					(click)="jsonOpen.set(!jsonOpen())"
-				>
-					View JSON
-				</button>
-			</div>
-		</div>
-	</section>
+	<chdg-source-review-selected-source
+		[view]="selectedSource()"
+		(refresh)="refreshAnalysis()"
+		(toggleJson)="toggleJson()"
+	/>
 
 	@if (state().errorMessage) {
 		<section class="card message danger">
@@ -84,562 +44,127 @@
 			<p>{{ orchestrator.autosaveWarning() }}</p>
 		</section>
 	}
-
-	<div class="summary-grid">
-		<section class="card summary-card">
-			<h2>Source Summary</h2>
-			<dl class="summary-list compact icon-list">
-				<div>
-					<dt><span aria-hidden="true">▧</span>Source Type</dt>
-					<dd>{{ sourceKindLabel() }}</dd>
-				</div>
-				<div>
-					<dt><span aria-hidden="true">♬</span>Resolution (PPQ)</dt>
-					<dd>{{ state().inspection?.resolution ?? "n/a" }}</dd>
-				</div>
-				<div>
-					<dt><span aria-hidden="true">⌁</span>Tempo Count</dt>
-					<dd>{{ state().inspection?.tempos?.length ?? "n/a" }}</dd>
-				</div>
-				<div>
-					<dt><span aria-hidden="true">♯</span>Time Signatures</dt>
-					<dd>
-						{{
-							state().inspection?.timeSignatures?.length ?? "n/a"
-						}}
-					</dd>
-				</div>
-				<div>
-					<dt><span aria-hidden="true">◴</span>Sections</dt>
-					<dd>{{ sectionsLabel() }}</dd>
-				</div>
-				<div>
-					<dt><span aria-hidden="true">☷</span>Total Tracks</dt>
-					<dd>{{ state().inspection?.tracks?.length ?? "n/a" }}</dd>
-				</div>
-			</dl>
-		</section>
-
-		<section class="card summary-card">
-			<h2>
-				Combined Summary
-				<span class="help-dot" aria-hidden="true">?</span>
-			</h2>
-			@if (state().normalizationPreview; as preview) {
-				<dl class="summary-list compact icon-list">
-					<div>
-						<dt>
-							<span aria-hidden="true">☌</span>Selected Tracks
-						</dt>
-						<dd>{{ state().selectedTracks.length }}</dd>
-					</div>
-					<div>
-						<dt><span aria-hidden="true">✣</span>Combined Hits</dt>
-						<dd>{{ formatNumberValue(preview.hitCount) }}</dd>
-					</div>
-					<div>
-						<dt>
-							<span aria-hidden="true">▤</span>Duplicates Removed
-						</dt>
-						<dd>{{ duplicateLabel() }}</dd>
-					</div>
-					<div>
-						<dt><span aria-hidden="true">?</span>Unknowns</dt>
-						<dd>{{ unknownCount() }}</dd>
-					</div>
-					<div>
-						<dt class="warning-label">
-							<span aria-hidden="true">△</span>Warnings
-						</dt>
-						<dd>{{ warningCount() }} issues</dd>
-					</div>
-				</dl>
-			} @else {
-				<p>
-					{{
-						state().status === "normalizing"
-							? "Building normalized preview…"
-							: "Waiting for normalized preview…"
-					}}
-				</p>
-			}
-		</section>
-
-		<section class="card summary-card piece-summary-card">
-			<h2>
-				Piece Summary Preview
-				<span class="help-dot" aria-hidden="true">?</span>
-			</h2>
-			<div class="piece-summary">
-				@for (piece of pieceEntries(); track piece.label) {
-					<div class="piece-item" [ngClass]="piece.kind">
-						<span class="piece-icon" aria-hidden="true"
-							><i></i
-						></span>
-						<strong>{{ piece.label }}</strong>
-						<span>{{ formatNumberValue(piece.count) }}</span>
-					</div>
-				}
-			</div>
-		</section>
-	</div>
-
-	<section class="card table-card track-card">
-		<div class="split-row table-header">
-			<div>
-				<h2>Track Candidates</h2>
-				<p>Select one or more complementary drum tracks.</p>
-			</div>
-			<span class="selected-count">{{ selectedTrackCountLabel() }}</span>
-		</div>
-		<div class="table-frame">
-			<table>
-				<thead>
-					<tr>
-						<th><span class="sr-only">Selected</span></th>
-						<th>Track</th>
-						<th>Name</th>
-						<th>Notes</th>
-						<th>Confidence</th>
-						<th>Status</th>
-					</tr>
-				</thead>
-				<tbody>
-					@for (track of trackRows(); track track.index) {
-						<tr [class.selected-row]="isSelected(track.index)">
-							<td>
-								<input
-									type="checkbox"
-									[checked]="isSelected(track.index)"
-									(change)="toggleTrack(track.index)"
-								/>
-							</td>
-							<td>{{ track.index }}</td>
-							<td>{{ track.name || "Untitled" }}</td>
-							<td>{{ noteCountLabel(track.noteCount) }}</td>
-							<td>
-								<span
-									class="pill confidence-pill"
-									[class.strong]="track.strength === 'strong'"
-									[class.weak]="track.strength === 'weak'"
-									[class.na]="track.strength === 'unknown'"
-									>{{ confidenceLabel(track.strength) }}</span
-								>
-							</td>
-							<td>
-								<span
-									class="status-badge"
-									[class.auto]="isSelected(track.index)"
-									[class.low]="track.strength === 'weak'"
-									>{{
-										trackStatus(track.index, track.strength)
-									}}</span
-								>
-							</td>
-						</tr>
-					}
-				</tbody>
-			</table>
-		</div>
-		<div class="track-table-footer">
-			<span>{{ selectedTrackCountLabel() }}</span
-			><span>{{ trackNotesSummaryLabel() }}</span>
-		</div>
-	</section>
-
-	<section
-		class="card accordion-card mapping-card"
-		[class.open]="mappingOpen()"
-		[class.attention]="mappingNeedsAttention()"
-	>
-		<div class="accordion-header mapping-header">
-			<div class="accordion-copy">
-				<div class="accordion-title-row">
-					<h2>Mapping Review</h2>
-					<span
-						class="review-badge"
-						[class.warning]="mappingNeedsAttention()"
-						><span aria-hidden="true">{{
-							mappingNeedsAttention()
-								? "△"
-								: mappingStatusLabel() ===
-									  "Known percussion ignored"
-									? "i"
-									: "✓"
-						}}</span
-						>{{ mappingStatusLabel() }}</span
-					>
-				</div>
-				<p>{{ mappingSummary() }}</p>
-				@if (mappingCoverageSummary()) {
-					<p class="profile-line">{{ mappingCoverageSummary() }}</p>
-				}
-				<p class="profile-line">Profile: None</p>
-			</div>
-			<div class="accordion-actions">
-				<button
-					class="button secondary small"
-					type="button"
-					(click)="toggleMappingReview()"
-				>
-					{{ mappingActionLabel() }}
-				</button>
-				<button
-					class="chevron-button"
-					type="button"
-					(click)="toggleMappingReview()"
-					[attr.aria-label]="mappingActionLabel()"
-				>
-					{{ mappingOpen() ? "⌃" : "⌄" }}
-				</button>
-			</div>
-		</div>
-		@if (mappingOpen()) {
-			<div class="mapping-review-panel">
-				<div class="mapping-copy-stack">
-					<p>
-						Candidates are skipped by default. Apply a suggestion
-						only if the sound is important for the playable drum
-						chart.
-					</p>
-					@if (ignoredKnownCount() > 0) {
-						<p>
-							Known ignored percussion is recognized but not
-							charted by default.
-						</p>
-					}
-					@if (unknownCount() > 0) {
-						<p>
-							Unknown notes were skipped because CHDG does not
-							know what drum lane they represent.
-						</p>
-					}
-				</div>
-				<div
-					class="mapping-filter-row"
-					aria-label="Mapping review filters"
-				>
-					@for (filter of mappingFilters; track filter.id) {
-						<button
-							class="filter-chip"
-							type="button"
-							[class.active]="mappingFilter() === filter.id"
-							(click)="setMappingFilter(filter.id)"
-						>
-							{{ filter.label }}
-							<span>{{
-								mappingFilterCountRecord()[filter.id]
-							}}</span>
-						</button>
-					}
-				</div>
-				@if (mappingRows().length === 0) {
-					<p class="mapping-empty">
-						No mapping sources detected for the selected track.
-					</p>
-				} @else if (filteredMappingRows().length === 0) {
-					<p class="mapping-empty">
-						{{ mappingEmptyFilterMessage() }}
-					</p>
-				} @else {
-					<div class="mapping-row-list">
-						@for (row of filteredMappingRows(); track row.key) {
-							<article
-								class="mapping-review-row"
-								[ngClass]="row.kind"
-							>
-								<div class="mapping-row-identity">
-									<strong>{{ row.primaryLabel }}</strong>
-									<span>{{ row.metaLabel }}</span>
-								</div>
-								<div class="mapping-row-decision">
-									<p class="mapping-current">
-										{{ row.currentMappingLabel }}
-									</p>
-									@if (row.suggestedPieceLabel) {
-										<p class="mapping-detail">
-											Suggested:
-											{{ row.suggestedPieceLabel }}
-										</p>
-									}
-									@if (row.confidence || row.reason) {
-										<p class="mapping-detail subtle">
-											@if (row.confidence) {
-												<span
-													>Confidence:
-													{{ row.confidence }}</span
-												>
-											}
-											@if (row.reason) {
-												<span>{{ row.reason }}</span>
-											}
-										</p>
-									}
-									@if (row.overrideLabel) {
-										<p class="mapping-detail override-copy">
-											{{ row.overrideLabel }}
-										</p>
-									}
-								</div>
-								<div class="mapping-row-control">
-									<span
-										class="mapping-status"
-										[ngClass]="row.badgeTone"
-										>{{ row.badgeLabel }}</span
-									>
-									<div class="mapping-row-actions">
-										@if (row.hasOverride) {
-											<button
-												class="button secondary small"
-												type="button"
-												(click)="resetOverride(row)"
-											>
-												Reset override
-											</button>
-										}
-										@if (
-											!row.hasOverride &&
-											row.action === "candidate" &&
-											row.suggestedPiece
-										) {
-											<button
-												class="button secondary small"
-												type="button"
-												(click)="applySuggestion(row)"
-											>
-												Apply suggestion
-											</button>
-										}
-										@if (
-											!row.hasOverride &&
-											row.action === "ignore"
-										) {
-											<span class="mapping-static-action"
-												>Keep ignored</span
-											>
-										}
-										@if (
-											!row.hasOverride &&
-											row.action === "map"
-										) {
-											<span class="mapping-static-action"
-												>Keep default</span
-											>
-										}
-										<label class="mapping-piece-select"
-											><span>{{
-												row.action === "map" &&
-												!row.hasOverride
-													? "Override"
-													: "Map to"
-											}}</span
-											><select
-												aria-label="Map source to piece"
-												[ngModel]="
-													pieceOverrideValue(row.key)
-												"
-												(ngModelChange)="
-													mapRow(row, $event)
-												"
-											>
-												<option value="">
-													Choose piece…
-												</option>
-												@for (
-													piece of pieces;
-													track piece
-												) {
-													<option [value]="piece">
-														{{ pieceLabel(piece) }}
-													</option>
-												}
-											</select></label
-										>
-										@if (showIgnoreAction(row)) {
-											<button
-												class="button secondary small ignore-action"
-												[class.quiet]="
-													row.action === 'map' &&
-													!row.hasOverride
-												"
-												type="button"
-												(click)="ignoreRow(row)"
-											>
-												Ignore
-											</button>
-										}
-									</div>
-								</div>
-							</article>
-						}
-					</div>
-				}
-			</div>
-			<div class="mapping-details-grid">
-				<section class="mini-card overrides-summary">
-					<h3>Active Overrides Summary</h3>
-					<div class="override-metrics">
-						<span
-							><strong>{{ overrideCount() }}</strong
-							>Total Overrides</span
-						><span
-							><strong>{{ changedMappingCount() }}</strong
-							>Mappings Changed</span
-						><span
-							><strong>{{ ignoredCount() }}</strong
-							>Ignored Sources</span
-						><span
-							><strong>{{ unknownCount() }}</strong
-							>Unknown Sources</span
-						>
-					</div>
-					<p>
-						Overrides are applied during generation. They do not
-						modify the source files.
-					</p>
-				</section>
-				<section class="mini-card profile-card">
-					<div>
-						<h3>Profile Actions (Local Only)</h3>
-						<p>{{ profileStatus() }}</p>
-						<p class="profile-hint">
-							Profiles are stored locally on this machine and are
-							not synced.
-						</p>
-					</div>
-					<div class="profile-actions">
-						<button
-							class="button secondary small"
-							type="button"
-							(click)="openProfileDialog()"
-						>
-							Save as Profile</button
-						><button
-							class="button secondary small"
-							type="button"
-							(click)="applyFirstProfile()"
-						>
-							Apply Profile
-						</button>
-					</div>
-				</section>
-			</div>
-		}
-	</section>
-
-	<section
-		class="card accordion-card issues-card"
-		[class.open]="issuesOpen()"
-		[class.attention]="issuesNeedAttention() || warningCount() > 0"
-	>
-		<div class="accordion-header issues-header">
-			<div class="issue-icon" aria-hidden="true">△</div>
-			<div class="accordion-copy">
-				<h2>Issues & Warnings</h2>
-				<p>{{ issuesSummary() }}</p>
-				@if (!issuesOpen() && issuePreview()) {
-					<p class="issue-preview">{{ issuePreview() }}</p>
-				}
-			</div>
-			<div class="accordion-actions">
-				<button
-					class="button secondary small"
-					type="button"
-					(click)="toggleIssues()"
-				>
-					{{ issuesActionLabel() }}
-				</button>
-				<button
-					class="chevron-button"
-					type="button"
-					(click)="toggleIssues()"
-					[attr.aria-label]="issuesActionLabel()"
-				>
-					{{ issuesOpen() ? "⌃" : "⌄" }}
-				</button>
-			</div>
-		</div>
-		@if (issuesOpen()) {
-			<div class="issues-panel">
-				<section class="issue-group warnings-group">
-					<h3>Warnings</h3>
-					@if (warningIssues().length === 0) {
-						<p class="empty-group">No warnings.</p>
-					}
-					<ul class="issues-list">
-						@for (
-							issue of warningIssues();
-							track issue.severity + issue.code + issue.message
-						) {
-							<li
-								[class.warning]="issue.severity === 'warning'"
-								[class.error]="issue.severity === 'error'"
-							>
-								<strong>{{ issueLabel(issue) }}</strong
-								><span>{{ issue.message }}</span>
-								@if (isMappingIssue(issue)) {
-									<button
-										class="button ghost small"
-										type="button"
-										(click)="mappingUserOpen.set(true)"
-									>
-										Review in Mapping Review
-									</button>
-								}
-							</li>
-						}
-					</ul>
-				</section>
-				<section class="issue-group info-group">
-					<h3>Unknowns / Info</h3>
-					@if (infoIssues().length === 0) {
-						<p class="empty-group">No info messages.</p>
-					}
-					<ul class="issues-list">
-						@for (
-							issue of infoIssues();
-							track issue.severity + issue.code + issue.message
-						) {
-							<li class="info">
-								<strong>{{ issueLabel(issue) }}</strong
-								><span>{{ issue.message }}</span>
-							</li>
-						}
-					</ul>
-				</section>
-			</div>
-		}
-	</section>
-
-	@if (jsonOpen()) {
-		<section class="card json-card">
-			<h2>Advanced JSON</h2>
-			<pre>{{ analysisJson() }}</pre>
+	@if (profileError()) {
+		<section class="card message warning">
+			<h2>Profile action failed</h2>
+			<p>{{ profileError() }}</p>
 		</section>
 	}
 
-	<div class="source-review-actions">
-		<a class="button ghost back-button" routerLink="/projects/details"
-			><span aria-hidden="true">←</span> Back to Project Details</a
-		>
-		<button
-			class="button primary continue-button"
-			type="button"
-			[disabled]="!canContinue()"
-			(click)="continueToGenerate()"
-		>
-			Continue to Generate <span aria-hidden="true">→</span>
-		</button>
-	</div>
+	<chdg-source-review-summaries
+		[sourceFacts]="sourceSummaryFacts()"
+		[combined]="combinedSummary()"
+		[pieceEntries]="pieceEntries()"
+		[hasPreview]="!!state().normalizationPreview"
+		[buildingMessage]="buildingMessage()"
+	/>
+
+	<chdg-source-review-track-list
+		[rows]="trackRows()"
+		[selectedCountLabel]="selectedTrackCountLabel()"
+		[notesSummaryLabel]="trackNotesSummaryLabel()"
+		(toggleTrack)="toggleTrack($event)"
+	/>
+
+	<chdg-source-review-mapping-review
+		[open]="mappingOpen()"
+		[needsAttention]="mappingNeedsAttention()"
+		[actionLabel]="mappingActionLabel()"
+		[statusLabel]="mappingStatusLabel()"
+		[summary]="mappingSummary()"
+		[coverageSummary]="mappingCoverageSummary()"
+		[selectedProfileName]="selectedProfile()?.name"
+		[filters]="mappingFilters"
+		[filterCountRecord]="mappingFilterCountRecord()"
+		[filter]="mappingFilter()"
+		[rowsEmpty]="rowsEmpty()"
+		[filteredRowsEmpty]="filteredMappingRows().length === 0"
+		[emptyFilterMessage]="mappingEmptyFilterMessage()"
+		[filteredRows]="filteredMappingRows()"
+		[unknownCount]="unknownCount()"
+		[ignoredKnownCount]="ignoredKnownCount()"
+		[overrideCount]="overrideCount()"
+		[changedCount]="changedMappingCount()"
+		[ignoredCount]="ignoredCount()"
+		(toggleOpen)="toggleMappingReview()"
+		(setFilter)="setMappingFilter($event)"
+		(applySuggestion)="applySuggestion($event)"
+		(ignore)="ignoreRow($event)"
+		(mapRow)="mapRow($event.row, $event.value)"
+		(resetOverride)="resetOverride($event)"
+	/>
+
+	<chdg-source-review-mapping-profiles
+		[profiles]="profileViews()"
+		[selectedProfile]="selectedProfileView()"
+		[applyMode]="applyMode()"
+		[applyModeOptions]="applyModeOptions"
+		[status]="profileStatus()"
+		[error]="profileError()"
+		[overrideCount]="overrideCount()"
+		(selectProfile)="selectProfile($event)"
+		(setApplyMode)="setApplyMode($event)"
+		(requestCreate)="openCreateProfileDialog()"
+		(requestUpdate)="updateSelectedFromCurrent()"
+		(requestEdit)="openEditProfileDialog()"
+		(requestDelete)="requestDeleteProfile()"
+		(apply)="applySelectedProfile()"
+	/>
+
+	<chdg-source-review-issues
+		[open]="issuesOpen()"
+		[needAttention]="issuesNeedAttention()"
+		[warningCount]="warningCount()"
+		[actionLabel]="issuesActionLabel()"
+		[summary]="issuesSummary()"
+		[preview]="issuePreview()"
+		[warningIssues]="warningIssues()"
+		[infoIssues]="infoIssues()"
+		(toggleOpen)="toggleIssues()"
+		(reviewInMapping)="mappingUserOpen.set(true)"
+	/>
+
+	<chdg-source-review-advanced
+		[open]="jsonOpen()"
+		[json]="analysisJson()"
+		(hide)="toggleJson()"
+	/>
+
+	<chdg-source-review-action-area
+		[canContinue]="canContinue()"
+		(back)="goBack()"
+		(continueToGenerate)="continueToGenerate()"
+	/>
 }
 
-<chdg-text-input-dialog
-	[isOpen]="showProfileDialog()"
-	title="Save Mapping Profile"
-	message="Enter a name for this mapping profile."
-	[initialValue]="'Source Review Profile'"
+<chdg-profile-metadata-dialog
+	[isOpen]="showCreateProfileDialog()"
+	title="Create mapping profile"
+	message="Save the current mapping overrides as a reusable local profile."
+	[required]="true"
+	confirmLabel="Create"
+	(cancelled)="cancelCreateProfileDialog()"
+	(confirmed)="confirmCreateProfile($event)"
+/>
+
+<chdg-profile-metadata-dialog
+	[isOpen]="showEditProfileDialog()"
+	title="Edit profile metadata"
+	message="Update the name and description of the selected profile."
+	[nameInitialValue]="editProfileInitial().name"
+	[descriptionInitialValue]="editProfileInitial().description"
 	[required]="true"
 	confirmLabel="Save"
-	(confirmed)="confirmSaveProfile($event)"
-	(cancelled)="cancelProfileDialog()"
+	(cancelled)="cancelEditProfileDialog()"
+	(confirmed)="confirmEditProfile($event)"
+/>
+
+<chdg-confirmation-dialog
+	[isOpen]="showDeleteProfileConfirm()"
+	title="Delete profile?"
+	[message]="'Delete the selected mapping profile? This cannot be undone.'"
+	confirmLabel="Delete"
+	[destructive]="true"
+	(confirmed)="confirmDeleteProfile()"
+	(cancelled)="cancelDeleteProfile()"
 />
