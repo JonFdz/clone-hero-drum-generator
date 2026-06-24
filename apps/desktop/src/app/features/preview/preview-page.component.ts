@@ -9,9 +9,9 @@ import {
 	ViewChild,
 } from "@angular/core";
 import { DesktopPreviewService } from "../../services/desktop-preview.service";
-import { PreviewChartStageComponent } from "./components/preview-chart-stage.component";
-import { PreviewOffsetPanelComponent } from "./components/preview-offset-panel.component";
-import { PreviewTransportCardComponent } from "./components/preview-transport-card.component";
+import { PreviewChartStageComponent } from "./components/preview-chart-stage/preview-chart-stage.component";
+import { PreviewOffsetPanelComponent } from "./components/preview-offset-panel/preview-offset-panel.component";
+import { PreviewTransportCardComponent } from "./components/preview-transport-card/preview-transport-card.component";
 
 @Component({
 	selector: "chdg-preview-page",

@@ -58,15 +58,15 @@ import {
 	noteCountLabel,
 } from "./source-review-format.util";
 import { ConfirmationDialogComponent } from "../../shared/confirmation-dialog/confirmation-dialog.component";
-import { ProfileMetadataDialogComponent } from "./components/profile-metadata-dialog.component";
-import { SourceReviewSelectedSourceComponent } from "./components/source-review-selected-source.component";
-import { SourceReviewSummariesComponent } from "./components/source-review-summaries.component";
-import { SourceReviewTrackListComponent } from "./components/source-review-track-list.component";
-import { SourceReviewMappingReviewComponent } from "./components/source-review-mapping-review.component";
-import { SourceReviewMappingProfilesComponent } from "./components/source-review-mapping-profiles.component";
-import { SourceReviewIssuesComponent } from "./components/source-review-issues.component";
-import { SourceReviewAdvancedComponent } from "./components/source-review-advanced.component";
-import { SourceReviewActionAreaComponent } from "./components/source-review-action-area.component";
+import { ProfileMetadataDialogComponent } from "./components/profile-metadata-dialog/profile-metadata-dialog.component";
+import { SourceReviewSelectedSourceComponent } from "./components/source-review-selected-source/source-review-selected-source.component";
+import { SourceReviewSummariesComponent } from "./components/source-review-summaries/source-review-summaries.component";
+import { SourceReviewTrackListComponent } from "./components/source-review-track-list/source-review-track-list.component";
+import { SourceReviewMappingReviewComponent } from "./components/source-review-mapping-review/source-review-mapping-review.component";
+import { SourceReviewMappingProfilesComponent } from "./components/source-review-mapping-profiles/source-review-mapping-profiles.component";
+import { SourceReviewIssuesComponent } from "./components/source-review-issues/source-review-issues.component";
+import { SourceReviewAdvancedComponent } from "./components/source-review-advanced/source-review-advanced.component";
+import { SourceReviewActionAreaComponent } from "./components/source-review-action-area/source-review-action-area.component";
 
 type IssueSeverityCounts = { errors: number; warnings: number; info: number };
 

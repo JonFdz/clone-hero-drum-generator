@@ -10,12 +10,12 @@ import {
 	type ProjectsSortMode,
 	type ProjectsSourceFilter,
 } from "./projects-library.model";
-import { ProjectsEmptyStateComponent } from "./components/projects-empty-state.component";
-import { ProjectsLibraryHeaderComponent } from "./components/projects-library-header.component";
-import { ProjectsLibraryStatsComponent } from "./components/projects-library-stats.component";
-import { ProjectsProjectGridComponent } from "./components/projects-project-grid.component";
-import { ProjectsRemoveConfirmDialogComponent } from "./components/projects-remove-confirm-dialog.component";
-import { ProjectsToolbarComponent } from "./components/projects-toolbar.component";
+import { ProjectsEmptyStateComponent } from "./components/projects-empty-state/projects-empty-state.component";
+import { ProjectsLibraryHeaderComponent } from "./components/projects-library-header/projects-library-header.component";
+import { ProjectsLibraryStatsComponent } from "./components/projects-library-stats/projects-library-stats.component";
+import { ProjectsProjectGridComponent } from "./components/projects-project-grid/projects-project-grid.component";
+import { ProjectsRemoveConfirmDialogComponent } from "./components/projects-remove-confirm-dialog/projects-remove-confirm-dialog.component";
+import { ProjectsToolbarComponent } from "./components/projects-toolbar/projects-toolbar.component";
 import { ProjectLibraryService } from "./project-library.service";
 
 @Component({

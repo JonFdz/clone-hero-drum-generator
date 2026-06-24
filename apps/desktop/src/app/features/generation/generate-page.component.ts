@@ -17,24 +17,24 @@ import { DesktopGenerateStateService } from "../../services/desktop-generate-sta
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopValidationService } from "../../services/desktop-validation.service";
 import { ConfirmationDialogComponent } from "../../shared/confirmation-dialog/confirmation-dialog.component";
-import { GenerationActionBarComponent } from "./components/generation-action-bar.component";
+import { GenerationActionBarComponent } from "./components/generation-action-bar/generation-action-bar.component";
 import {
 	GenerationConfigurationComponent,
 	type GenerationConfigRow,
-} from "./components/generation-configuration.component";
-import { GenerationLogComponent } from "./components/generation-log.component";
-import { GenerationReadinessComponent } from "./components/generation-readiness.component";
-import { GenerationStepsComponent } from "./components/generation-steps.component";
+} from "./components/generation-configuration/generation-configuration.component";
+import { GenerationLogComponent } from "./components/generation-log/generation-log.component";
+import { GenerationReadinessComponent } from "./components/generation-readiness/generation-readiness.component";
+import { GenerationStepsComponent } from "./components/generation-steps/generation-steps.component";
 import {
 	OutputPreviewComponent,
 	type OutputFileRow,
-} from "./components/output-preview.component";
+} from "./components/output-preview/output-preview.component";
 import {
 	QaChecklistComponent,
 	type ChecklistFilter,
 	type ChecklistRow,
-} from "./components/qa-checklist.component";
-import { ValidationReportComponent } from "./components/validation-report.component";
+} from "./components/qa-checklist/qa-checklist.component";
+import { ValidationReportComponent } from "./components/validation-report/validation-report.component";
 import { GenerationService } from "./generation.service";
 
 const severityRank: Record<ValidationItem["severity"], number> = {
