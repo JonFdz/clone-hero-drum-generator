@@ -1,48 +1,28 @@
 import {
-	HIGHWAY_LANES,
+	HIGHWAY_KICK_STYLE,
+	HIGHWAY_PITCHED_LANES,
 	type HighwayGeometry,
-	type HighwayLaneId,
+	type HighwayLaneDivider,
+	type HighwayProjectedHead,
 	type HighwayProjectedLine,
-	type HighwayProjectedNote,
-	type HighwaySourceNote,
+	type HighwayProjectedSustain,
+	type HighwayRoadBounds,
+	type HighwaySemanticNote,
 	type HighwaySpeedPreset,
+	type HighwayTarget,
 } from "./highway-model";
 import type { HighwayMusicalLine } from "./highway-timing";
 
-export function buildHighwaySourceNotes(
-	noteEvents: ReadonlyArray<{ tick: number; lane: number; seconds: number }>,
-): HighwaySourceNote[] {
-	const occurrenceByTickLane = new Map<string, number>();
-	return noteEvents
-		.filter(isValidHighwayNoteEvent)
-		.map((event) => {
-			const key = `${event.tick}-${event.lane}`;
-			const occurrence = occurrenceByTickLane.get(key) ?? 0;
-			occurrenceByTickLane.set(key, occurrence + 1);
-			return {
-				id: `${event.tick}-${event.lane}-${occurrence}`,
-				tick: event.tick,
-				lane: event.lane,
-				chartSeconds: event.seconds,
-			} satisfies HighwaySourceNote;
-		})
-		.sort(
-			(a, b) =>
-				a.chartSeconds - b.chartSeconds ||
-				a.tick - b.tick ||
-				a.lane - b.lane ||
-				a.id.localeCompare(b.id),
-		);
-}
-
 export function filterVisibleHighwayNotes(
-	notes: readonly HighwaySourceNote[],
+	notes: readonly HighwaySemanticNote[],
 	startChartSeconds: number,
 	endChartSeconds: number,
-): HighwaySourceNote[] {
-	const start = lowerBound(notes, startChartSeconds);
-	const end = upperBound(notes, endChartSeconds);
-	return notes.slice(start, end);
+): HighwaySemanticNote[] {
+	return notes.filter(
+		(note) =>
+			note.chartSeconds <= endChartSeconds &&
+			note.endChartSeconds >= startChartSeconds,
+	);
 }
 
 export function buildHighwayGeometry(
@@ -53,10 +33,10 @@ export function buildHighwayGeometry(
 	const safeHeight = Math.max(0, cssHeight);
 	const horizonY = safeHeight * 0.18;
 	const hitLineY = safeHeight * 0.82;
-	const topRoadWidth = Math.max(260, Math.min(safeWidth * 0.22, 260));
-	const bottomRoadWidth = Math.max(260, Math.min(safeWidth * 0.84, 980));
-	const horizonLaneWidth = topRoadWidth / HIGHWAY_LANES.length;
-	const hitLineLaneWidth = bottomRoadWidth / HIGHWAY_LANES.length;
+	const topRoadWidth = Math.max(220, Math.min(safeWidth * 0.22, 240));
+	const bottomRoadWidth = Math.max(260, Math.min(safeWidth * 0.84, 920));
+	const horizonLaneWidth = topRoadWidth / HIGHWAY_PITCHED_LANES.length;
+	const hitLineLaneWidth = bottomRoadWidth / HIGHWAY_PITCHED_LANES.length;
 	return {
 		cssWidth: safeWidth,
 		cssHeight: safeHeight,
@@ -65,54 +45,97 @@ export function buildHighwayGeometry(
 		roadCenterX: safeWidth * 0.5,
 		topRoadWidth,
 		bottomRoadWidth,
+		pitchedLaneCount: 4,
 		minimumReadable:
-			safeHeight >= 280 &&
-			horizonLaneWidth >= 14 &&
-			hitLineLaneWidth >= 42,
+			safeHeight >= 280 && horizonLaneWidth >= 18 && hitLineLaneWidth >= 52,
 	};
 }
 
+export function buildHighwayLaneCenters(
+	geometry: HighwayGeometry,
+	depth = 0,
+): number[] {
+	const bounds = roadBoundsAtDepth(geometry, depth);
+	return HIGHWAY_PITCHED_LANES.map(
+		(_, index) => bounds.leftX + (index + 0.5) * bounds.laneWidth,
+	);
+}
+
+export function buildHighwayLaneDividers(
+	geometry: HighwayGeometry,
+): HighwayLaneDivider[] {
+	return Array.from({ length: HIGHWAY_PITCHED_LANES.length - 1 }, (_, index) => {
+		const lane = index + 1;
+		return {
+			startX:
+				geometry.roadCenterX - geometry.topRoadWidth / 2 +
+				(geometry.topRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
+			endX:
+				geometry.roadCenterX - geometry.bottomRoadWidth / 2 +
+				(geometry.bottomRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
+		};
+	});
+}
+
+export function buildHighwayTargets(
+	geometry: HighwayGeometry,
+): HighwayTarget[] {
+	const bounds = roadBoundsAtDepth(geometry, 0);
+	const targetHeight = Math.max(14, geometry.cssHeight * 0.028);
+	const inset = Math.max(4, bounds.laneWidth * 0.08);
+	return HIGHWAY_PITCHED_LANES.map((lane, index) => {
+		const laneLeft = bounds.leftX + index * bounds.laneWidth + inset;
+		const laneRight = bounds.leftX + (index + 1) * bounds.laneWidth - inset;
+		return {
+			lane: lane.id,
+			leftX: laneLeft,
+			rightX: laneRight,
+			topY: geometry.hitLineY - targetHeight,
+			bottomY: geometry.hitLineY + targetHeight * 0.22,
+			fill: lane.fill,
+			stroke: lane.stroke,
+		};
+	});
+}
+
+export function projectKickRailAtDepth(
+	geometry: HighwayGeometry,
+	depth: number,
+): { leftX: number; rightX: number; width: number } {
+	const bounds = roadBoundsAtDepth(geometry, depth);
+	const inset = Math.max(8, bounds.width * 0.04);
+	const leftX = bounds.leftX + inset;
+	const rightX = Math.max(leftX, bounds.rightX - inset);
+	return { leftX, rightX, width: Math.max(0, rightX - leftX) };
+}
+
 export function projectHighwayNotes(input: {
-	notes: readonly HighwaySourceNote[];
+	notes: readonly HighwaySemanticNote[];
 	playbackSeconds: number;
 	previewOffsetSeconds: number;
 	preset: HighwaySpeedPreset;
 	geometry: HighwayGeometry;
-}): HighwayProjectedNote[] {
-	return input.notes
-		.map((note) => {
-			const effectiveSeconds = note.chartSeconds + input.previewOffsetSeconds;
-			const deltaSeconds = effectiveSeconds - input.playbackSeconds;
-			const progress = clamp(
-				deltaSeconds / input.preset.lookAheadSeconds,
-				0,
-				1,
-			);
-			const depth = easeOutCubic(progress);
-			const centerY = lerp(input.geometry.hitLineY, input.geometry.horizonY, depth);
-			const roadWidth = lerp(
-				input.geometry.bottomRoadWidth,
-				input.geometry.topRoadWidth,
-				depth,
-			);
-			const laneWidth = roadWidth / HIGHWAY_LANES.length;
-			const roadLeft = input.geometry.roadCenterX - roadWidth / 2;
-			return {
-				id: note.id,
-				lane: note.lane,
-				centerX: roadLeft + (note.lane + 0.5) * laneWidth,
-				centerY,
-				radius: lerp(18, 5, depth),
-				depth,
-				effectiveSeconds,
-			} satisfies HighwayProjectedNote;
-		})
-		.sort(
-			(a, b) =>
-				a.centerY - b.centerY ||
-				a.lane - b.lane ||
-				a.id.localeCompare(b.id),
-		);
+}): {
+	heads: HighwayProjectedHead[];
+	sustains: HighwayProjectedSustain[];
+} {
+	const window = visibleChartWindow({
+		playbackSeconds: input.playbackSeconds,
+		previewOffsetSeconds: input.previewOffsetSeconds,
+		preset: input.preset,
+	});
+	const heads: HighwayProjectedHead[] = [];
+	const sustains: HighwayProjectedSustain[] = [];
+	for (const note of input.notes) {
+		const sustain = projectSustain(note, input, window.startChartSeconds, window.endChartSeconds);
+		if (sustain) sustains.push(sustain);
+		const head = projectHead(note, input, window.startChartSeconds, window.endChartSeconds);
+		if (head) heads.push(head);
+	}
+	return {
+		heads: heads.sort(compareProjectedDepth),
+		sustains: sustains.sort(compareProjectedDepth),
+	};
 }
 
 export function projectHighwayLines(input: {
@@ -125,13 +148,11 @@ export function projectHighwayLines(input: {
 	return input.lines
 		.map((line) => {
 			const effectiveSeconds = line.chartSeconds + input.previewOffsetSeconds;
-			const deltaSeconds = effectiveSeconds - input.playbackSeconds;
-			const progress = clamp(
-				deltaSeconds / input.preset.lookAheadSeconds,
-				0,
-				1,
+			const depth = depthForEffectiveSeconds(
+				effectiveSeconds,
+				input.playbackSeconds,
+				input.preset,
 			);
-			const depth = easeOutCubic(progress);
 			const y = lerp(input.geometry.hitLineY, input.geometry.horizonY, depth);
 			const roadWidth = lerp(
 				input.geometry.bottomRoadWidth,
@@ -171,48 +192,182 @@ export function visibleChartWindow(input: {
 	};
 }
 
-function lowerBound(
-	notes: readonly HighwaySourceNote[],
-	target: number,
-): number {
-	let low = 0;
-	let high = notes.length;
-	while (low < high) {
-		const mid = Math.floor((low + high) / 2);
-		if (notes[mid]!.chartSeconds < target) low = mid + 1;
-		else high = mid;
+export function roadBoundsAtDepth(
+	geometry: HighwayGeometry,
+	depth: number,
+): HighwayRoadBounds {
+	const width = lerp(geometry.bottomRoadWidth, geometry.topRoadWidth, depth);
+	return {
+		leftX: geometry.roadCenterX - width / 2,
+		rightX: geometry.roadCenterX + width / 2,
+		width,
+		laneWidth: width / HIGHWAY_PITCHED_LANES.length,
+	};
+}
+
+function projectHead(
+	note: HighwaySemanticNote,
+	input: {
+		playbackSeconds: number;
+		previewOffsetSeconds: number;
+		preset: HighwaySpeedPreset;
+		geometry: HighwayGeometry;
+	},
+	startChartSeconds: number,
+	endChartSeconds: number,
+): HighwayProjectedHead | null {
+	if (note.chartSeconds < startChartSeconds || note.chartSeconds > endChartSeconds) {
+		return null;
 	}
-	return low;
-}
-
-function upperBound(
-	notes: readonly HighwaySourceNote[],
-	target: number,
-): number {
-	let low = 0;
-	let high = notes.length;
-	while (low < high) {
-		const mid = Math.floor((low + high) / 2);
-		if (notes[mid]!.chartSeconds <= target) low = mid + 1;
-		else high = mid;
-	}
-	return low;
-}
-
-function isHighwayLane(lane: number): lane is HighwayLaneId {
-	return Number.isFinite(lane) && Number.isInteger(lane) && lane >= 0 && lane <= 4;
-}
-
-function isValidHighwayNoteEvent(event: {
-	tick: number;
-	lane: number;
-	seconds: number;
-}): event is { tick: number; lane: HighwayLaneId; seconds: number } {
-	return (
-		isHighwayLane(event.lane) &&
-		Number.isFinite(event.tick) &&
-		Number.isFinite(event.seconds)
+	const effectiveSeconds = note.chartSeconds + input.previewOffsetSeconds;
+	const depth = depthForEffectiveSeconds(
+		effectiveSeconds,
+		input.playbackSeconds,
+		input.preset,
 	);
+	const y = lerp(input.geometry.hitLineY, input.geometry.horizonY, depth);
+	if (note.visualKind === "kick-rail") {
+		const rail = projectKickRailAtDepth(input.geometry, depth);
+		return {
+			id: note.id,
+			visualKind: "kick-rail",
+			depth,
+			y,
+			leftX: rail.leftX,
+			rightX: rail.rightX,
+			thickness: Math.max(6, lerp(14, 4, depth)),
+			fill: note.fill,
+			stroke: note.stroke,
+		};
+	}
+	const laneIndex = HIGHWAY_PITCHED_LANES.findIndex(
+		(lane) => lane.id === note.pitchedLane,
+	);
+	if (laneIndex < 0) return null;
+	const bounds = roadBoundsAtDepth(input.geometry, depth);
+	const centerX = bounds.leftX + (laneIndex + 0.5) * bounds.laneWidth;
+	return {
+		id: note.id,
+		visualKind: note.visualKind,
+		depth,
+		centerX,
+		centerY: y,
+		radius: Math.max(5, lerp(20, 5, depth)),
+		fill: note.fill,
+		stroke: note.stroke,
+		dynamic: note.dynamic,
+	};
+}
+
+function projectSustain(
+	note: HighwaySemanticNote,
+	input: {
+		playbackSeconds: number;
+		previewOffsetSeconds: number;
+		preset: HighwaySpeedPreset;
+		geometry: HighwayGeometry;
+	},
+	startChartSeconds: number,
+	endChartSeconds: number,
+): HighwayProjectedSustain | null {
+	if (note.length <= 0) return null;
+	const clippedStart = clamp(note.chartSeconds, startChartSeconds, endChartSeconds);
+	const clippedEnd = clamp(note.endChartSeconds, startChartSeconds, endChartSeconds);
+	if (!Number.isFinite(clippedStart) || !Number.isFinite(clippedEnd) || clippedEnd <= clippedStart) {
+		return null;
+	}
+	const startEffective = clippedStart + input.previewOffsetSeconds;
+	const endEffective = clippedEnd + input.previewOffsetSeconds;
+	const startDepth = depthForEffectiveSeconds(
+		startEffective,
+		input.playbackSeconds,
+		input.preset,
+	);
+	const endDepth = depthForEffectiveSeconds(
+		endEffective,
+		input.playbackSeconds,
+		input.preset,
+	);
+	const nearDepth = Math.min(startDepth, endDepth);
+	if (note.visualKind === "kick-rail") {
+		const startRail = projectKickRailAtDepth(input.geometry, startDepth);
+		const endRail = projectKickRailAtDepth(input.geometry, endDepth);
+		const sustain = {
+			id: note.id,
+			kind: "kick",
+			depth: nearDepth,
+			nearLeftX: startRail.leftX,
+			nearRightX: startRail.rightX,
+			nearY: lerp(input.geometry.hitLineY, input.geometry.horizonY, startDepth),
+			farLeftX: endRail.leftX,
+			farRightX: endRail.rightX,
+			farY: lerp(input.geometry.hitLineY, input.geometry.horizonY, endDepth),
+			fill: HIGHWAY_KICK_STYLE.bandFill,
+		} satisfies HighwayProjectedSustain;
+		return isFiniteSustain(sustain) ? sustain : null;
+	}
+	const laneIndex = HIGHWAY_PITCHED_LANES.findIndex(
+		(lane) => lane.id === note.pitchedLane,
+	);
+	if (laneIndex < 0) return null;
+	const startBounds = roadBoundsAtDepth(input.geometry, startDepth);
+	const endBounds = roadBoundsAtDepth(input.geometry, endDepth);
+	const startLane = laneBandBounds(startBounds, laneIndex);
+	const endLane = laneBandBounds(endBounds, laneIndex);
+	const sustain = {
+		id: note.id,
+		kind: "pitched",
+		depth: nearDepth,
+		nearLeftX: startLane.leftX,
+		nearRightX: startLane.rightX,
+		nearY: lerp(input.geometry.hitLineY, input.geometry.horizonY, startDepth),
+		farLeftX: endLane.leftX,
+		farRightX: endLane.rightX,
+		farY: lerp(input.geometry.hitLineY, input.geometry.horizonY, endDepth),
+		fill: note.fill,
+	} satisfies HighwayProjectedSustain;
+	return isFiniteSustain(sustain) ? sustain : null;
+}
+
+function laneBandBounds(
+	bounds: HighwayRoadBounds,
+	laneIndex: number,
+): { leftX: number; rightX: number } {
+	const laneLeft = bounds.leftX + laneIndex * bounds.laneWidth;
+	const laneRight = laneLeft + bounds.laneWidth;
+	const inset = Math.max(2, bounds.laneWidth * 0.18);
+	return {
+		leftX: laneLeft + inset,
+		rightX: Math.max(laneLeft + inset, laneRight - inset),
+	};
+}
+
+function depthForEffectiveSeconds(
+	effectiveSeconds: number,
+	playbackSeconds: number,
+	preset: HighwaySpeedPreset,
+): number {
+	const deltaSeconds = effectiveSeconds - playbackSeconds;
+	const progress = clamp(deltaSeconds / preset.lookAheadSeconds, 0, 1);
+	return easeOutCubic(progress);
+}
+
+function isFiniteSustain(sustain: HighwayProjectedSustain): boolean {
+	return [
+		sustain.nearLeftX,
+		sustain.nearRightX,
+		sustain.nearY,
+		sustain.farLeftX,
+		sustain.farRightX,
+		sustain.farY,
+	].every(Number.isFinite);
+}
+
+function compareProjectedDepth(
+	a: { depth: number },
+	b: { depth: number },
+): number {
+	return b.depth - a.depth;
 }
 
 export function easeOutCubic(value: number): number {

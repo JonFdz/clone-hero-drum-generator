@@ -17,6 +17,7 @@ function createCanvasContext() {
 		setTransform: vi.fn(),
 		clearRect: vi.fn(),
 		fillRect: vi.fn(),
+		strokeRect: vi.fn(),
 		createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
 		beginPath: vi.fn(),
 		moveTo: vi.fn(),
@@ -26,11 +27,24 @@ function createCanvasContext() {
 		stroke: vi.fn(),
 		arc: vi.fn(),
 		fillText: vi.fn(),
+		save: vi.fn(),
+		restore: vi.fn(),
 		font: "",
 		fillStyle: "",
 		strokeStyle: "",
+		globalAlpha: 1,
 		lineWidth: 1,
 	} as unknown as CanvasRenderingContext2D;
+}
+
+function previewNoteEvent(tick: number, lane: number, seconds: number, length = 0) {
+	return {
+		tick,
+		lane,
+		length,
+		seconds,
+		endSeconds: seconds + length / 192 / 2,
+	};
 }
 
 function createComponent(options?: {
@@ -121,7 +135,7 @@ describe("PreviewHighwayComponent", () => {
 			offsetSeconds: 0,
 			hasAccurateTiming: false,
 			limitations: [],
-			noteEvents: [{ tick: 192, lane: 1, seconds: 1 }],
+			noteEvents: [previewNoteEvent(192, 1, 1)],
 			sectionEvents: [],
 			timing: {
 				resolution: 192,
@@ -144,7 +158,8 @@ describe("PreviewHighwayComponent", () => {
 		} as never;
 		component.ngAfterViewInit();
 
-		expect(component.accessibleSummary()).toContain("Tick unavailable");
+		expect(component.accessibleSummary()).toContain("read-only generated-chart playback preview");
+		expect(component.accessibleSummary()).toContain("Tempo timing is unavailable");
 		vi.unstubAllGlobals();
 	});
 
@@ -158,7 +173,7 @@ describe("PreviewHighwayComponent", () => {
 			offsetSeconds: 0,
 			hasAccurateTiming: true,
 			limitations: [],
-			noteEvents: [{ tick: 192, lane: 1, seconds: 1 }],
+			noteEvents: [previewNoteEvent(192, 1, 1)],
 			sectionEvents: [],
 			timing: {
 				resolution: 192,

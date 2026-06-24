@@ -11,6 +11,10 @@ import {
 	type PreviewNote,
 } from "./preview-chart-stage-model";
 
+function previewNoteEvent(tick: number, lane: number, seconds: number, length = 0) {
+	return { tick, lane, length, seconds, endSeconds: seconds + length / 192 / 2 };
+}
+
 describe("preview-chart-stage-model", () => {
 	it("defines the required preview lane order", () => {
 		expect(PREVIEW_LANES.map((lane) => lane.id)).toEqual([
@@ -134,15 +138,15 @@ describe("preview-chart-stage-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 1, lane: 0, seconds: 1 },
-					{ tick: 2, lane: 2, seconds: 2 },
-					{ tick: 3, lane: 2, seconds: 3 },
-					{ tick: 3, lane: 66, seconds: 3 },
-					{ tick: 4, lane: 3, seconds: 4 },
-					{ tick: 4, lane: 67, seconds: 4 },
-					{ tick: 5, lane: 4, seconds: 5 },
-					{ tick: 5, lane: 68, seconds: 5 },
-					{ tick: 6, lane: 99, seconds: 6 },
+					previewNoteEvent(1, 0, 1),
+					previewNoteEvent(2, 2, 2),
+					previewNoteEvent(3, 2, 3),
+					previewNoteEvent(3, 66, 3),
+					previewNoteEvent(4, 3, 4),
+					previewNoteEvent(4, 67, 4),
+					previewNoteEvent(5, 4, 5),
+					previewNoteEvent(5, 68, 5),
+					previewNoteEvent(6, 99, 6),
 				],
 			},
 			50,
@@ -175,10 +179,10 @@ describe("preview-chart-stage-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 1, lane: 0, seconds: 11.1 },
-					{ tick: 2, lane: 1, seconds: 11.5 },
-					{ tick: 3, lane: 2, seconds: 13 },
-					{ tick: 4, lane: 3, seconds: 15.4 },
+					previewNoteEvent(1, 0, 11.1),
+					previewNoteEvent(2, 1, 11.5),
+					previewNoteEvent(3, 2, 13),
+					previewNoteEvent(4, 3, 15.4),
 				],
 			},
 			0,

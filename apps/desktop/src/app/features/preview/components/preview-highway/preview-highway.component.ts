@@ -11,16 +11,17 @@ import {
 	signal,
 } from "@angular/core";
 import type { ChartPreviewData } from "../../../../services/desktop-bridge.service";
-import { formatTime } from "../../../../services/desktop-preview-model";
 import {
 	HIGHWAY_SPEED_PRESETS,
 	type HighwayFrameData,
-	type HighwaySourceNote,
+	type HighwaySemanticNote,
 	type HighwaySpeedPresetId,
 } from "../../highway/highway-model";
+import { buildHighwaySemanticNotes } from "../../highway/highway-note-semantics";
 import {
 	buildHighwayGeometry,
-	buildHighwaySourceNotes,
+	buildHighwayLaneDividers,
+	buildHighwayTargets,
 	filterVisibleHighwayNotes,
 	projectHighwayLines,
 	projectHighwayNotes,
@@ -60,7 +61,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private readonly visibleNoteCount = signal(0);
 	private readonly reducedMotion = signal(false);
 
-	private sourceNotes: HighwaySourceNote[] = [];
+	private sourceNotes: HighwaySemanticNote[] = [];
 	private timingMap: HighwayTimingMap | null = null;
 	private resizeObserver: ResizeObserver | null = null;
 	private animationFrameId: number | null = null;
@@ -73,7 +74,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 
 	@Input() set chartData(value: ChartPreviewData | null) {
 		this._chartData.set(value);
-		this.sourceNotes = buildHighwaySourceNotes(value?.noteEvents ?? []);
+		this.sourceNotes = buildHighwaySemanticNotes(value?.noteEvents ?? []);
 		this.timingMap = value
 			? buildHighwayTimingMap({
 					resolution: value.resolution,
@@ -120,20 +121,12 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	}
 
 	readonly accessibleSummary = computed(() => {
-		const timeText = formatTime(Math.round(this._currentTime() * 2) / 2);
-		const frame = this.lastRenderedFrame;
-		const tick = frame?.hud.tick ?? null;
-		const beat = frame?.hud.beat ?? null;
-		const measure = frame?.hud.measure ?? null;
 		const limitation = this.limitationText();
 		return [
-			"Highway experimental mode.",
-			`Time ${timeText}.`,
-			`Tick ${tick ?? "unavailable"}.`,
-			`Beat ${beat ?? "unavailable"}.`,
-			`Measure ${measure ?? "unavailable"}.`,
-			`Visible notes ${this.visibleNoteCount()}.`,
-			limitation ?? "",
+			"Highway is a read-only generated-chart playback preview with four pitched lanes and a separate kick rail.",
+			"Use the existing transport controls for playback.",
+			"Highway speed and technical HUD options are session-only.",
+			limitation ? `Current limitation: ${limitation}` : "",
 		]
 			.filter(Boolean)
 			.join(" ");
@@ -256,7 +249,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 			window.endChartSeconds,
 		);
 		this.visibleNoteCount.set(visibleNotes.length);
-		const notes = geometry.minimumReadable
+		const projected = geometry.minimumReadable
 			? projectHighwayNotes({
 					notes: visibleNotes,
 					playbackSeconds: this._currentTime(),
@@ -264,7 +257,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 					preset,
 					geometry,
 				})
-			: [];
+			: { heads: [], sustains: [] };
 		const chartSecondsAtPlayback = Math.max(
 			0,
 			this._currentTime() - previewOffsetSeconds,
@@ -295,8 +288,11 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 			cssWidth: geometry.cssWidth,
 			cssHeight: geometry.cssHeight,
 			geometry,
-			notes,
+			heads: projected.heads,
+			sustains: projected.sustains,
 			lines,
+			targets: buildHighwayTargets(geometry),
+			laneDividers: buildHighwayLaneDividers(geometry),
 			hudEnabled: this._hudEnabled(),
 			limitationText: limitation,
 			hud: {

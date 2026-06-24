@@ -24,10 +24,10 @@
 	color: var(--color-muted);
 }
 
-.experimental-pill {
+.read-only-pill {
 	border: 1px solid rgba(79, 149, 255, 0.35);
 	border-radius: 999px;
-	color: #9bc0ff;
+	color: #b7d6ff;
 	font-size: 0.82rem;
 	font-weight: 700;
 	padding: 0.4rem 0.65rem;

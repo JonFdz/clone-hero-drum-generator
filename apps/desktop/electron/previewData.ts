@@ -29,12 +29,20 @@ export type ChartPreviewSectionEvent = {
 	source: "generated-chart";
 };
 
+export type ChartPreviewNoteEvent = {
+	tick: number;
+	lane: number;
+	length: number;
+	seconds: number;
+	endSeconds: number;
+};
+
 export type ChartPreviewData = {
 	resolution: number;
 	offsetSeconds: number;
 	hasAccurateTiming: boolean;
 	limitations: string[];
-	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
+	noteEvents: ChartPreviewNoteEvent[];
 	sectionEvents: ChartPreviewSectionEvent[];
 	timing: GeneratedChartTiming & {
 		summary: TimingDiagnosticsSummary;
@@ -185,10 +193,15 @@ export async function parseChartPreviewData(
 				{ tick: 0, bpm: 120 },
 				...timing.tempos.map(({ tick, bpm }) => ({ tick, bpm })),
 			];
-	const noteEvents = parseExpertDrumsNotes(text).map((note) => ({
-		...note,
-		seconds: tickToSeconds(note.tick, resolution, tempos),
-	}));
+	const noteEvents = parseExpertDrumsNotes(text).map((note) => {
+		const seconds = tickToSeconds(note.tick, resolution, tempos);
+		const endSeconds = tickToSeconds(note.tick + note.length, resolution, tempos);
+		return {
+			...note,
+			seconds,
+			endSeconds: Math.max(seconds, endSeconds),
+		};
+	});
 	const sectionEvents = timing.sections;
 	return {
 		resolution,
@@ -208,24 +221,42 @@ export async function parseChartPreviewData(
 	};
 }
 
-function parseExpertDrumsNotes(text: string): Array<{ tick: number; lane: number }> {
+function parseExpertDrumsNotes(text: string): Array<{
+	tick: number;
+	lane: number;
+	length: number;
+}> {
 	const drums = section(text, "ExpertDrums");
 	if (!drums) return [];
-	const notes: Array<{ tick: number; lane: number }> = [];
+	const notes: Array<{ tick: number; lane: number; length: number }> = [];
 	for (const line of drums.split(/\r?\n/)) {
-		const m = line.match(/^(\s*\d+)\s*=\s*N\s+(\d+)\s+\d+/);
+		const m = line.match(/^\s*(-?\d+)\s*=\s*N\s+(-?\d+)\s+(-?\d+)\s*$/);
 		if (!m) continue;
-		const tick = Number(m[1].trim());
+		const tick = Number(m[1]);
 		const lane = Number(m[2]);
-		if (Number.isFinite(tick) && Number.isFinite(lane)) {
-			notes.push({ tick, lane });
+		const length = Number(m[3]);
+		if (
+			isNonNegativeInteger(tick) &&
+			isNonNegativeInteger(lane) &&
+			isNonNegativeInteger(length)
+		) {
+			notes.push({ tick, lane, length });
 		}
 	}
-	return notes.sort((a, b) => a.tick - b.tick);
+	return notes.sort(
+		(a, b) => a.tick - b.tick || a.lane - b.lane || a.length - b.length,
+	);
 }
 
+function isNonNegativeInteger(value: number): boolean {
+	return Number.isInteger(value) && value >= 0;
+}
 
-function tickToSeconds(tick: number, resolution: number, tempos: Array<{ tick: number; bpm: number }>): number {
+function tickToSeconds(
+	tick: number,
+	resolution: number,
+	tempos: Array<{ tick: number; bpm: number }>,
+): number {
 	if (!Number.isFinite(tick) || tick <= 0) return 0;
 	if (tempos.length === 0) {
 		return tick / resolution / 2;
@@ -282,7 +313,7 @@ function isSongSection(value: unknown): value is { tick: number; name: string } 
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === "object" && value !== null && !Array.isArray(value);
+	return typeof value === "object" && value !== null;
 }
 
 function isFiniteNumber(value: unknown): value is number {
