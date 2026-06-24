@@ -5,7 +5,9 @@ import {
 	EventEmitter,
 	HostListener,
 	Input,
+	OnChanges,
 	Output,
+	SimpleChanges,
 } from "@angular/core";
 
 export type ProfileMetadataDialogIntent = {
@@ -26,7 +28,7 @@ export type ProfileMetadataDialogIntent = {
 	templateUrl: "./profile-metadata-dialog.component.html",
 	styleUrl: "./profile-metadata-dialog.component.css",
 })
-export class ProfileMetadataDialogComponent {
+export class ProfileMetadataDialogComponent implements OnChanges {
 	@Input() isOpen = false;
 	@Input() title = "Profile metadata";
 	@Input() message = "";
@@ -45,6 +47,13 @@ export class ProfileMetadataDialogComponent {
 	/** Whether the confirm action is disabled (required name empty). */
 	get confirmDisabled(): boolean {
 		return this.required && this.name.trim().length === 0;
+	}
+
+	ngOnChanges(changes: SimpleChanges): void {
+		const isOpenChange = changes["isOpen"];
+		if (isOpenChange && !isOpenChange.previousValue && isOpenChange.currentValue) {
+			this.syncValues();
+		}
 	}
 
 	/** Resets editable fields to the configured initial values. */
