@@ -49,6 +49,70 @@ audio {
 	gap: 1rem;
 	min-width: 0;
 }
+.preview-visual-mode-card {
+	display: grid;
+	gap: 1rem;
+}
+.preview-visual-heading {
+	align-items: start;
+	display: flex;
+	gap: 1rem;
+	justify-content: space-between;
+}
+.preview-visual-heading h2,
+.preview-visual-heading p {
+	margin-bottom: 0;
+}
+.preview-visual-toggle {
+	display: inline-flex;
+	gap: 0.5rem;
+}
+.mode-button {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid var(--color-border);
+	border-radius: 999px;
+	color: var(--color-foreground);
+	cursor: pointer;
+	font-weight: 700;
+	padding: 0.6rem 0.9rem;
+}
+.mode-button.active {
+	background: rgba(79, 149, 255, 0.12);
+	border-color: rgba(79, 149, 255, 0.35);
+	color: #9bc0ff;
+}
+.highway-toolbar {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+}
+.highway-toolbar label {
+	display: grid;
+	gap: 0.4rem;
+}
+.highway-toolbar span {
+	color: var(--color-muted);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+.highway-toolbar select {
+	background: rgba(255, 255, 255, 0.03);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-md);
+	color: var(--color-foreground);
+	padding: 0.6rem 0.75rem;
+}
+.checkbox-label {
+	align-items: center;
+	display: inline-flex !important;
+	gap: 0.65rem;
+}
+.checkbox-label span {
+	color: var(--color-foreground);
+	font-size: 0.95rem;
+	font-weight: 500;
+}
 chdg-preview-offset-panel {
 	min-width: 0;
 }
@@ -159,8 +223,12 @@ chdg-preview-offset-panel {
 }
 @media (max-width: 760px) {
 	.preview-header,
-	.timing-heading {
+	.timing-heading,
+	.preview-visual-heading {
 		display: grid;
+	}
+	.preview-visual-toggle {
+		flex-wrap: wrap;
 	}
 	.timing-facts,
 	.timing-tables {

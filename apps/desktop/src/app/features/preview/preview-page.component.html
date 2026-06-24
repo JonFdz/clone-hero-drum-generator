@@ -46,18 +46,82 @@
 					(seek)="seek($event)"
 				/>
 
-				<chdg-preview-chart-stage
-					[waveformOverview]="preview.waveformOverview()"
-					[chartData]="preview.chartData()"
-					[currentTime]="preview.currentTime()"
-					[duration]="preview.duration()"
-					[previewOffsetMs]="preview.previewOffsetMs()"
-					[audioSourceLabel]="preview.audioSourceLabel()"
-					[noteCount]="preview.previewNoteCount()"
-					[waveformStatus]="preview.waveformStatus()"
-					[waveformError]="preview.waveformError()"
-					(seek)="seek($event)"
-				/>
+				<section class="card preview-visual-mode-card">
+					<div class="preview-visual-heading">
+						<div>
+							<p class="eyebrow">Preview mode</p>
+							<h2>Chart view or Highway (experimental)</h2>
+						</div>
+						<div class="preview-visual-toggle" role="tablist" aria-label="Preview visual mode">
+							<button
+								type="button"
+								class="mode-button"
+								[class.active]="visualMode() === 'chart'"
+								(click)="setVisualMode('chart')"
+							>
+								Chart view
+							</button>
+							<button
+								type="button"
+								class="mode-button"
+								[class.active]="visualMode() === 'highway'"
+								(click)="setVisualMode('highway')"
+							>
+								Highway (experimental)
+							</button>
+						</div>
+					</div>
+
+					<div class="highway-toolbar" *ngIf="visualMode() === 'highway'">
+						<label>
+							<span>Highway speed</span>
+							<select
+								[value]="highwayPreset()"
+								(change)="setHighwayPreset($any($event.target).value)"
+							>
+								<option
+									*ngFor="let preset of highwayPresets"
+									[value]="preset.id"
+								>
+									{{ preset.label }}
+								</option>
+							</select>
+						</label>
+						<label class="checkbox-label">
+							<input
+								type="checkbox"
+								[checked]="highwayHudEnabled()"
+								(change)="setHighwayHudEnabled($any($event.target).checked)"
+							/>
+							<span>Show technical HUD</span>
+						</label>
+					</div>
+
+					<chdg-preview-chart-stage
+						*ngIf="visualMode() === 'chart'"
+						[waveformOverview]="preview.waveformOverview()"
+						[chartData]="preview.chartData()"
+						[currentTime]="preview.currentTime()"
+						[duration]="preview.duration()"
+						[previewOffsetMs]="preview.previewOffsetMs()"
+						[audioSourceLabel]="preview.audioSourceLabel()"
+						[noteCount]="preview.previewNoteCount()"
+						[waveformStatus]="preview.waveformStatus()"
+						[waveformError]="preview.waveformError()"
+						(seek)="seek($event)"
+					/>
+
+					<chdg-preview-highway
+						*ngIf="visualMode() === 'highway'"
+						[chartData]="preview.chartData()"
+						[currentTime]="preview.currentTime()"
+						[previewOffsetMs]="preview.previewOffsetMs()"
+						[isPlaying]="isPlaying()"
+						[seekEpoch]="previewSeekEpoch()"
+						[preset]="highwayPreset()"
+						[hudEnabled]="highwayHudEnabled()"
+					/>
+				</section>
 
 				<section
 					class="card timing-card"

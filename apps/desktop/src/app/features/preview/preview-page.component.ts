@@ -10,8 +10,15 @@ import {
 } from "@angular/core";
 import { DesktopPreviewService } from "../../services/desktop-preview.service";
 import { PreviewChartStageComponent } from "./components/preview-chart-stage/preview-chart-stage.component";
+import { PreviewHighwayComponent } from "./components/preview-highway/preview-highway.component";
 import { PreviewOffsetPanelComponent } from "./components/preview-offset-panel/preview-offset-panel.component";
 import { PreviewTransportCardComponent } from "./components/preview-transport-card/preview-transport-card.component";
+import {
+	HIGHWAY_SPEED_PRESETS,
+	type HighwaySpeedPresetId,
+} from "./highway/highway-model";
+
+type PreviewVisualMode = "chart" | "highway";
 
 @Component({
 	selector: "chdg-preview-page",
@@ -20,6 +27,7 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 	imports: [
 		CommonModule,
 		PreviewChartStageComponent,
+		PreviewHighwayComponent,
 		PreviewOffsetPanelComponent,
 		PreviewTransportCardComponent,
 	],
@@ -29,6 +37,11 @@ import { PreviewTransportCardComponent } from "./components/preview-transport-ca
 export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 	@ViewChild("audio") private readonly audioRef?: ElementRef<HTMLAudioElement>;
 	readonly isPlaying = signal(false);
+	readonly visualMode = signal<PreviewVisualMode>("chart");
+	readonly highwayPreset = signal<HighwaySpeedPresetId>("normal");
+	readonly highwayHudEnabled = signal(true);
+	readonly highwayPresets = HIGHWAY_SPEED_PRESETS;
+	readonly previewSeekEpoch = signal(0);
 	private animationFrameId: number | null = null;
 
 	constructor(readonly preview: DesktopPreviewService) {}
@@ -57,6 +70,7 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 			const clamped = this.clampTime(value, duration);
 			this.audioRef.nativeElement.currentTime = clamped;
 			this.preview.currentTime.set(clamped);
+			this.previewSeekEpoch.update((epoch) => epoch + 1);
 		}
 	}
 
@@ -109,6 +123,18 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 
 	formatOffsetMilliseconds(offsetSeconds: number): number {
 		return Math.round(offsetSeconds * 1000);
+	}
+
+	setVisualMode(mode: PreviewVisualMode): void {
+		this.visualMode.set(mode);
+	}
+
+	setHighwayPreset(preset: HighwaySpeedPresetId): void {
+		this.highwayPreset.set(preset);
+	}
+
+	setHighwayHudEnabled(enabled: boolean): void {
+		this.highwayHudEnabled.set(enabled);
 	}
 
 	private startPlaybackAnimation(): void {
