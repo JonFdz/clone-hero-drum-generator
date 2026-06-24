@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from "@angular/core";
-import type { HomeRecentProjectItem } from "../../../services/home-dashboard-model";
+import type { HomeRecentProjectItem } from "../home-dashboard.model";
 
 @Component({
 	selector: "chdg-home-recent-projects-compact",

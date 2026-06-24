@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from "@angular/core";
-import type { ProjectsLibraryItem } from "../../../services/projects-library-model";
+import type { ProjectsLibraryItem } from "../projects-library.model";
 import { ProjectsCoverPlaceholderComponent } from "./projects-cover-placeholder.component";
 import { ProjectsSourceBadgeComponent } from "./projects-source-badge.component";
 

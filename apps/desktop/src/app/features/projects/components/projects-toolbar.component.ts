@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from "@angular/core";
-import type { ProjectsSortMode, ProjectsSourceFilter } from "../../../services/projects-library-model";
+import type { ProjectsSortMode, ProjectsSourceFilter } from "../projects-library.model";
 
 @Component({
 	selector: "chdg-projects-toolbar",

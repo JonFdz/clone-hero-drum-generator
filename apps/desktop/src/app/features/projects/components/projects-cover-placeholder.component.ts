@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
-import type { ProjectsSourceType } from "../../../services/projects-library-model";
+import type { ProjectsSourceType } from "../projects-library.model";
 
 @Component({
 	selector: "chdg-projects-cover-placeholder",

@@ -4,7 +4,7 @@ import { Router } from "@angular/router";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { ProjectLibraryService } from "../projects/public-api";
 import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator } from "../project-session/public-api";
-import { deriveHomeDashboardModel } from "../../services/home-dashboard-model";
+import { deriveHomeDashboardModel } from "./home-dashboard.model";
 import { HomeRecentProjectsCompactComponent } from "./components/home-recent-projects-compact.component";
 import { HomeWarningsPanelComponent } from "./components/home-warnings-panel.component";
 import { HomeWorkflowProgressComponent } from "./components/home-workflow-progress.component";
@@ -34,10 +34,17 @@ export class HomePageComponent {
 
 	readonly model = computed(() =>
 		deriveHomeDashboardModel({
-			project: { ...this.session.state(), recentProjects: this.library.recentProjects(), settings: { schemaVersion: 1, theme: "dark", projectLocation: "" } },
-			generate: this.generateState.state(),
+			projectName: this.session.projectName(),
+			projectFilePath: this.session.projectFilePath(),
+			outputStatus: this.session.outputStatus(),
+			missingPathWarnings: this.session.missingPathWarnings(),
+			recentProjects: this.library.recentProjects(),
 			hasProject: this.session.hasProject(),
 			isDirty: this.session.isDirty(),
+			sourcePath: this.generateState.state().sourcePath,
+			audioPath: this.generateState.state().audioPath,
+			outputDir: this.generateState.state().outputDir,
+			selectedTrackCount: this.generateState.state().selectedTracks.length,
 		}),
 	);
 

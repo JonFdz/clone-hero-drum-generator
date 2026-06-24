@@ -254,12 +254,19 @@ transition.
 ## Migrated feature ownership (#75)
 
 - `features/home` owns the Home page, dashboard presentation components, and
-  output-folder application action.
+  output-folder application action. Its pure dashboard view model lives at
+  `features/home/home-dashboard.model.ts` and accepts a minimal feature-owned
+  input rather than the legacy project facade shape.
 - `features/projects` owns recent-project state, filtering/sorting view models,
   the Projects page, project cards, removal interaction, and its public API.
+  The pure library model is colocated as
+  `features/projects/projects-library.model.ts`.
 - `features/project-details` owns project creation/editing presentation and
   local file-picker/cover-preview application actions.
 - `features/settings` owns persisted settings and FFmpeg diagnostics.
+  `SettingsPageComponent` uses an immutable local linked draft that tracks
+  later service emissions and backend-normalized save results; it never mutates
+  the shared settings signal object directly.
 - All migrated components use external HTML/CSS and OnPush. No exception was
   introduced.
 - Project lifecycle operations use the project-session public API; pages

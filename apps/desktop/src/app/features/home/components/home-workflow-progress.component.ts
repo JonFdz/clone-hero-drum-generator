@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
-import type { HomeWorkflowStep } from "../../../services/home-dashboard-model";
+import type { HomeWorkflowStep } from "../home-dashboard.model";
 
 @Component({
 	selector: "chdg-home-workflow-progress",

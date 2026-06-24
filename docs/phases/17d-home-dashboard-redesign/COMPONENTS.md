@@ -12,7 +12,7 @@ HomeQuickActionsComponent
 HomeRecentProjectsCompactComponent
 HomeWorkflowProgressComponent
 HomeWarningsPanelComponent
-home-dashboard-model.ts
+home-dashboard.model.ts
 ```
 
 The model/helper work is useful. The visual composition should be corrected.
@@ -117,7 +117,7 @@ Projects Library
 Keep:
 
 ```txt
-apps/desktop/src/app/services/home-dashboard-model.ts
+apps/desktop/src/app/features/home/home-dashboard.model.ts
 ```
 
 But adjust output to support a compact mock-like layout:

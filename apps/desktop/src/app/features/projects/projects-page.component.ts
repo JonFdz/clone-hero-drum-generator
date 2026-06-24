@@ -9,7 +9,7 @@ import {
 	type ProjectsLibraryItem,
 	type ProjectsSortMode,
 	type ProjectsSourceFilter,
-} from "../../services/projects-library-model";
+} from "./projects-library.model";
 import { ProjectsEmptyStateComponent } from "./components/projects-empty-state.component";
 import { ProjectsLibraryHeaderComponent } from "./components/projects-library-header.component";
 import { ProjectsLibraryStatsComponent } from "./components/projects-library-stats.component";

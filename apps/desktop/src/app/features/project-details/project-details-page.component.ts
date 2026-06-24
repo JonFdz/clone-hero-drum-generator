@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from "@angular/core";
+import { ChangeDetectionStrategy, Component, computed, effect, inject, InjectionToken, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterModule } from "@angular/router";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
@@ -8,6 +8,11 @@ import { ProjectLibraryService } from "../projects/public-api";
 import { SettingsService } from "../settings/public-api";
 import { ProjectDetailsService } from "./project-details.service";
 import { createDefaultProjectName } from "../../services/project-name-model";
+
+export const PROJECT_DETAILS_REACTIVE_EFFECTS = new InjectionToken<boolean>(
+	"PROJECT_DETAILS_REACTIVE_EFFECTS",
+	{ factory: () => true },
+);
 
 @Component({
 	selector: "chdg-project-details-page",
@@ -26,6 +31,7 @@ export class ProjectDetailsPageComponent {
 	private readonly settingsService = inject(SettingsService);
 	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly router = inject(Router);
+	private readonly reactiveEffects = inject(PROJECT_DETAILS_REACTIVE_EFFECTS);
 
 	readonly state = this.generateState.state;
 	readonly validation = this.generateState.validation;
@@ -52,18 +58,20 @@ export class ProjectDetailsPageComponent {
 	);
 
 	constructor() {
-		effect(() => {
-			const key = this.loadedProjectKey();
-			if (key !== this.lastLoadedProjectKey) {
-				this.lastLoadedProjectKey = key;
-				this.projectNameInput = this.projectState.state().projectName;
-				this.metadata = { ...this.generateState.state().metadata };
-			}
-		});
-		effect(() => {
-			const imagePath = this.state().cover?.imagePath;
-			void this.refreshCoverPreview(imagePath);
-		});
+		if (this.reactiveEffects) {
+			effect(() => {
+				const key = this.loadedProjectKey();
+				if (key !== this.lastLoadedProjectKey) {
+					this.lastLoadedProjectKey = key;
+					this.projectNameInput = this.projectState.state().projectName;
+					this.metadata = { ...this.generateState.state().metadata };
+				}
+			});
+			effect(() => {
+				const imagePath = this.state().cover?.imagePath;
+				void this.refreshCoverPreview(imagePath);
+			});
+		}
 
 		const settings = this.settingsService.settings();
 		if (settings.defaultCharter && !this.metadata.charter) {

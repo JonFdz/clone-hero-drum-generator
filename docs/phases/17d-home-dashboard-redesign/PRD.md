@@ -220,7 +220,7 @@ four-card status metrics row
 Keep the pure model helper from the current PR:
 
 ```txt
-apps/desktop/src/app/services/home-dashboard-model.ts
+apps/desktop/src/app/features/home/home-dashboard.model.ts
 ```
 
 But adjust it if needed so the model supports:

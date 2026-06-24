@@ -17,19 +17,19 @@
         </div>
         <div class="setting-row">
           <div><strong>Default project location</strong><p>Folder where new projects are created by default.</p></div>
-          <input class="input-like" [(ngModel)]="settings.projectLocation" (change)="save()" />
+          <input class="input-like" [ngModel]="settings().projectLocation" (ngModelChange)="updateSettings({ projectLocation: $event })" (change)="save()" />
         </div>
         <div class="setting-row">
           <div><strong>Default output folder</strong><p>Optional override for the default output folder inside each project.</p></div>
-          <input class="input-like" [(ngModel)]="settings.defaultOutputFolder" (change)="save()" placeholder="<project>/output" />
+          <input class="input-like" [ngModel]="settings().defaultOutputFolder" (ngModelChange)="updateSettings({ defaultOutputFolder: $event })" (change)="save()" placeholder="<project>/output" />
         </div>
         <div class="setting-row">
           <div><strong>Default charter</strong><p>Default charter name for new projects.</p></div>
-          <input class="input-like" [(ngModel)]="settings.defaultCharter" (change)="save()" />
+          <input class="input-like" [ngModel]="settings().defaultCharter" (ngModelChange)="updateSettings({ defaultCharter: $event })" (change)="save()" />
         </div>
         <div class="setting-row">
           <div><strong>Default offset (ms)</strong><p>Default chart offset in milliseconds.</p></div>
-          <input class="input-like" type="number" [(ngModel)]="settings.defaultOffsetMs" (change)="save()" />
+          <input class="input-like" type="number" [ngModel]="settings().defaultOffsetMs" (ngModelChange)="updateSettings({ defaultOffsetMs: $event })" (change)="save()" />
         </div>
       </section>
 
@@ -38,7 +38,7 @@
         <div class="setting-row">
           <div><strong>FFmpeg path</strong><p>Path to FFmpeg binary. Leave empty to detect from PATH.</p></div>
           <div class="column">
-            <input class="input-like" [(ngModel)]="settings.ffmpegPath" (change)="save()" placeholder="Auto-detect from PATH" />
+            <input class="input-like" [ngModel]="settings().ffmpegPath" (ngModelChange)="updateSettings({ ffmpegPath: $event })" (change)="save()" placeholder="Auto-detect from PATH" />
             <button class="button secondary small" type="button" (click)="testFfmpeg()">Test FFmpeg</button>
             @if (ffmpegResult(); as result) {
               <p class="ffmpeg-result" [class.available]="result.available">{{ result.message }}</p>

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
-import type { ProjectsLibraryStats } from "../../../services/projects-library-model";
+import type { ProjectsLibraryStats } from "../projects-library.model";
 
 @Component({
 	selector: "chdg-projects-library-stats",

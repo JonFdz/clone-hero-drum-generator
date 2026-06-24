@@ -1,9 +1,5 @@
 import type { ChdgOutputStatus, RecentProject } from "@chdg/project/browser";
-import type { DesktopGenerateState } from "./desktop-generate-state.service";
-import type {
-	DesktopProjectState,
-	MissingPathWarning,
-} from "./desktop-project-state.service";
+import type { MissingPathWarning } from "../project-session/public-api";
 
 export type HomeNextActionId =
 	| "new_project"
@@ -61,10 +57,17 @@ export type HomeDashboardModel = {
 };
 
 export type HomeDashboardModelInput = {
-	project: DesktopProjectState;
-	generate: DesktopGenerateState;
+	projectName: string;
+	projectFilePath?: string;
+	outputStatus: ChdgOutputStatus;
+	missingPathWarnings: MissingPathWarning[];
+	recentProjects: RecentProject[];
 	hasProject: boolean;
 	isDirty: boolean;
+	sourcePath?: string;
+	audioPath?: string;
+	outputDir?: string;
+	selectedTrackCount: number;
 };
 
 export const HOME_WORKFLOW_LABELS = [
@@ -87,22 +90,22 @@ const workflowDescriptions: Record<
 export function deriveHomeDashboardModel(
 	input: HomeDashboardModelInput,
 ): HomeDashboardModel {
-	const outputStatus = formatHomeOutputStatus(input.project.outputStatus);
+	const outputStatus = formatHomeOutputStatus(input.outputStatus);
 	const recentProjects = deriveRecentProjectItems(
-		limitRecentProjects(input.project.recentProjects),
+		limitRecentProjects(input.recentProjects),
 		input,
 		outputStatus,
 	);
 	return {
 		hasProject: input.hasProject,
 		projectName: input.hasProject
-			? input.project.projectName
+			? input.projectName
 			: "No project selected",
-		projectFilePathLabel: compactPathLabel(input.project.projectFilePath),
+		projectFilePathLabel: compactPathLabel(input.projectFilePath),
 		isDirty: input.isDirty,
 		outputStatus,
-		missingPathWarnings: input.project.missingPaths,
-		missingPathCount: input.project.missingPaths.length,
+		missingPathWarnings: input.missingPathWarnings,
+		missingPathCount: input.missingPathWarnings.length,
 		nextAction: deriveHomeNextAction(input),
 		recentProjects,
 		workflow: deriveWorkflowStepStatuses(input),
@@ -112,7 +115,7 @@ export function deriveHomeDashboardModel(
 export function deriveHomeNextAction(
 	input: HomeDashboardModelInput,
 ): HomeNextAction {
-	const { project, generate, hasProject } = input;
+	const { hasProject } = input;
 	if (!hasProject) {
 		return {
 			id: "new_project",
@@ -125,7 +128,7 @@ export function deriveHomeNextAction(
 		};
 	}
 
-	if (project.missingPaths.length > 0 || hasMissingSetupPaths(generate)) {
+	if (input.missingPathWarnings.length > 0 || hasMissingSetupPaths(input)) {
 		return {
 			id: "continue_setup",
 			label: "Continue Setup",
@@ -133,11 +136,11 @@ export function deriveHomeNextAction(
 				"Add or repair the source, audio, and output folder before generation.",
 			route: "/projects/details",
 			secondaryLabel: "Source Review",
-			secondaryRoute: generate.sourcePath ? "/source-review" : undefined,
+			secondaryRoute: input.sourcePath ? "/source-review" : undefined,
 		};
 	}
 
-	if (project.outputStatus === "failed") {
+	if (input.outputStatus === "failed") {
 		return {
 			id: "review_generate",
 			label: "Review Generate",
@@ -147,7 +150,7 @@ export function deriveHomeNextAction(
 		};
 	}
 
-	if (project.outputStatus === "needs-regenerate") {
+	if (input.outputStatus === "needs-regenerate") {
 		return {
 			id: "generate",
 			label: "Generate",
@@ -157,7 +160,7 @@ export function deriveHomeNextAction(
 		};
 	}
 
-	if (project.outputStatus === "generated") {
+	if (input.outputStatus === "generated") {
 		return {
 			id: "preview",
 			label: "Preview",
@@ -169,7 +172,7 @@ export function deriveHomeNextAction(
 		};
 	}
 
-	if (generate.sourcePath) {
+	if (input.sourcePath) {
 		return {
 			id: "source_review",
 			label: "Source Review",
@@ -177,8 +180,7 @@ export function deriveHomeNextAction(
 				"Source is set. Review source analysis, selected tracks, and mapping before generation.",
 			route: "/source-review",
 			secondaryLabel: "Generate",
-			secondaryRoute:
-				generate.selectedTracks.length > 0 ? "/generate" : undefined,
+			secondaryRoute: input.selectedTrackCount > 0 ? "/generate" : undefined,
 		};
 	}
 
@@ -193,13 +195,13 @@ export function deriveHomeNextAction(
 export function deriveWorkflowStepStatuses(
 	input: HomeDashboardModelInput,
 ): HomeWorkflowStep[] {
-	const { hasProject, generate, project } = input;
-	const hasSource = !!generate.sourcePath;
-	const selected = generate.selectedTracks.length > 0;
-	const generated = project.outputStatus === "generated";
-	const failed = project.outputStatus === "failed";
+	const { hasProject } = input;
+	const hasSource = !!input.sourcePath;
+	const selected = input.selectedTrackCount > 0;
+	const generated = input.outputStatus === "generated";
+	const failed = input.outputStatus === "failed";
 	const canGenerate =
-		hasSource && !!generate.audioPath && !!generate.outputDir && selected;
+		hasSource && !!input.audioPath && !!input.outputDir && selected;
 
 	const statuses: HomeWorkflowStepStatus[] = [
 		hasSource ? "complete" : hasProject ? "current" : "upcoming",
@@ -281,8 +283,7 @@ function deriveRecentProjectItems(
 ): HomeRecentProjectItem[] {
 	return projects.map((project) => {
 		const isCurrentProject =
-			!!input.project.projectFilePath &&
-			project.path === input.project.projectFilePath;
+			!!input.projectFilePath && project.path === input.projectFilePath;
 		return {
 			...project,
 			icon: iconForRecentProject(project.name, project.path),
@@ -332,12 +333,12 @@ function formatRecentOpened(value: string): string {
 	});
 }
 
-function hasMissingSetupPaths(generate: DesktopGenerateState): boolean {
-	return countMissingSetupPaths(generate) > 0;
+function hasMissingSetupPaths(input: HomeDashboardModelInput): boolean {
+	return countMissingSetupPaths(input) > 0;
 }
 
-function countMissingSetupPaths(generate: DesktopGenerateState): number {
-	return [generate.sourcePath, generate.audioPath, generate.outputDir].filter(
+function countMissingSetupPaths(input: HomeDashboardModelInput): number {
+	return [input.sourcePath, input.audioPath, input.outputDir].filter(
 		(path) => !path,
 	).length;
 }

@@ -22,12 +22,12 @@ the pre-refactor API for unmigrated pages/services. It delegates to
 `ProjectPersistenceService`. Remove it as each page migrates to the canonical
 services (#75/#76). Consumers to migrate:
 
-- `pages/generate`, `pages/home`, `pages/new-project`,
-  `pages/new-project` plus the #76 workflow pages and services. Home, Projects,
+- `pages/generate`, `pages/new-project`, plus the #76 workflow pages and
+  services. Home, Projects,
   Project Details, and Settings no longer consume this facade after #75.
 - `services/desktop-generate-state.service` (mark* calls -> `ProjectSessionStore`).
 - `services/desktop-validation.service`, `services/desktop-preview.service`,
-  `services/source-review-orchestrator.service`, `services/home-dashboard-model`,
+  `services/source-review-orchestrator.service`, and
   `services/desktop-validation-model` (typed `DesktopProjectState` reads).
 
 ### Consolidate generation workflow state into the session boundary

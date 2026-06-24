@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
 import type { MissingPathWarning } from "../../../services/desktop-project-state.service";
-import type { HomeDashboardModel } from "../../../services/home-dashboard-model";
+import type { HomeDashboardModel } from "../home-dashboard.model";
 
 @Component({
 	selector: "chdg-home-warnings-panel",

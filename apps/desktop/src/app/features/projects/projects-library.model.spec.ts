@@ -6,7 +6,7 @@ import {
 	filterProjects,
 	inferProjectSourceType,
 	sortProjects,
-} from "./projects-library-model";
+} from "./projects-library.model";
 
 const now = new Date("2026-05-23T12:00:00.000Z");
 
