@@ -281,8 +281,8 @@ Keep `ProjectsPageComponent` as a container/composer.
 Create if practical:
 
 ```txt
-apps/desktop/src/app/services/projects-library-model.ts
-apps/desktop/src/app/services/projects-library-model.test.ts
+apps/desktop/src/app/features/projects/projects-library.model.ts
+apps/desktop/src/app/features/projects/projects-library.model.spec.ts
 ```
 
 Responsibilities:

@@ -1,0 +1,31 @@
+<section class="card recent-projects-card">
+			<div class="recent-header">
+				<h2>Recent Projects</h2>
+				<button class="view-all-link" type="button" (click)="viewAll.emit()">
+					View all projects <span aria-hidden="true">→</span>
+				</button>
+			</div>
+			@if (projects.length === 0) {
+				<div class="recent-project-row empty-row">
+					<div class="recent-icon">▣</div>
+					<div class="recent-copy">
+						<strong>No recent projects yet</strong>
+						<p>Create or open a .chdg project to pin it here.</p>
+					</div>
+				</div>
+			} @else {
+				<div class="recent-list">
+					@for (project of projects; track project.path) {
+						<div class="recent-project-row" role="button" tabindex="0" (click)="openProject.emit(project.path)" (keyup.enter)="openProject.emit(project.path)">
+							<div class="recent-icon">{{ project.icon }}</div>
+							<div class="recent-copy">
+								<strong>{{ project.name }}</strong>
+								<p>{{ project.lastOpenedLabel }}</p>
+							</div>
+							<span class="recent-status" [class]="'recent-status tone-' + project.statusTone">{{ project.statusLabel }}</span>
+							<button class="kebab-button" type="button" aria-label="Remove recent project" (click)="removeProjectClick($event, project.path)">⋮</button>
+						</div>
+					}
+				</div>
+			}
+		</section>

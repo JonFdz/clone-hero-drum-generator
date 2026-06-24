@@ -15,6 +15,8 @@ export class ProjectLibraryService {
 	private readonly bridge: DesktopBridgeService;
 
 	readonly recentProjects = signal<RecentProject[]>([]);
+	readonly loading = signal(false);
+	readonly error = signal<string | null>(null);
 
 	constructor(bridge: DesktopBridgeService = inject(DesktopBridgeService)) {
 		this.bridge = bridge;
@@ -22,13 +24,20 @@ export class ProjectLibraryService {
 
 	/** Reloads recent projects from the desktop bridge. */
 	async refresh(): Promise<void> {
+		this.loading.set(true);
+		this.error.set(null);
 		try {
 			const envelope = await this.bridge.readRecentProjects();
 			if (envelope.ok) {
 				this.recentProjects.set(envelope.data);
+			} else {
+				this.error.set(envelope.error.message);
 			}
-		} catch {
+		} catch (error) {
 			// Keep current list on failure.
+			this.error.set(error instanceof Error ? error.message : "Unable to load recent projects.");
+		} finally {
+			this.loading.set(false);
 		}
 	}
 

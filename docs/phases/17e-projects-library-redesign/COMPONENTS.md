@@ -241,7 +241,7 @@ Cancel
 Create:
 
 ```txt
-apps/desktop/src/app/services/projects-library-model.ts
+apps/desktop/src/app/features/projects/projects-library.model.ts
 ```
 
 Suggested exports:
@@ -259,7 +259,7 @@ isCurrentProject()
 Tests:
 
 ```txt
-apps/desktop/src/app/services/projects-library-model.test.ts
+apps/desktop/src/app/features/projects/projects-library.model.spec.ts
 ```
 
 ## Implementation order

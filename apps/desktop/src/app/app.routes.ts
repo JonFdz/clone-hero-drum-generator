@@ -1,5 +1,5 @@
 import type { Routes } from "@angular/router";
-import { HomePageComponent } from "./pages/home/home-page.component";
+import { HomePageComponent } from "./features/home/home-page.component";
 
 export const routes: Routes = [
 	{ path: "", pathMatch: "full", redirectTo: "home" },
@@ -9,14 +9,14 @@ export const routes: Routes = [
 	{
 		path: "projects",
 		loadComponent: () =>
-			import("./pages/projects/projects-page.component").then(
+			import("./features/projects/projects-page.component").then(
 				(m) => m.ProjectsPageComponent,
 			),
 	},
 	{
 		path: "projects/details",
 		loadComponent: () =>
-			import("./pages/projects/project-details/project-details-page.component").then(
+			import("./features/project-details/project-details-page.component").then(
 				(m) => m.ProjectDetailsPageComponent,
 			),
 	},
@@ -49,7 +49,7 @@ export const routes: Routes = [
 	{
 		path: "settings",
 		loadComponent: () =>
-			import("./pages/settings/settings-page.component").then(
+			import("./features/settings/settings-page.component").then(
 				(m) => m.SettingsPageComponent,
 			),
 	},

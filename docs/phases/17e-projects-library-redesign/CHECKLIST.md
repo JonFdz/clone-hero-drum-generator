@@ -14,7 +14,7 @@
 
 ## Model/helper
 
-- [x] Add `projects-library-model.ts`.
+- [x] Add `features/projects/projects-library.model.ts`.
 - [x] Add tests.
 - [x] Infer source type from project name/path safely.
 - [x] Format last opened labels.

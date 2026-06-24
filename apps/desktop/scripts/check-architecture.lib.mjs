@@ -133,11 +133,8 @@ export function findCrossFeatureViolations(entries, appRoot) {
 			const targetFeature = targetFeatureOfKey(key);
 			if (!targetFeature) continue;
 			if (targetFeature === sourceFeature) continue; // same feature ok
-			// project-session public API is the only allowed cross-feature target.
-			if (
-				targetFeature === PROJECT_SESSION_FEATURE &&
-				key === PROJECT_SESSION_PUBLIC_KEY
-			) {
+			// Cross-feature dependencies must enter through the target's public API.
+			if (key === `features/${targetFeature}/public-api`) {
 				continue;
 			}
 			violations.push({

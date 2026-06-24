@@ -1,0 +1,2 @@
+.project-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(20rem, 1fr)); }
+		@media (max-width: 1080px) { .project-grid { grid-template-columns: 1fr; } }

@@ -120,6 +120,14 @@ describe("check:architecture cross-feature rules", () => {
 		expect(violations).toHaveLength(0);
 	});
 
+	it("allows another feature's explicit public API", () => {
+		const violations = findCrossFeatureViolations(
+			[entry("features/home/home-page.component.ts", 'import { ProjectLibraryService } from "../projects/public-api";')],
+			APP_ROOT,
+		);
+		expect(violations).toHaveLength(0);
+	});
+
 	it("5. rejects direct access to a project-session internal file", () => {
 		const violations = findCrossFeatureViolations(
 			[

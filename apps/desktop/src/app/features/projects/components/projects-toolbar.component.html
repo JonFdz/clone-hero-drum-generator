@@ -1,0 +1,23 @@
+<section class="toolbar" aria-label="Project library controls">
+			<label class="search-field">
+				<span class="search-icon" aria-hidden="true">⌕</span>
+				<span class="sr-only">Search projects</span>
+				<input type="search" placeholder="Search projects..." [value]="query" (input)="queryChange.emit(inputValue($event))" />
+			</label>
+
+			<div class="control-group" aria-label="Source filters">
+				@for (option of sourceOptions; track option.value) {
+					<button class="filter-chip" type="button" [class.active]="sourceFilter === option.value" (click)="sourceFilterChange.emit(option.value)">{{ option.label }}</button>
+				}
+			</div>
+
+			<label class="select-label">
+				<span>Sort</span>
+				<select [value]="sortMode" (change)="sortModeChange.emit(sortValue($event))">
+					<option value="last-opened">Last opened</option>
+					<option value="name-az">Name A-Z</option>
+				</select>
+			</label>
+
+			<p class="result-count">{{ resultCount }} shown</p>
+		</section>

@@ -22,12 +22,12 @@ the pre-refactor API for unmigrated pages/services. It delegates to
 `ProjectPersistenceService`. Remove it as each page migrates to the canonical
 services (#75/#76). Consumers to migrate:
 
-- `pages/generate`, `pages/home`, `pages/new-project`,
-  `pages/projects/projects-page`, `pages/projects/project-details`,
-  `pages/settings` (recents/settings/project-state reads).
+- `pages/generate`, `pages/new-project`, plus the #76 workflow pages and
+  services. Home, Projects,
+  Project Details, and Settings no longer consume this facade after #75.
 - `services/desktop-generate-state.service` (mark* calls -> `ProjectSessionStore`).
 - `services/desktop-validation.service`, `services/desktop-preview.service`,
-  `services/source-review-orchestrator.service`, `services/home-dashboard-model`,
+  `services/source-review-orchestrator.service`, and
   `services/desktop-validation-model` (typed `DesktopProjectState` reads).
 
 ### Consolidate generation workflow state into the session boundary
@@ -66,10 +66,25 @@ mapping).
 
 ### Full-app lint enablement
 
-ESLint is configured for `core/`, `shared/`, `features/`, the shell, and routes
-in #74. Legacy `pages/` and `services/` are excluded until migrated. Remove the
-`src/app/pages/**` and `src/app/services/**` ignores as each area is migrated
-(#75/#76).
+ESLint covers `core/`, `shared/`, `features/`, the shell, and routes. The #75
+features are therefore enforced. Legacy #76 `pages/` and transitional
+`services/` remain excluded until their migration; remove those ignores in #76.
+
+### Retained legacy New Project component
+
+`pages/new-project/new-project-page.component.ts` remains even though the live
+`/new-project` route redirects to `/projects/details`. It still has historical
+tests/documentation and imports transitional workflow services. Delete it only
+after #76 proves there are no route, import, navigation, test, documentation,
+or compatibility consumers.
+
+### Retained bridge location and feature application wrappers
+
+`DesktopBridgeService` remains in `services/` because relocating the canonical
+bridge would churn every #76 workflow consumer. Migrated components do not
+import it: `HomeService` and `ProjectDetailsService` own the feature-specific
+bridge operations. Relocate the bridge only when #76 can update the remaining
+consumers atomically.
 
 ### Architecture import analysis coverage
 

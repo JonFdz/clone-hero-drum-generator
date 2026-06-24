@@ -1,0 +1,74 @@
+<div class="home-mock-page">
+			<header class="home-welcome">
+				<h1>Welcome back!</h1>
+				<p>Here's what's happening with your projects.</p>
+			</header>
+
+			<div class="home-mock-grid">
+				<chdg-home-recent-projects-compact
+					[projects]="model().recentProjects"
+					(openProject)="openRecent($event)"
+					(removeProject)="removeRecent($event)"
+					(viewAll)="navigateTo('/projects')"
+				/>
+
+				<section class="card mock-actions-card" aria-label="Quick actions">
+					<h2>Quick Actions</h2>
+					<div class="mock-action-list">
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+							<span class="mock-action-icon">▣</span>
+							<span>New Project</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="openProject()">
+							<span class="mock-action-icon">▰</span>
+							<span>Open Project</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+							<span class="mock-action-icon">♪</span>
+							<span>Import MIDI</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+							<span class="mock-action-icon gp-icon">GP</span>
+							<span>Import Guitar Pro</span>
+						</button>
+						<button class="mock-action-button" type="button" (click)="openOutputFolder()">
+							<span class="mock-action-icon">▭</span>
+							<span>Open Output Folder</span>
+						</button>
+					</div>
+				</section>
+
+				<chdg-home-workflow-progress [steps]="model().workflow" />
+
+				<section class="card mock-system-card" aria-label="System status">
+					<h2>System Status</h2>
+					<div class="system-row">
+						<span class="system-icon info">◎</span>
+						<div>
+							<strong>Audio conversion</strong>
+							<p>Uses local FFmpeg when available.</p>
+						</div>
+					</div>
+					<div class="system-row">
+						<span class="system-icon info">◎</span>
+						<div>
+							<strong>Local only / offline</strong>
+							<p>Working locally. No internet required.</p>
+						</div>
+					</div>
+					<div class="system-row project-format-row">
+						<span class="system-icon purple">▤</span>
+						<div>
+							<strong>Project format</strong>
+							<p>.chdg</p>
+						</div>
+						<button class="learn-more" type="button" (click)="navigateTo('/settings')">Learn more</button>
+					</div>
+				</section>
+			</div>
+
+			<chdg-home-warnings-panel
+				[model]="model()"
+				[warnings]="model().missingPathWarnings"
+			/>
+		</div>
