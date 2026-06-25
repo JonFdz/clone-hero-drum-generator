@@ -47,19 +47,20 @@ Kick:          separate orange horizontal rail inside the road
 
 ## Projection and calibration pass
 
-This iteration is explicitly a **projection-calibration correction**. The main
-remaining defect after the first stage-style pass was not generic polish but
-time-to-depth behavior: near-field temporal compression and past-event pile-up
-at the hit line.
+This iteration is explicitly a **camera-calibration pass**. The remaining
+defect after the first stage-style pass was no longer generic styling, but the
+actual gameplay camera: time-to-depth spacing, target-row height, road width at
+the hit line, and note size relative to local lane width.
 
 The calibrated intent is:
 
 - a materially narrower centered road;
 - more black negative space on wide scenes;
-- a higher/farther-feeling horizon and a lower hit line;
+- a higher target row with a long, narrow gameplay road;
 - more readable note spacing through the near and mid sections;
-- stronger compression only toward the far horizon;
+- perspective-style lower-field expansion with compression pushed toward the far horizon;
 - no duplicate/piled-up passed heads or musical lines at the hit line;
+- compact note/target sizing tied to local lane geometry;
 - tiny corner-oriented technical HUD metrics.
 
 ## Scene and camera principles
@@ -70,19 +71,19 @@ The calibrated intent is:
 - Road viewport width is `min(maxRoadViewportWidth, canvasWidth * roadViewportWidthRatio)`,
   floored by `minRoadViewportWidth`, and never exceeds the canvas minus safe
   scene padding.
-- On wide canvases the bottom road lands in roughly the 34–48% band of canvas
-  width and the top road in the 8–16% band, with substantial dark negative
+- On wide canvases the bottom road lands in roughly the 18–24% band of canvas
+  width and the top road in the 4–7% band, with substantial dark negative
   space on both sides.
 - The road is centered within a 1 CSS px tolerance.
-- The horizon sits higher than the initial stage-style pass (~24–32% height)
-  so the road feels longer and deeper.
-- The hit line sits lower (~84–90% height), enlarging the near field.
+- The horizon remains in the established higher band (~24–32% height) so the
+  road still feels long and deep.
+- The hit line/target row is materially higher (~72–77% height), matching a
+  gameplay-like camera instead of a low, stage-floor viewpoint.
 - The depth curve is a named, profile-driven, monotonic, finite function
-  clamped to `[0, 1]` (`stageDepthForProgress`). The corrected curve is a
-  calibrated ease-out mapping `1 - (1 - p)^timeToDepthExponent`, chosen because
-  it has a non-zero slope at the hit line and naturally pushes compression
-  toward the horizon instead of collapsing nearby notes into nearly the same Y
-  positions.
+  clamped to `[0, 1]` (`stageDepthForProgress`). The calibrated curve is the
+  perspective-style mapping `p / (p + perspectiveCompression * (1 - p))`,
+  chosen because it expands the lower field much more aggressively than a
+  generic exponent ease while still compressing the far horizon.
 - Passed heads and passed beat/measure lines are not rendered once their
   effective seconds fall behind playback. Sustains that cross playback are
   clipped safely to the hit line without spawning a duplicate head there.
@@ -110,6 +111,8 @@ The renderer retains this fixed semantic order:
 - Never large opaque solid blocks.
 - Geometry derives from the same road bounds and lane widths used for
   projection — no renderer-only interpretation.
+- Target height is clamped relative to the local lane width so targets do not
+  bloat when the road narrows.
 - No fifth kick target.
 
 ## Standard pitched notes (squares / prisms)
@@ -119,6 +122,7 @@ The renderer retains this fixed semantic order:
   consistent outline.
 - Calibrated smaller than the initial stage-style pass; never oversized blocks
   that mask the road.
+- Head size is clamped relative to the current local lane width.
 
 ## Cymbals (discs)
 

@@ -27,19 +27,20 @@ regression, and reduced-motion/destroy cleanup regressions.
 
 ## Manual validation
 
-This iteration is explicitly a **projection-calibration correction**. Manual
-review should compare not only whether the Highway is "pretty" but whether the
-projection now behaves materially closer in gameplay readability and temporal
-spacing.
+This iteration is explicitly a **camera-calibration pass**. Manual review
+should compare not only whether the Highway is "pretty" but whether the camera,
+projection, and note sizing now behave materially closer to gameplay spacing.
 
 Priority comparison axes for this pass:
 
 - road width feel;
+- target-row vertical position;
 - horizon / stage-depth feel;
 - note spacing feel (especially near + mid sections);
+- number of visible future notes at matching Tick / Beat / Measure positions;
 - absence of lower-road pile-up from recently passed events;
 - target scale and darkness;
-- note scale (square + cymbal heads);
+- note scale relative to lane width (square + cymbal heads);
 - HUD subtlety and corner placement.
 
 Use a generated chart that contains kick, standard pitched notes, cymbals,
@@ -48,31 +49,38 @@ accent/ghost cases, sustains, tempo data, and meter data.
 ### Wide desktop window
 
 1. Open Preview and select Highway.
-2. Compare the road width feel against the previous iteration: confirm a
+2. Use the HUD to match the same Tick / Beat / Measure position against the
+   same-song reference before judging spacing.
+3. Compare the road width feel against the previous iteration: confirm a
    materially narrower centered road with more black space around it.
-3. Confirm the road does not stretch to near full screen width.
-4. Compare the horizon feel against the previous iteration: confirm a farther,
+4. Confirm the road does not stretch to near full screen width.
+5. Compare the target-row vertical position against the reference: it should
+   sit materially higher than the previous pass.
+6. Compare the horizon feel against the previous iteration: confirm a farther,
    longer, deeper stage perspective.
-5. Confirm four colored pitched targets are visible, compact, darker inside,
+7. Compare the number of visible future notes at the same musical position:
+   the field should not feel materially denser than the reference.
+8. Confirm four colored pitched targets are visible, compact, darker inside,
    and more clearly framed (not solid blocks).
-6. Compare note scale against the previous iteration: square and cymbal heads
-   should feel more compact.
-7. Compare note spacing feel against the previous iteration: clusters should be
-   more readable vertically through the near and mid sections.
-8. Confirm there is no lower-road pile-up from recently passed heads or
+9. Compare note scale against the previous iteration: square and cymbal heads
+   should feel more compact relative to their lanes.
+10. Compare note spacing feel against the previous iteration: clusters should
+   be more readable vertically through the near and mid sections.
+11. Confirm there is no lower-road pile-up from recently passed heads or
    beat/measure lines at the hit line during repeated passages.
-9. Confirm kick is a separate orange rail, never a target or fifth lane.
-10. Confirm squares, circles, rail, and sustains remain distinct.
+12. Confirm kick is a separate orange rail, never a target or fifth lane.
+13. Confirm squares, circles, rail, and sustains remain distinct.
 
 ### Ordinary desktop window
 
 1. Confirm the road stays centered and safely bounded.
-2. Compare note spacing feel against the previous iteration: the mid field
+2. Use the HUD to compare the same Tick / Beat / Measure against the reference.
+3. Compare note spacing feel against the previous iteration: the mid field
    should feel less vertically compressed.
-3. Confirm recently passed heads and beat/measure lines do not stack at the hit
+4. Confirm recently passed heads and beat/measure lines do not stack at the hit
    line.
-4. Confirm notes, targets, rails, and sustains are legible.
-5. Confirm beat/measure lines remain secondary.
+5. Confirm notes, targets, rails, and sustains are legible.
+6. Confirm beat/measure lines remain secondary.
 
 ### Narrow window
 
