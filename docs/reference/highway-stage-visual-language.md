@@ -59,8 +59,10 @@ The calibrated intent is:
 - a tall gameplay field that occupies most of the Canvas height;
 - a lower hit line / higher horizon pairing that yields roughly 70–75% playable road span;
 - a shorter Fast travel window so fewer future notes are visible at once;
+- a dedicated near-field gameplay segment that uses most of the lower road for readability;
+- a separate far-field segment that compresses the remaining notes toward the horizon;
 - more readable note spacing through the near and mid sections;
-- perspective-style lower-field expansion with compression pushed toward the far horizon;
+- piecewise projection instead of relying on one global smooth curve;
 - no duplicate/piled-up passed heads or musical lines at the hit line;
 - compact note/target sizing tied to local lane geometry;
 - tiny corner-oriented technical HUD metrics.
@@ -83,11 +85,12 @@ The calibrated intent is:
 - The hit line/target row sits in roughly the 88–91% height band.
 - Together, the playable road span occupies roughly 70–75% of the Canvas
   height.
-- The depth curve is a named, profile-driven, monotonic, finite function
-  clamped to `[0, 1]` (`stageDepthForProgress`). The calibrated curve is the
-  perspective-style mapping `p / (p + perspectiveCompression * (1 - p))`,
-  chosen because it expands the lower field much more aggressively than a
-  generic exponent ease while still compressing the far horizon.
+- The base depth curve is a named, profile-driven, monotonic, finite function
+  clamped to `[0, 1]` (`stageDepthForProgress`). Fast now layers a smooth
+  piecewise gameplay projection above that base curve: the first ~0.7s of
+  future chart time occupies ~57% of the playable road almost linearly, then
+  the remaining future time is mapped into the upper road with stronger
+  compression toward the horizon.
 - Passed heads and passed beat/measure lines are not rendered once their
   effective seconds fall behind playback. Sustains that cross playback are
   clipped safely to the hit line without spawning a duplicate head there.
