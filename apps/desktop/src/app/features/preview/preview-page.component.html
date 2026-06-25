@@ -76,12 +76,12 @@
 						<label>
 							<span>Highway speed</span>
 							<select
-								[value]="highwayPreset()"
 								(change)="setHighwayPreset($any($event.target).value)"
 							>
 								<option
 									*ngFor="let preset of highwayPresets"
 									[value]="preset.id"
+									[selected]="preset.id === highwayPreset()"
 								>
 									{{ preset.label }}
 								</option>
