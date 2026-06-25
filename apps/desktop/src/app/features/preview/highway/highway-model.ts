@@ -146,7 +146,7 @@ export type HighwayFrameData = {
 };
 
 export const HIGHWAY_SPEED_PRESETS: readonly HighwaySpeedPreset[] = [
-	{ id: "fast", label: "Fast", lookAheadSeconds: 3, lookBehindSeconds: 0.1 },
+	{ id: "fast", label: "Fast", lookAheadSeconds: 2, lookBehindSeconds: 0.1 },
 	{
 		id: "normal",
 		label: "Normal",

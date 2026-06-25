@@ -176,39 +176,53 @@ describe("highway-projection", () => {
 		expect(projected.heads).toHaveLength(1);
 	});
 
-	it("updates visible chart window with speed presets only", () => {
+	it("updates visible chart window with a shorter Fast look-ahead only", () => {
 		const fast = visibleChartWindow({
 			playbackSeconds: 10,
 			previewOffsetSeconds: 0.5,
 			preset: HIGHWAY_SPEED_PRESETS[0]!,
+		});
+		const normal = visibleChartWindow({
+			playbackSeconds: 10,
+			previewOffsetSeconds: 0.5,
+			preset: HIGHWAY_SPEED_PRESETS[1]!,
 		});
 		const slow = visibleChartWindow({
 			playbackSeconds: 10,
 			previewOffsetSeconds: 0.5,
 			preset: HIGHWAY_SPEED_PRESETS[2]!,
 		});
-		expect(fast.startChartSeconds).toBe(slow.startChartSeconds);
-		expect(fast.endChartSeconds).toBeLessThan(slow.endChartSeconds);
+		expect(fast.startChartSeconds).toBe(normal.startChartSeconds);
+		expect(normal.startChartSeconds).toBe(slow.startChartSeconds);
+		expect(fast.endChartSeconds).toBeCloseTo(11.5, 5);
+		expect(normal.endChartSeconds).toBeCloseTo(14, 5);
+		expect(slow.endChartSeconds).toBeCloseTo(15.5, 5);
+		expect(fast.endChartSeconds).toBeLessThan(normal.endChartSeconds);
+		expect(normal.endChartSeconds).toBeLessThan(slow.endChartSeconds);
 	});
 
 	describe("stage scene viewport (profile-driven)", () => {
-		it("bounds and centers the road on a wide canvas with substantial dark side space", () => {
+		it("bounds and centers the road on a wide canvas with lateral negative space and a tall gameplay field", () => {
 			const geometry = buildHighwayGeometry(1600, 720);
 			const roadLeft = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
 			const roadRight = geometry.roadCenterX + geometry.bottomRoadWidth / 2;
-			// Camera-calibration pass: road is long and narrow on wide desktop windows.
-			expect(geometry.bottomRoadWidth).toBeLessThan(1600 * 0.24);
-			expect(geometry.bottomRoadWidth).toBeGreaterThan(1600 * 0.18);
+			const playableSpanRatio =
+				(geometry.hitLineY - geometry.horizonY) / geometry.cssHeight;
+			// Near road should occupy about a third of the canvas width, not a tiny sliver.
+			expect(geometry.bottomRoadWidth).toBeLessThan(1600 * 0.38);
+			expect(geometry.bottomRoadWidth).toBeGreaterThan(1600 * 0.33);
 			// Centered within 1 CSS px tolerance.
 			expect(Math.abs(geometry.roadCenterX - 1600 / 2)).toBeLessThanOrEqual(1);
-			// Each side retains substantial dark negative space.
-			expect(roadLeft).toBeGreaterThan(1600 * 0.35);
-			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.35);
-			// Calibration pass: hit line rises materially while horizon stays in the same band.
-			expect(geometry.horizonY).toBeGreaterThan(720 * 0.24);
-			expect(geometry.horizonY).toBeLessThan(720 * 0.32);
-			expect(geometry.hitLineY).toBeGreaterThanOrEqual(720 * 0.72);
-			expect(geometry.hitLineY).toBeLessThanOrEqual(720 * 0.77);
+			// Negative space remains primarily lateral.
+			expect(roadLeft).toBeGreaterThan(1600 * 0.3);
+			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.3);
+			// Road occupies most of the useful vertical playfield.
+			expect(geometry.horizonY).toBeGreaterThanOrEqual(720 * 0.18);
+			expect(geometry.horizonY).toBeLessThanOrEqual(720 * 0.22);
+			expect(geometry.hitLineY).toBeGreaterThanOrEqual(720 * 0.88);
+			expect(geometry.hitLineY).toBeLessThanOrEqual(720 * 0.91);
+			expect(playableSpanRatio).toBeGreaterThanOrEqual(0.7);
+			expect(playableSpanRatio).toBeLessThanOrEqual(0.75);
 		});
 
 		it("caps the road viewport with the profile maximum on very wide canvases", () => {
@@ -344,7 +358,7 @@ describe("highway-projection", () => {
 	});
 
 	describe("projection correction pass (fast preset)", () => {
-		it("keeps near-to-far heads strictly ordered with measurable lower-field spacing", () => {
+		it("keeps near-to-far heads strictly ordered with materially larger lower-field spacing", () => {
 			const geometry = buildHighwayGeometry(900, 480);
 			const preset = HIGHWAY_SPEED_PRESETS[0]!;
 			const projected = projectHighwayNotes({
@@ -403,15 +417,16 @@ describe("highway-projection", () => {
 			expect(y050.centerY).toBeGreaterThan(y100.centerY);
 			expect(y100.centerY).toBeGreaterThan(y200.centerY);
 			// Measurable lower-field spacing, normalized by visible road depth.
-			expect(nearGap005_010).toBeGreaterThan(0.03);
-			expect(nearGap010_020).toBeGreaterThan(0.06);
+			expect(nearGap005_010).toBeGreaterThan(0.035);
+			expect(nearGap010_020).toBeGreaterThan(0.07);
 			// Far field compresses more per second than the near field.
 			expect(farGap100_200 / 1).toBeLessThan(nearGap010_020 / 0.1);
 			expect(farGap100_200 / 1).toBeLessThan(midGap050_100 / 0.5);
 			// Camera invariants remain intact.
-			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.24);
+			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(0.33);
+			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.38);
 			expect(geometry.hitLineY / geometry.cssHeight).toBeGreaterThanOrEqual(
-				0.72,
+				0.88,
 			);
 			expect(buildHighwayTargets(geometry)).toHaveLength(4);
 			expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);

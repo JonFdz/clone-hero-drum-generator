@@ -21,7 +21,7 @@ describe("highway-stage-visual-profile", () => {
 		expect(HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault).toBe(false);
 	});
 
-	it("keeps the road markedly narrower than the canvas on a wide scene", () => {
+	it("keeps the road horizontally restrained without making it tiny on a wide scene", () => {
 		const { scene, road } = HIGHWAY_STAGE_VISUAL_PROFILE;
 		const canvasWidth = 1440;
 		const viewport = Math.min(
@@ -29,19 +29,21 @@ describe("highway-stage-visual-profile", () => {
 			canvasWidth * scene.roadViewportWidthRatio,
 		);
 		const bottomRoadWidth = viewport * road.bottomWidthRatio;
-		// Camera-calibration pass: target-row road is intentionally long/narrow.
-		expect(bottomRoadWidth).toBeLessThan(canvasWidth * 0.24);
-		expect(bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.18);
-		// Each side retains substantial dark negative space.
-		expect(canvasWidth - bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.7);
+		// Camera + density pass: near road should occupy about a third of the canvas.
+		expect(bottomRoadWidth).toBeLessThan(canvasWidth * 0.38);
+		expect(bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.33);
+		// Negative space remains primarily lateral.
+		expect(canvasWidth - bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.6);
 	});
 
-	it("uses profile-owned camera ratios inside the calibrated gameplay-camera bands", () => {
+	it("uses profile-owned camera ratios inside the calibrated tall-gameplay bands", () => {
 		const { scene } = HIGHWAY_STAGE_VISUAL_PROFILE;
-		expect(scene.horizonRatio).toBeGreaterThanOrEqual(0.24);
-		expect(scene.horizonRatio).toBeLessThanOrEqual(0.32);
-		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.72);
-		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.77);
+		expect(scene.horizonRatio).toBeGreaterThanOrEqual(0.18);
+		expect(scene.horizonRatio).toBeLessThanOrEqual(0.22);
+		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.88);
+		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.91);
+		expect(scene.hitLineRatio - scene.horizonRatio).toBeGreaterThanOrEqual(0.7);
+		expect(scene.hitLineRatio - scene.horizonRatio).toBeLessThanOrEqual(0.75);
 	});
 
 	describe("stageDepthForProgress", () => {

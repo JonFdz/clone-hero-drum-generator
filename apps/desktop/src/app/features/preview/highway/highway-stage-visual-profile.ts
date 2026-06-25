@@ -121,24 +121,23 @@ export type HighwayStageVisualProfile = {
 /**
  * The single production stage visual profile.
  *
- * This calibration pass intentionally pushes the composition closer to a long,
- * narrow, centered gameplay road with more black negative space, smaller note
- * pieces, and a more conservative HUD. The road is materially narrower on wide
- * canvases, the horizon sits higher to lengthen the stage, and the near field
- * is deeper thanks to a lower hit line.
+ * This calibration pass intentionally separates horizontal framing from the
+ * usable gameplay field. The road stays centered and horizontally restrained
+ * with lateral black space, but it now occupies most of the useful vertical
+ * playfield so Fast notes have room to separate before reaching the targets.
  */
 export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 	scene: {
-		maxRoadViewportWidth: 560,
-		roadViewportWidthRatio: 0.32,
-		minRoadViewportWidth: 250,
+		maxRoadViewportWidth: 820,
+		roadViewportWidthRatio: 0.5,
+		minRoadViewportWidth: 320,
 		sideScenePadding: 24,
-		horizonRatio: 0.27,
-		hitLineRatio: 0.74,
+		horizonRatio: 0.2,
+		hitLineRatio: 0.9,
 	},
 	road: {
-		topWidthRatio: 0.16,
-		bottomWidthRatio: 0.66,
+		topWidthRatio: 0.17,
+		bottomWidthRatio: 0.7,
 		borderWidthNear: 2.25,
 		borderWidthFar: 1,
 		laneDividerAlpha: 0.1,
@@ -206,11 +205,10 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
  *
  * `depth = p / (p + perspectiveCompression * (1 - p))`
  *
- * This camera-calibration pass replaces the earlier generic ease-out curve with
- * a named perspective-style mapping so the lower field opens up more
- * aggressively while the far horizon still compresses. Lower compression values
- * produce a longer, gameplay-like near field; higher values flatten it back
- * toward the hit line.
+ * This camera-calibration pass keeps the perspective-style mapping, but it is
+ * now paired with a taller road span and a shorter Fast travel window. The
+ * projection therefore opens the lower field without relying on generic easing
+ * tricks alone, while the far horizon still compresses in a bounded way.
  */
 export function stageDepthForProgress(
 	progress: number,
