@@ -47,18 +47,19 @@ Kick:          separate orange horizontal rail inside the road
 
 ## Projection and calibration pass
 
-This iteration is explicitly a **projection and calibration pass**. The main
-visual gap after the first stage-style pass was not generic polish but camera
-geometry, time-to-depth mapping, note scale, target scale, and HUD emphasis.
+This iteration is explicitly a **projection-calibration correction**. The main
+remaining defect after the first stage-style pass was not generic polish but
+time-to-depth behavior: near-field temporal compression and past-event pile-up
+at the hit line.
 
 The calibrated intent is:
 
 - a materially narrower centered road;
 - more black negative space on wide scenes;
 - a higher/farther-feeling horizon and a lower hit line;
-- smaller and more compact heads and target pads;
 - more readable note spacing through the near and mid sections;
-- stronger compression only near the far horizon;
+- stronger compression only toward the far horizon;
+- no duplicate/piled-up passed heads or musical lines at the hit line;
 - tiny corner-oriented technical HUD metrics.
 
 ## Scene and camera principles
@@ -77,10 +78,14 @@ The calibrated intent is:
   so the road feels longer and deeper.
 - The hit line sits lower (~84–90% height), enlarging the near field.
 - The depth curve is a named, profile-driven, monotonic, finite function
-  clamped to `[0, 1]` (`stageDepthForProgress`). The calibrated curve keeps the
-  near and mid field lower/longer for gameplay readability, then blends into a
-  stronger far-horizon compression tail late in the visible window. It
-  preserves temporal ordering of notes, sustains, and musical lines.
+  clamped to `[0, 1]` (`stageDepthForProgress`). The corrected curve is a
+  calibrated ease-out mapping `1 - (1 - p)^timeToDepthExponent`, chosen because
+  it has a non-zero slope at the hit line and naturally pushes compression
+  toward the horizon instead of collapsing nearby notes into nearly the same Y
+  positions.
+- Passed heads and passed beat/measure lines are not rendered once their
+  effective seconds fall behind playback. Sustains that cross playback are
+  clipped safely to the hit line without spawning a duplicate head there.
 
 ## Draw order
 

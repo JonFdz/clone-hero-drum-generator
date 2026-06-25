@@ -27,15 +27,17 @@ regression, and reduced-motion/destroy cleanup regressions.
 
 ## Manual validation
 
-This iteration is explicitly a **projection and calibration pass**. Manual
-review should compare not only whether the Highway is "pretty" but whether it
-feels materially closer in gameplay readability and spatial composition.
+This iteration is explicitly a **projection-calibration correction**. Manual
+review should compare not only whether the Highway is "pretty" but whether the
+projection now behaves materially closer in gameplay readability and temporal
+spacing.
 
 Priority comparison axes for this pass:
 
 - road width feel;
 - horizon / stage-depth feel;
 - note spacing feel (especially near + mid sections);
+- absence of lower-road pile-up from recently passed events;
 - target scale and darkness;
 - note scale (square + cymbal heads);
 - HUD subtlety and corner placement.
@@ -57,16 +59,20 @@ accent/ghost cases, sustains, tempo data, and meter data.
    should feel more compact.
 7. Compare note spacing feel against the previous iteration: clusters should be
    more readable vertically through the near and mid sections.
-8. Confirm kick is a separate orange rail, never a target or fifth lane.
-9. Confirm squares, circles, rail, and sustains remain distinct.
+8. Confirm there is no lower-road pile-up from recently passed heads or
+   beat/measure lines at the hit line during repeated passages.
+9. Confirm kick is a separate orange rail, never a target or fifth lane.
+10. Confirm squares, circles, rail, and sustains remain distinct.
 
 ### Ordinary desktop window
 
 1. Confirm the road stays centered and safely bounded.
 2. Compare note spacing feel against the previous iteration: the mid field
    should feel less vertically compressed.
-3. Confirm notes, targets, rails, and sustains are legible.
-4. Confirm beat/measure lines remain secondary.
+3. Confirm recently passed heads and beat/measure lines do not stack at the hit
+   line.
+4. Confirm notes, targets, rails, and sustains are legible.
+5. Confirm beat/measure lines remain secondary.
 
 ### Narrow window
 
