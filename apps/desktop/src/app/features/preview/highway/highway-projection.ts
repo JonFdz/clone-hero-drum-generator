@@ -11,6 +11,11 @@ import {
 	type HighwaySpeedPreset,
 	type HighwayTarget,
 } from "./highway-model";
+import {
+	HIGHWAY_STAGE_VISUAL_PROFILE,
+	type HighwayStageVisualProfile,
+	stageDepthForProgress,
+} from "./highway-stage-visual-profile";
 import type { HighwayMusicalLine } from "./highway-timing";
 
 export function filterVisibleHighwayNotes(
@@ -25,16 +30,36 @@ export function filterVisibleHighwayNotes(
 	);
 }
 
+/**
+ * Builds the stage highway geometry from the visual profile.
+ *
+ * The playable road lives inside a bounded, centered viewport whose width is
+ * derived from both a ratio of the canvas width and a profile-owned maximum.
+ * On wide canvases the road stays materially narrower than the canvas with
+ * dark scene space on both sides; on narrow canvases it retains safe side
+ * padding. Horizon and hit line are profile-owned ratios.
+ */
 export function buildHighwayGeometry(
 	cssWidth: number,
 	cssHeight: number,
+	profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE,
 ): HighwayGeometry {
 	const safeWidth = Math.max(0, cssWidth);
 	const safeHeight = Math.max(0, cssHeight);
-	const horizonY = safeHeight * 0.18;
-	const hitLineY = safeHeight * 0.82;
-	const topRoadWidth = Math.max(220, Math.min(safeWidth * 0.22, 240));
-	const bottomRoadWidth = Math.max(260, Math.min(safeWidth * 0.84, 920));
+	const horizonY = safeHeight * profile.scene.horizonRatio;
+	const hitLineY = safeHeight * profile.scene.hitLineRatio;
+	const maxAvailable = Math.max(
+		0,
+		safeWidth - profile.scene.sideScenePadding * 2,
+	);
+	const idealViewport = safeWidth * profile.scene.roadViewportWidthRatio;
+	const roadViewport = clamp(
+		idealViewport,
+		profile.scene.minRoadViewportWidth,
+		Math.min(profile.scene.maxRoadViewportWidth, maxAvailable),
+	);
+	const bottomRoadWidth = roadViewport * profile.road.bottomWidthRatio;
+	const topRoadWidth = roadViewport * profile.road.topWidthRatio;
 	const horizonLaneWidth = topRoadWidth / HIGHWAY_PITCHED_LANES.length;
 	const hitLineLaneWidth = bottomRoadWidth / HIGHWAY_PITCHED_LANES.length;
 	return {
@@ -47,7 +72,7 @@ export function buildHighwayGeometry(
 		bottomRoadWidth,
 		pitchedLaneCount: 4,
 		minimumReadable:
-			safeHeight >= 280 && horizonLaneWidth >= 18 && hitLineLaneWidth >= 52,
+			safeHeight >= 280 && horizonLaneWidth >= 14 && hitLineLaneWidth >= 48,
 	};
 }
 
@@ -79,9 +104,13 @@ export function buildHighwayLaneDividers(
 
 export function buildHighwayTargets(
 	geometry: HighwayGeometry,
+	profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE,
 ): HighwayTarget[] {
 	const bounds = roadBoundsAtDepth(geometry, 0);
-	const targetHeight = Math.max(14, geometry.cssHeight * 0.028);
+	const targetHeight = Math.max(
+		10,
+		Math.min(profile.targets.heightNear, geometry.cssHeight * 0.045),
+	);
 	const inset = Math.max(4, bounds.laneWidth * 0.08);
 	return HIGHWAY_PITCHED_LANES.map((lane, index) => {
 		const laneLeft = bounds.leftX + index * bounds.laneWidth + inset;
@@ -115,10 +144,12 @@ export function projectHighwayNotes(input: {
 	previewOffsetSeconds: number;
 	preset: HighwaySpeedPreset;
 	geometry: HighwayGeometry;
+	profile?: HighwayStageVisualProfile;
 }): {
 	heads: HighwayProjectedHead[];
 	sustains: HighwayProjectedSustain[];
 } {
+	const profile = input.profile ?? HIGHWAY_STAGE_VISUAL_PROFILE;
 	const window = visibleChartWindow({
 		playbackSeconds: input.playbackSeconds,
 		previewOffsetSeconds: input.previewOffsetSeconds,
@@ -127,9 +158,9 @@ export function projectHighwayNotes(input: {
 	const heads: HighwayProjectedHead[] = [];
 	const sustains: HighwayProjectedSustain[] = [];
 	for (const note of input.notes) {
-		const sustain = projectSustain(note, input, window.startChartSeconds, window.endChartSeconds);
+		const sustain = projectSustain(note, input, profile, window.startChartSeconds, window.endChartSeconds);
 		if (sustain) sustains.push(sustain);
-		const head = projectHead(note, input, window.startChartSeconds, window.endChartSeconds);
+		const head = projectHead(note, input, profile, window.startChartSeconds, window.endChartSeconds);
 		if (head) heads.push(head);
 	}
 	return {
@@ -144,7 +175,9 @@ export function projectHighwayLines(input: {
 	previewOffsetSeconds: number;
 	preset: HighwaySpeedPreset;
 	geometry: HighwayGeometry;
+	profile?: HighwayStageVisualProfile;
 }): HighwayProjectedLine[] {
+	const profile = input.profile ?? HIGHWAY_STAGE_VISUAL_PROFILE;
 	return input.lines
 		.map((line) => {
 			const effectiveSeconds = line.chartSeconds + input.previewOffsetSeconds;
@@ -152,6 +185,7 @@ export function projectHighwayLines(input: {
 				effectiveSeconds,
 				input.playbackSeconds,
 				input.preset,
+				profile,
 			);
 			const y = lerp(input.geometry.hitLineY, input.geometry.horizonY, depth);
 			const roadWidth = lerp(
@@ -213,6 +247,7 @@ function projectHead(
 		preset: HighwaySpeedPreset;
 		geometry: HighwayGeometry;
 	},
+	profile: HighwayStageVisualProfile,
 	startChartSeconds: number,
 	endChartSeconds: number,
 ): HighwayProjectedHead | null {
@@ -224,6 +259,7 @@ function projectHead(
 		effectiveSeconds,
 		input.playbackSeconds,
 		input.preset,
+		profile,
 	);
 	const y = lerp(input.geometry.hitLineY, input.geometry.horizonY, depth);
 	if (note.visualKind === "kick-rail") {
@@ -235,7 +271,14 @@ function projectHead(
 			y,
 			leftX: rail.leftX,
 			rightX: rail.rightX,
-			thickness: Math.max(6, lerp(14, 4, depth)),
+			thickness: Math.max(
+				2,
+				lerp(
+					profile.notes.kickRailNearThickness,
+					profile.notes.kickRailFarThickness,
+					depth,
+				),
+			),
 			fill: note.fill,
 			stroke: note.stroke,
 		};
@@ -251,7 +294,20 @@ function projectHead(
 		depth,
 		centerX,
 		centerY: y,
-		radius: Math.max(5, lerp(20, 5, depth)),
+		radius: Math.max(
+			3,
+			note.visualKind === "cymbal-head"
+				? lerp(
+						profile.notes.circleNearRadius,
+						profile.notes.circleFarRadius,
+						depth,
+					)
+				: lerp(
+						profile.notes.squareNearSize,
+						profile.notes.squareFarSize,
+						depth,
+					),
+		),
 		fill: note.fill,
 		stroke: note.stroke,
 		dynamic: note.dynamic,
@@ -276,6 +332,7 @@ function projectSustain(
 		preset: HighwaySpeedPreset;
 		geometry: HighwayGeometry;
 	},
+	profile: HighwayStageVisualProfile,
 	startChartSeconds: number,
 	endChartSeconds: number,
 ): HighwayProjectedSustain | null {
@@ -291,11 +348,13 @@ function projectSustain(
 		startEffective,
 		input.playbackSeconds,
 		input.preset,
+		profile,
 	);
 	const endDepth = depthForEffectiveSeconds(
 		endEffective,
 		input.playbackSeconds,
 		input.preset,
+		profile,
 	);
 	const nearDepth = Math.min(startDepth, endDepth);
 	if (note.visualKind === "kick-rail") {
@@ -355,10 +414,11 @@ function depthForEffectiveSeconds(
 	effectiveSeconds: number,
 	playbackSeconds: number,
 	preset: HighwaySpeedPreset,
+	profile: HighwayStageVisualProfile,
 ): number {
 	const deltaSeconds = effectiveSeconds - playbackSeconds;
 	const progress = clamp(deltaSeconds / preset.lookAheadSeconds, 0, 1);
-	return easeOutCubic(progress);
+	return stageDepthForProgress(progress, profile);
 }
 
 function isFiniteSustain(sustain: HighwayProjectedSustain): boolean {
@@ -377,10 +437,6 @@ function compareProjectedDepth(
 	b: { depth: number },
 ): number {
 	return b.depth - a.depth;
-}
-
-export function easeOutCubic(value: number): number {
-	return 1 - (1 - value) ** 3;
 }
 
 function lerp(start: number, end: number, progress: number): number {

@@ -6,10 +6,19 @@ import {
 	buildHighwayTargets,
 	filterVisibleHighwayNotes,
 	projectHighwayNotes,
+	projectHighwayLines,
 	projectKickRailAtDepth,
+	roadBoundsAtDepth,
 	visibleChartWindow,
 } from "./highway-projection";
-import { HIGHWAY_SPEED_PRESETS, type HighwaySemanticNote } from "./highway-model";
+import {
+	HIGHWAY_SPEED_PRESETS,
+	type HighwaySemanticNote,
+} from "./highway-model";
+import {
+	HIGHWAY_STAGE_VISUAL_PROFILE,
+	type HighwayStageVisualProfile,
+} from "./highway-stage-visual-profile";
 
 function pitchedNote(overrides: Partial<HighwaySemanticNote> = {}): HighwaySemanticNote {
 	return {
@@ -129,5 +138,143 @@ describe("highway-projection", () => {
 		});
 		expect(fast.startChartSeconds).toBe(slow.startChartSeconds);
 		expect(fast.endChartSeconds).toBeLessThan(slow.endChartSeconds);
+	});
+
+	describe("stage scene viewport (profile-driven)", () => {
+		it("bounds and centers the road on a wide canvas with substantial dark side space", () => {
+			const geometry = buildHighwayGeometry(1600, 720);
+			const roadLeft = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
+			const roadRight = geometry.roadCenterX + geometry.bottomRoadWidth / 2;
+			// Road is materially narrower than the canvas (34–48% band on wide).
+			expect(geometry.bottomRoadWidth).toBeLessThan(1600 * 0.5);
+			expect(geometry.bottomRoadWidth).toBeGreaterThan(1600 * 0.3);
+			// Centered within 1 CSS px tolerance.
+			expect(Math.abs(geometry.roadCenterX - 1600 / 2)).toBeLessThanOrEqual(1);
+			// Each side retains substantial dark negative space.
+			expect(roadLeft).toBeGreaterThan(1600 * 0.2);
+			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.2);
+			// Horizon sits in the upper-middle scene; hit line leaves a spacious near field.
+			expect(geometry.horizonY).toBeGreaterThan(720 * 0.28);
+			expect(geometry.horizonY).toBeLessThan(720 * 0.42);
+			expect(geometry.hitLineY).toBeGreaterThan(720 * 0.75);
+		});
+
+		it("caps the road viewport with the profile maximum on very wide canvases", () => {
+			const profile = HIGHWAY_STAGE_VISUAL_PROFILE;
+			const geometry = buildHighwayGeometry(2400, 720);
+			const expectedViewport = Math.min(
+				profile.scene.maxRoadViewportWidth,
+				2400 * profile.scene.roadViewportWidthRatio,
+			);
+			expect(geometry.bottomRoadWidth).toBeCloseTo(
+				expectedViewport * profile.road.bottomWidthRatio,
+				5,
+			);
+		});
+
+		it("keeps geometry safe and centered on an ordinary canvas", () => {
+			const geometry = buildHighwayGeometry(800, 420);
+			expect(Math.abs(geometry.roadCenterX - 400)).toBeLessThanOrEqual(1);
+			expect(geometry.bottomRoadWidth).toBeGreaterThan(0);
+			expect(geometry.topRoadWidth).toBeGreaterThan(0);
+			expect(geometry.topRoadWidth).toBeLessThan(geometry.bottomRoadWidth);
+			expect(geometry.horizonY).toBeLessThan(geometry.hitLineY);
+		});
+
+		it("keeps geometry safe on a narrow canvas without clipping past the scene padding", () => {
+			const geometry = buildHighwayGeometry(320, 480);
+			const roadLeft = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
+			const roadRight = geometry.roadCenterX + geometry.bottomRoadWidth / 2;
+			expect(roadLeft).toBeGreaterThanOrEqual(0);
+			expect(roadRight).toBeLessThanOrEqual(320);
+			expect(Math.abs(geometry.roadCenterX - 160)).toBeLessThanOrEqual(1);
+			expect(geometry.bottomRoadWidth).toBeGreaterThan(0);
+			expect(geometry.topRoadWidth).toBeGreaterThan(0);
+		});
+
+		it("preserves exactly four centers, three dividers, and four targets under the stage profile", () => {
+			const geometry = buildHighwayGeometry(1280, 600);
+			expect(buildHighwayLaneCenters(geometry)).toHaveLength(4);
+			expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);
+			expect(buildHighwayTargets(geometry)).toHaveLength(4);
+			expect(buildHighwayLaneCenters(geometry, 0.5)).toHaveLength(4);
+		});
+
+		it("never introduces a fifth kick target, center, or divider", () => {
+			const geometry = buildHighwayGeometry(1280, 600);
+			const targets = buildHighwayTargets(geometry);
+			expect(targets.map((t) => t.lane)).toEqual(["red", "yellow", "blue", "green"]);
+			// Kick rail is a road-contained rail, not a lane center/target/divider.
+			const rail = projectKickRailAtDepth(geometry, 0);
+			const centers = buildHighwayLaneCenters(geometry, 0);
+			expect(rail.width).toBeGreaterThan(0);
+			expect(centers).not.toContain(rail.leftX);
+			expect(targets).not.toContainEqual(expect.objectContaining({ lane: expect.stringContaining("kick") }));
+		});
+
+		it("keeps the kick rail inside road bounds at near and far depths", () => {
+			const geometry = buildHighwayGeometry(1200, 600);
+			for (const depth of [0, 0.25, 0.5, 0.75, 1]) {
+				const rail = projectKickRailAtDepth(geometry, depth);
+				const bounds = roadBoundsAtDepth(geometry, depth);
+				expect(rail.leftX).toBeGreaterThanOrEqual(bounds.leftX);
+				expect(rail.rightX).toBeLessThanOrEqual(bounds.rightX);
+				expect(rail.width).toBeGreaterThan(0);
+			}
+		});
+
+		it("derives targets and projection from the same road geometry (no renderer-only interpretation)", () => {
+			const geometry = buildHighwayGeometry(1100, 560);
+			const targets = buildHighwayTargets(geometry);
+			const bounds = roadBoundsAtDepth(geometry, 0);
+			for (const target of targets) {
+				expect(target.leftX).toBeGreaterThanOrEqual(bounds.leftX);
+				expect(target.rightX).toBeLessThanOrEqual(bounds.rightX);
+			}
+		});
+
+		it("respects an explicit profile override for the road viewport", () => {
+			const narrowProfile: HighwayStageVisualProfile = {
+				...HIGHWAY_STAGE_VISUAL_PROFILE,
+				scene: {
+					...HIGHWAY_STAGE_VISUAL_PROFILE.scene,
+					roadViewportWidthRatio: 0.3,
+					maxRoadViewportWidth: 360,
+				},
+			};
+			const geometry = buildHighwayGeometry(1400, 600, narrowProfile);
+			const full = buildHighwayGeometry(1400, 600);
+			expect(geometry.bottomRoadWidth).toBeLessThan(full.bottomRoadWidth);
+			expect(geometry.bottomRoadWidth).toBeLessThan(360);
+		});
+
+		it("projects musical lines with finite clamped depths and monotonic screen ordering", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const preset = HIGHWAY_SPEED_PRESETS[1]!;
+			const lines = projectHighwayLines({
+				lines: [
+					{ tick: 0, kind: "beat", chartSeconds: 0.4, measure: 0, beat: 2 },
+					{ tick: 192, kind: "beat", chartSeconds: 0.8, measure: 1, beat: 1 },
+					{ tick: 384, kind: "measure", chartSeconds: 1.2, measure: 1, beat: 1 },
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset,
+				geometry,
+			});
+			// Lines are returned sorted by screen Y ascending (near to far), so depth
+			// is non-increasing under a monotonic curve.
+			const ys = lines.map((l) => l.y);
+			expect(ys).toEqual([...ys].sort((a, b) => a - b));
+			const depths = lines.map((l) => l.depth);
+			for (let i = 1; i < depths.length; i += 1) {
+				expect(depths[i]).toBeLessThanOrEqual(depths[i - 1]!);
+			}
+			for (const depth of depths) {
+				expect(Number.isFinite(depth)).toBe(true);
+				expect(depth).toBeGreaterThanOrEqual(0);
+				expect(depth).toBeLessThanOrEqual(1);
+			}
+		});
 	});
 });
