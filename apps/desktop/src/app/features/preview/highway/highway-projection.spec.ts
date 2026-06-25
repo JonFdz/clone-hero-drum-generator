@@ -341,7 +341,11 @@ describe("highway-projection", () => {
 			const preset = HIGHWAY_SPEED_PRESETS[0]!;
 			const projected = projectHighwayNotes({
 				notes: [
-					pitchedNote({ id: "n005", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "n005",
+						chartSeconds: 0.05,
+						endChartSeconds: 0.05,
+					}),
 					pitchedNote({ id: "n010", chartSeconds: 0.1, endChartSeconds: 0.1 }),
 					pitchedNote({ id: "n020", chartSeconds: 0.2, endChartSeconds: 0.2 }),
 					pitchedNote({ id: "n050", chartSeconds: 0.5, endChartSeconds: 0.5 }),
@@ -377,8 +381,16 @@ describe("highway-projection", () => {
 			const preset = HIGHWAY_SPEED_PRESETS[0]!;
 			const projected = projectHighwayNotes({
 				notes: [
-					pitchedNote({ id: "past-head", chartSeconds: -0.05, endChartSeconds: -0.05 }),
-					pitchedNote({ id: "future-head", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "past-head",
+						chartSeconds: -0.05,
+						endChartSeconds: -0.05,
+					}),
+					pitchedNote({
+						id: "future-head",
+						chartSeconds: 0.05,
+						endChartSeconds: 0.05,
+					}),
 				],
 				playbackSeconds: 0,
 				previewOffsetSeconds: 0,
