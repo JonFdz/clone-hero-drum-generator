@@ -52,8 +52,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	@ViewChild("canvas")
 	private readonly canvasRef?: ElementRef<HTMLCanvasElement>;
 
-	constructor(private readonly document: Document = inject(DOCUMENT)) {}
-
+	private readonly document = inject(DOCUMENT);
 	private readonly renderer = new HighwayRenderer();
 	private readonly _chartData = signal<ChartPreviewData | null>(null);
 	private readonly _currentTime = signal(0);

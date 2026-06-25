@@ -1,4 +1,6 @@
 import "@angular/compiler";
+import { DOCUMENT } from "@angular/common";
+import { Injector, runInInjectionContext } from "@angular/core";
 import { describe, expect, it, vi } from "vitest";
 import { PreviewHighwayComponent } from "./preview-highway.component";
 
@@ -73,7 +75,14 @@ function createComponent(options?: {
 			performance: { now: vi.fn(() => 1000) },
 		},
 	} as unknown as Document;
-	const component = new PreviewHighwayComponent(document);
+	const injector = Injector.create({
+		providers: [{ provide: DOCUMENT, useValue: document }],
+	});
+
+	const component = runInInjectionContext(
+		injector,
+		() => new PreviewHighwayComponent(),
+	);
 	const context = createCanvasContext();
 	const canvas = {
 		style: { width: "480px", height: "360px" },
