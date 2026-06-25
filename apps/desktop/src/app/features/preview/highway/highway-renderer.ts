@@ -1,8 +1,9 @@
-import {
-	HIGHWAY_LANES,
-	type HighwayFrameData,
-	type HighwayProjectedLine,
-	type HighwayProjectedNote,
+import type {
+	HighwayFrameData,
+	HighwayProjectedHead,
+	HighwayProjectedLine,
+	HighwayProjectedSustain,
+	HighwayTarget,
 } from "./highway-model";
 
 export class HighwayRenderer {
@@ -18,8 +19,9 @@ export class HighwayRenderer {
 		this.drawRoad(ctx, frame);
 		this.drawLaneDividers(ctx, frame);
 		this.drawMusicalLines(ctx, frame.lines);
-		this.drawNotes(ctx, frame.notes);
-		this.drawHitLine(ctx, frame);
+		this.drawSustains(ctx, frame.sustains);
+		this.drawHeads(ctx, frame.heads);
+		this.drawHitLineAndTargets(ctx, frame);
 		if (frame.hudEnabled) this.drawHud(ctx, frame);
 		if (frame.limitationText) this.drawOverlay(ctx, frame);
 	}
@@ -63,19 +65,12 @@ export class HighwayRenderer {
 		ctx: CanvasRenderingContext2D,
 		frame: HighwayFrameData,
 	): void {
-		const { geometry } = frame;
 		ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
 		ctx.lineWidth = 1;
-		for (let lane = 1; lane < HIGHWAY_LANES.length; lane += 1) {
-			const topX =
-				geometry.roadCenterX - geometry.topRoadWidth / 2 +
-				(geometry.topRoadWidth / HIGHWAY_LANES.length) * lane;
-			const bottomX =
-				geometry.roadCenterX - geometry.bottomRoadWidth / 2 +
-				(geometry.bottomRoadWidth / HIGHWAY_LANES.length) * lane;
+		for (const divider of frame.laneDividers) {
 			ctx.beginPath();
-			ctx.moveTo(topX, geometry.horizonY);
-			ctx.lineTo(bottomX, geometry.hitLineY);
+			ctx.moveTo(divider.startX, frame.geometry.horizonY);
+			ctx.lineTo(divider.endX, frame.geometry.hitLineY);
 			ctx.stroke();
 		}
 	}
@@ -97,23 +92,113 @@ export class HighwayRenderer {
 		}
 	}
 
-	private drawNotes(
+	private drawSustains(
 		ctx: CanvasRenderingContext2D,
-		notes: readonly HighwayProjectedNote[],
+		sustains: readonly HighwayProjectedSustain[],
 	): void {
-		for (const note of notes) {
-			const style = HIGHWAY_LANES[note.lane]!;
+		for (const sustain of sustains) {
 			ctx.beginPath();
-			ctx.arc(note.centerX, note.centerY, note.radius, 0, Math.PI * 2);
-			ctx.fillStyle = style.fill;
+			ctx.moveTo(sustain.nearLeftX, sustain.nearY);
+			ctx.lineTo(sustain.nearRightX, sustain.nearY);
+			ctx.lineTo(sustain.farRightX, sustain.farY);
+			ctx.lineTo(sustain.farLeftX, sustain.farY);
+			ctx.closePath();
+			ctx.fillStyle = sustain.fill;
 			ctx.fill();
-			ctx.strokeStyle = style.stroke;
-			ctx.lineWidth = 2;
-			ctx.stroke();
 		}
 	}
 
-	private drawHitLine(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
+	private drawHeads(
+		ctx: CanvasRenderingContext2D,
+		heads: readonly HighwayProjectedHead[],
+	): void {
+		for (const head of heads) {
+			if (head.visualKind === "kick-rail") {
+				const thickness = head.thickness;
+				ctx.fillStyle = head.fill;
+				ctx.fillRect(head.leftX, head.y - thickness / 2, head.rightX - head.leftX, thickness);
+				ctx.strokeStyle = head.stroke;
+				ctx.lineWidth = 2;
+				ctx.strokeRect?.(head.leftX, head.y - thickness / 2, head.rightX - head.leftX, thickness);
+				continue;
+			}
+			if (head.dynamic === "ghost") {
+				ctx.save();
+				ctx.globalAlpha = 0.48;
+			}
+			if (head.visualKind === "square-head") {
+				this.drawSquareHead(ctx, head);
+			} else {
+				this.drawCircleHead(ctx, head);
+			}
+			if (head.dynamic === "ghost") {
+				ctx.restore();
+			}
+			if (head.dynamic === "accent") {
+				this.drawAccent(ctx, head);
+			}
+		}
+	}
+
+	private drawSquareHead(
+		ctx: CanvasRenderingContext2D,
+		head: Extract<HighwayProjectedHead, { visualKind: "square-head" }>,
+	): void {
+		const half = head.radius;
+		ctx.beginPath();
+		ctx.moveTo(head.centerX - half, head.centerY - half);
+		ctx.lineTo(head.centerX + half, head.centerY - half);
+		ctx.lineTo(head.centerX + half, head.centerY + half);
+		ctx.lineTo(head.centerX - half, head.centerY + half);
+		ctx.closePath();
+		ctx.fillStyle = head.fill;
+		ctx.fill();
+		ctx.strokeStyle = head.stroke;
+		ctx.lineWidth = 2;
+		ctx.stroke();
+	}
+
+	private drawCircleHead(
+		ctx: CanvasRenderingContext2D,
+		head: Extract<HighwayProjectedHead, { visualKind: "cymbal-head" }>,
+	): void {
+		ctx.beginPath();
+		ctx.arc(head.centerX, head.centerY, head.radius, 0, Math.PI * 2);
+		ctx.fillStyle = head.fill;
+		ctx.fill();
+		ctx.strokeStyle = head.stroke;
+		ctx.lineWidth = 2;
+		ctx.stroke();
+	}
+
+	private drawAccent(
+		ctx: CanvasRenderingContext2D,
+		head: Extract<HighwayProjectedHead, { visualKind: "square-head" | "cymbal-head" }>,
+	): void {
+		ctx.save();
+		ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+		ctx.lineWidth = 2;
+		if (head.visualKind === "square-head") {
+			const half = head.radius + 3;
+			ctx.beginPath();
+			ctx.moveTo(head.centerX - half, head.centerY - half);
+			ctx.lineTo(head.centerX + half, head.centerY - half);
+			ctx.lineTo(head.centerX + half, head.centerY + half);
+			ctx.lineTo(head.centerX - half, head.centerY + half);
+			ctx.closePath();
+			ctx.stroke();
+		} else {
+			ctx.beginPath();
+			ctx.arc(head.centerX, head.centerY, head.radius + 3, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+
+	private drawHitLineAndTargets(
+		ctx: CanvasRenderingContext2D,
+		frame: HighwayFrameData,
+	): void {
 		const { geometry } = frame;
 		ctx.strokeStyle = "#ffffff";
 		ctx.lineWidth = 3;
@@ -126,6 +211,24 @@ export class HighwayRenderer {
 			geometry.roadCenterX + geometry.bottomRoadWidth / 2,
 			geometry.hitLineY,
 		);
+		ctx.stroke();
+
+		for (const target of frame.targets) {
+			this.drawTarget(ctx, target);
+		}
+	}
+
+	private drawTarget(ctx: CanvasRenderingContext2D, target: HighwayTarget): void {
+		ctx.beginPath();
+		ctx.moveTo(target.leftX, target.bottomY);
+		ctx.lineTo(target.rightX, target.bottomY);
+		ctx.lineTo(target.rightX - 5, target.topY);
+		ctx.lineTo(target.leftX + 5, target.topY);
+		ctx.closePath();
+		ctx.fillStyle = target.fill;
+		ctx.fill();
+		ctx.strokeStyle = target.stroke;
+		ctx.lineWidth = 2;
 		ctx.stroke();
 	}
 

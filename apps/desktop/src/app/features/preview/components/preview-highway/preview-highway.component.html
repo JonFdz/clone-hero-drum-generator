@@ -1,10 +1,10 @@
 <section class="highway-card">
 	<div class="highway-header">
 		<div>
-			<h2>Highway Preview</h2>
-			<p>Experimental read-only Canvas 2D playback view.</p>
+			<h2>Highway</h2>
+			<p>Read-only generated-chart playback view with four pitched lanes and a separate kick rail.</p>
 		</div>
-		<span class="experimental-pill">Experimental</span>
+		<span class="read-only-pill">Read only</span>
 	</div>
 
 	<div class="canvas-shell" #container>
@@ -12,11 +12,11 @@
 			#canvas
 			class="highway-canvas"
 			role="img"
-			aria-label="Experimental five-lane drum highway preview"
+			aria-label="Read-only drum highway preview with four pitched lanes and a separate kick rail"
 		></canvas>
 	</div>
 
-	<p class="highway-summary" aria-live="polite">
+	<p class="highway-summary">
 		{{ accessibleSummary() }}
 	</p>
 </section>

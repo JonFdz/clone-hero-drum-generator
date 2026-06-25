@@ -13,6 +13,10 @@ import {
 	offsetMsToSeconds,
 } from "./desktop-preview-model";
 
+function previewNoteEvent(tick: number, lane: number, seconds: number, length = 0) {
+	return { tick, lane, length, seconds, endSeconds: seconds + length / 192 / 2 };
+}
+
 describe("desktop-preview-model", () => {
 	it("formats time", () => {
 		expect(formatTime(12.345)).toBe("00:12.345");
@@ -38,8 +42,8 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 0, lane: 0, seconds: 1 },
-					{ tick: 100, lane: 1, seconds: 2 },
+					previewNoteEvent(0, 0, 1),
+					previewNoteEvent(100, 1, 2),
 				],
 			},
 			1.05,
@@ -58,10 +62,10 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 192, lane: 2, seconds: 1 },
-					{ tick: 192, lane: 66, seconds: 1 },
-					{ tick: 192, lane: 35, seconds: 1 },
-					{ tick: 192, lane: 41, seconds: 1 },
+					previewNoteEvent(192, 2, 1),
+					previewNoteEvent(192, 66, 1),
+					previewNoteEvent(192, 35, 1),
+					previewNoteEvent(192, 41, 1),
 				],
 			},
 			0,
@@ -84,7 +88,7 @@ describe("desktop-preview-model", () => {
 				hasAccurateTiming: true,
 				limitations: [],
 				sectionEvents: [],
-				noteEvents: [{ tick: 192, lane: 66, seconds: 1 }],
+				noteEvents: [previewNoteEvent(192, 66, 1)],
 			},
 			0,
 			0,
@@ -101,9 +105,9 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 1, lane: 1, seconds: 0.8 },
-					{ tick: 2, lane: 2, seconds: 1.0 },
-					{ tick: 3, lane: 3, seconds: 2.0 },
+					previewNoteEvent(1, 1, 0.8),
+					previewNoteEvent(2, 2, 1.0),
+					previewNoteEvent(3, 3, 2.0),
 				],
 			},
 			1.0,
@@ -129,9 +133,9 @@ describe("desktop-preview-model", () => {
 				limitations: [],
 				sectionEvents: [],
 				noteEvents: [
-					{ tick: 1, lane: 1, seconds: 0.8 },
-					{ tick: 2, lane: 2, seconds: 1.0 },
-					{ tick: 3, lane: 3, seconds: 5.0 },
+					previewNoteEvent(1, 1, 0.8),
+					previewNoteEvent(2, 2, 1.0),
+					previewNoteEvent(3, 3, 5.0),
 				],
 			},
 			1.0,

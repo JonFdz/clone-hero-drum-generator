@@ -1,86 +1,122 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildHighwayGeometry,
-	buildHighwaySourceNotes,
+	buildHighwayLaneCenters,
+	buildHighwayLaneDividers,
+	buildHighwayTargets,
 	filterVisibleHighwayNotes,
 	projectHighwayNotes,
+	projectKickRailAtDepth,
 	visibleChartWindow,
 } from "./highway-projection";
-import { HIGHWAY_SPEED_PRESETS } from "./highway-model";
+import { HIGHWAY_SPEED_PRESETS, type HighwaySemanticNote } from "./highway-model";
+
+function pitchedNote(overrides: Partial<HighwaySemanticNote> = {}): HighwaySemanticNote {
+	return {
+		id: "pitched",
+		tick: 192,
+		chartLane: 2,
+		pitchedLane: "yellow",
+		visualKind: "square-head",
+		dynamic: null,
+		length: 0,
+		chartSeconds: 1,
+		endChartSeconds: 1,
+		fill: "#ffd84d",
+		stroke: "#fff0b0",
+		...overrides,
+	};
+}
 
 describe("highway-projection", () => {
-	it("creates deterministic source notes with stable ids", () => {
-		const notes = buildHighwaySourceNotes([
-			{ tick: 192, lane: 2, seconds: 1 },
-			{ tick: 192, lane: 2, seconds: 1 },
-			{ tick: 192, lane: 9, seconds: 1 },
-		]);
-		expect(notes.map((note) => note.id)).toEqual(["192-2-0", "192-2-1"]);
+	it("filters notes by interval intersection, not only start time", () => {
+		const visible = filterVisibleHighwayNotes(
+			[
+				pitchedNote({ id: "overlap", chartSeconds: 0.2, endChartSeconds: 0.9, length: 96 }),
+				pitchedNote({ id: "inside", chartSeconds: 1, endChartSeconds: 1 }),
+				pitchedNote({ id: "outside", chartSeconds: 5, endChartSeconds: 5 }),
+			],
+			0.5,
+			4.5,
+		);
+		expect(visible.map((note) => note.id)).toEqual(["overlap", "inside"]);
 	});
 
-	it("drops invalid fractional or out-of-range lanes", () => {
-		const notes = buildHighwaySourceNotes([
-			{ tick: 100, lane: 2.5, seconds: 1 },
-			{ tick: 101, lane: -1, seconds: 1 },
-			{ tick: 102, lane: 5, seconds: 1 },
-			{ tick: 103, lane: Number.NaN, seconds: 1 },
-			{ tick: 104, lane: Number.POSITIVE_INFINITY, seconds: 1 },
-			{ tick: 105, lane: 2, seconds: 1 },
-		]);
-		expect(notes).toHaveLength(1);
-		expect(notes[0]?.lane).toBe(2);
+	it("builds exactly four pitched lane centers, three dividers, and four targets", () => {
+		const geometry = buildHighwayGeometry(800, 420);
+		expect(buildHighwayLaneCenters(geometry)).toHaveLength(4);
+		expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);
+		expect(buildHighwayTargets(geometry)).toHaveLength(4);
 	});
 
-	it("filters visible notes inside the chart-time window", () => {
-		const notes = buildHighwaySourceNotes([
-			{ tick: 0, lane: 1, seconds: 0.4 },
-			{ tick: 192, lane: 2, seconds: 1 },
-			{ tick: 384, lane: 3, seconds: 4.9 },
+	it("keeps four lane centers ordered inside road bounds with no fifth target", () => {
+		const geometry = buildHighwayGeometry(800, 420);
+		const centers = buildHighwayLaneCenters(geometry);
+		expect(centers).toEqual([...centers].sort((a, b) => a - b));
+		expect(centers[0]).toBeGreaterThan(0);
+		expect(centers.at(-1)).toBeLessThan(800);
+		expect(buildHighwayTargets(geometry).map((target) => target.lane)).toEqual([
+			"red",
+			"yellow",
+			"blue",
+			"green",
 		]);
-		const visible = filterVisibleHighwayNotes(notes, 0.5, 4.5);
-		expect(visible.map((note) => note.lane)).toEqual([2]);
 	});
 
-	it("keeps five lane note centers ordered inside road bounds", () => {
+	it("projects kick rail inside road bounds instead of as a fifth lane center", () => {
+		const geometry = buildHighwayGeometry(800, 420);
+		const rail = projectKickRailAtDepth(geometry, 0.2);
+		const roadLeft = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
+		const roadRight = geometry.roadCenterX + geometry.bottomRoadWidth / 2;
+		expect(rail.leftX).toBeGreaterThan(roadLeft);
+		expect(rail.rightX).toBeLessThan(roadRight);
+		expect(rail.width).toBeGreaterThan(0);
+	});
+
+	it("projects square heads, circular cymbals, kick rails, and sustains", () => {
 		const geometry = buildHighwayGeometry(800, 420);
 		const preset = HIGHWAY_SPEED_PRESETS[1]!;
 		const projected = projectHighwayNotes({
-			notes: buildHighwaySourceNotes([
-				{ tick: 0, lane: 0, seconds: 1 },
-				{ tick: 1, lane: 1, seconds: 1 },
-				{ tick: 2, lane: 2, seconds: 1 },
-				{ tick: 3, lane: 3, seconds: 1 },
-				{ tick: 4, lane: 4, seconds: 1 },
-			]),
+			notes: [
+				pitchedNote({ id: "square", chartSeconds: 1.2 }),
+				pitchedNote({ id: "circle", chartLane: 3, pitchedLane: "blue", visualKind: "cymbal-head", chartSeconds: 1.5 }),
+				pitchedNote({ id: "tail", chartLane: 4, pitchedLane: "green", chartSeconds: 1.8, endChartSeconds: 3.2, length: 192 }),
+				pitchedNote({ id: "kick", chartLane: 0, pitchedLane: null, visualKind: "kick-rail", chartSeconds: 2, endChartSeconds: 2.8, length: 96, fill: "#ff9a3c", stroke: "#ffd8ae" }),
+			],
 			playbackSeconds: 0,
 			previewOffsetSeconds: 0,
 			preset,
 			geometry,
 		});
-		const centers = projected.map((note) => note.centerX);
-		expect(centers).toEqual([...centers].sort((a, b) => a - b));
-		expect(centers[0]).toBeGreaterThan(0);
-		expect(centers.at(-1)).toBeLessThan(800);
+		expect(projected.heads.map((head) => head.visualKind)).toEqual([
+			"kick-rail",
+			"square-head",
+			"cymbal-head",
+			"square-head",
+		]);
+		expect(projected.sustains.map((sustain) => sustain.kind)).toEqual([
+			"kick",
+			"pitched",
+		]);
 	});
 
-	it("projects hit-line and horizon notes with expected scale ordering", () => {
+	it("falls back safely by omitting invalid sustain geometry while keeping head geometry", () => {
 		const geometry = buildHighwayGeometry(800, 420);
 		const preset = HIGHWAY_SPEED_PRESETS[1]!;
 		const projected = projectHighwayNotes({
-			notes: buildHighwaySourceNotes([
-				{ tick: 0, lane: 1, seconds: 1 },
-				{ tick: 1, lane: 2, seconds: 1 + preset.lookAheadSeconds },
-			]),
-			playbackSeconds: 1,
+			notes: [
+				pitchedNote({ id: "invalid-tail", chartSeconds: 1, endChartSeconds: Number.NaN, length: 96 }),
+			],
+			playbackSeconds: 0,
 			previewOffsetSeconds: 0,
 			preset,
 			geometry,
 		});
-		expect(projected[0]?.radius).toBeLessThan(projected[1]?.radius ?? 0);
-		expect(projected[0]?.centerY).toBeLessThan(projected[1]?.centerY ?? 0);
+		expect(projected.sustains).toHaveLength(0);
+		expect(projected.heads).toHaveLength(1);
 	});
 
-	it("changes visible chart window with speed presets only", () => {
+	it("updates visible chart window with speed presets only", () => {
 		const fast = visibleChartWindow({
 			playbackSeconds: 10,
 			previewOffsetSeconds: 0.5,

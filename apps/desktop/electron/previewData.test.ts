@@ -40,8 +40,24 @@ describe("parseChartPreviewData", () => {
 		);
 
 		const data = await parseChartPreviewData(chartPath);
-		expect(data.noteEvents[0]?.seconds).toBeCloseTo(0.5, 6);
-		expect(data.noteEvents[1]?.seconds).toBeCloseTo(1, 6);
+		expect(data.noteEvents[0]).toEqual(
+			expect.objectContaining({
+				tick: 192,
+				lane: 0,
+				length: 0,
+				seconds: 0.5,
+				endSeconds: 0.5,
+			}),
+		);
+		expect(data.noteEvents[1]).toEqual(
+			expect.objectContaining({
+				tick: 384,
+				lane: 1,
+				length: 0,
+				seconds: 1,
+				endSeconds: 1,
+			}),
+		);
 		expect(data.timing.tempos).toEqual([
 			{ tick: 0, bpm: 120, seconds: 0, source: "generated-chart" },
 		]);
@@ -187,6 +203,130 @@ describe("parseChartPreviewData", () => {
 			]),
 		);
 		expect(data.timing.summary.label).toBe("Timing: 2 warnings, 1 info");
+	});
+
+	it("retains zero-length taps and positive sustains with endSeconds", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = B 120000
+}
+[ExpertDrums]
+{
+  192 = N 0 0
+  384 = N 1 96
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.noteEvents[0]).toEqual(
+			expect.objectContaining({ length: 0, seconds: 0.5, endSeconds: 0.5 }),
+		);
+		expect(data.noteEvents[1]).toEqual(
+			expect.objectContaining({ length: 96, seconds: 1, endSeconds: 1.25 }),
+		);
+	});
+
+	it("computes sustain endSeconds across tempo changes", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = B 120000
+  384 = B 60000
+}
+[ExpertDrums]
+{
+  288 = N 2 288
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.noteEvents[0]?.seconds).toBeCloseTo(0.75, 6);
+		expect(data.noteEvents[0]?.endSeconds).toBeCloseTo(2, 6);
+		expect(data.noteEvents[0]?.endSeconds).toBeGreaterThanOrEqual(
+			data.noteEvents[0]?.seconds ?? 0,
+		);
+	});
+
+	it("retains valid raw modifier events, drops malformed negatives, and sorts deterministically", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = B 120000
+}
+[ExpertDrums]
+{
+  384 = N 35 0
+  384 = N 66 0
+  192 = N 2 0
+  -5 = N 1 0
+  120 = N -1 0
+  130 = N 1 -2
+  nope
+}
+`,
+			"utf8",
+			);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.noteEvents.map((note) => [note.tick, note.lane, note.length])).toEqual([
+			[192, 2, 0],
+			[384, 35, 0],
+			[384, 66, 0],
+		]);
+	});
+
+	it("keeps chart timing independent from preview offset handling", async () => {
+		const tempDir = await mkdtemp(path.join(os.tmpdir(), "chdg-preview-"));
+		const chartPath = path.join(tempDir, "notes.chart");
+		await writeFile(
+			chartPath,
+			`[Song]
+{
+  Offset = 1.5
+  Resolution = 192
+}
+[SyncTrack]
+{
+  0 = B 120000
+}
+[ExpertDrums]
+{
+  192 = N 0 0
+}
+`,
+			"utf8",
+		);
+
+		const data = await parseChartPreviewData(chartPath);
+		expect(data.offsetSeconds).toBe(1.5);
+		expect(data.noteEvents[0]?.seconds).toBe(0.5);
+		expect(data.noteEvents[0]?.endSeconds).toBe(0.5);
 	});
 
 	it("returns no section events when generated chart has no section markers", async () => {

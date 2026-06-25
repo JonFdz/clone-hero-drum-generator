@@ -63,12 +63,20 @@ export type ChartPreviewSectionEvent = {
 	source?: "generated-chart";
 };
 
+export type ChartPreviewNoteEvent = {
+	tick: number;
+	lane: number;
+	length: number;
+	seconds: number;
+	endSeconds: number;
+};
+
 export type ChartPreviewData = {
 	resolution: number;
 	offsetSeconds: number;
 	hasAccurateTiming: boolean;
 	limitations: string[];
-	noteEvents: Array<{ tick: number; lane: number; seconds: number }>;
+	noteEvents: ChartPreviewNoteEvent[];
 	sectionEvents: ChartPreviewSectionEvent[];
 	timing: {
 		resolution: number;
