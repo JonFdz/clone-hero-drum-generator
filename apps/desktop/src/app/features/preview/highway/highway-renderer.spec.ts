@@ -361,14 +361,14 @@ describe("HighwayRenderer", () => {
 			HIGHWAY_STAGE_VISUAL_PROFILE.hud.edgeInset,
 		]);
 		// Tick/Beat/Measure are top-right and right-aligned.
-		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toBe(
-			"Tick 192",
-		);
-		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[2]?.[0]).toBe(
-			"Beat 2",
-		);
-		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[3]?.[0]).toBe(
-			"Measure 1",
-		);
+		expect(
+			(ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[1]?.[0],
+		).toBe("Tick 192");
+		expect(
+			(ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[2]?.[0],
+		).toBe("Beat 2");
+		expect(
+			(ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[3]?.[0],
+		).toBe("Measure 1");
 	});
 });

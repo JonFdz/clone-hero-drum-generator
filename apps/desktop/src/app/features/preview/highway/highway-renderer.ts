@@ -370,7 +370,11 @@ export class HighwayRenderer {
 		ctx.font = `${hud.fontSize}px sans-serif`;
 		ctx.textBaseline = "top";
 		ctx.textAlign = "left";
-		ctx.fillText(`FPS ${state.fps === null ? "—" : state.fps.toFixed(0)}`, hud.edgeInset, hud.edgeInset);
+		ctx.fillText(
+			`FPS ${state.fps === null ? "—" : state.fps.toFixed(0)}`,
+			hud.edgeInset,
+			hud.edgeInset,
+		);
 		ctx.textAlign = "right";
 		const rightX = frame.cssWidth - hud.edgeInset;
 		const topY = hud.edgeInset;

@@ -92,9 +92,21 @@ describe("highway-stage-visual-profile", () => {
 		it("stays monotonic for a range of calibrated profile parameters", () => {
 			const base = HIGHWAY_STAGE_VISUAL_PROFILE;
 			for (const params of [
-				{ nearFieldExponent: 1.2, farCompressionStart: 0.6, farCompressionExponent: 2 },
-				{ nearFieldExponent: 1.75, farCompressionStart: 0.68, farCompressionExponent: 2.9 },
-				{ nearFieldExponent: 2.4, farCompressionStart: 0.75, farCompressionExponent: 4 },
+				{
+					nearFieldExponent: 1.2,
+					farCompressionStart: 0.6,
+					farCompressionExponent: 2,
+				},
+				{
+					nearFieldExponent: 1.75,
+					farCompressionStart: 0.68,
+					farCompressionExponent: 2.9,
+				},
+				{
+					nearFieldExponent: 2.4,
+					farCompressionStart: 0.75,
+					farCompressionExponent: 4,
+				},
 			]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
