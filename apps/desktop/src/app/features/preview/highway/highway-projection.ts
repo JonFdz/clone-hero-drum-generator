@@ -72,7 +72,7 @@ export function buildHighwayGeometry(
 		bottomRoadWidth,
 		pitchedLaneCount: 4,
 		minimumReadable:
-			safeHeight >= 280 && horizonLaneWidth >= 14 && hitLineLaneWidth >= 48,
+			safeHeight >= 280 && horizonLaneWidth >= 10 && hitLineLaneWidth >= 40,
 	};
 }
 
@@ -112,8 +112,9 @@ export function buildHighwayTargets(
 	profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE,
 ): HighwayTarget[] {
 	const bounds = roadBoundsAtDepth(geometry, 0);
-	const targetHeight = Math.max(
-		9,
+	const targetHeight = clamp(
+		bounds.laneWidth * profile.targets.heightLaneWidthRatio,
+		profile.targets.minHeight,
 		Math.min(profile.targets.heightNear, geometry.cssHeight * 0.04),
 	);
 	const inset = Math.max(4, bounds.laneWidth * profile.targets.laneInsetRatio);
@@ -317,25 +318,28 @@ function projectHead(
 	if (laneIndex < 0) return null;
 	const bounds = roadBoundsAtDepth(input.geometry, depth);
 	const centerX = bounds.leftX + (laneIndex + 0.5) * bounds.laneWidth;
+	const baseRadius =
+		note.visualKind === "cymbal-head"
+			? lerp(
+					profile.notes.circleNearRadius,
+					profile.notes.circleFarRadius,
+					depth,
+				)
+			: lerp(
+					profile.notes.squareNearSize,
+					profile.notes.squareFarSize,
+					depth,
+				);
+	const maxLaneRelativeRadius =
+		note.visualKind === "cymbal-head"
+			? bounds.laneWidth * profile.notes.circleMaxLaneWidthRatio
+			: bounds.laneWidth * profile.notes.squareMaxLaneWidthRatio;
 	const pitchedHeadBase = {
 		id: note.id,
 		depth,
 		centerX,
 		centerY: y,
-		radius: Math.max(
-			3,
-			note.visualKind === "cymbal-head"
-				? lerp(
-						profile.notes.circleNearRadius,
-						profile.notes.circleFarRadius,
-						depth,
-					)
-				: lerp(
-						profile.notes.squareNearSize,
-						profile.notes.squareFarSize,
-						depth,
-					),
-		),
+		radius: Math.max(3, Math.min(baseRadius, maxLaneRelativeRadius)),
 		fill: note.fill,
 		stroke: note.stroke,
 		dynamic: note.dynamic,

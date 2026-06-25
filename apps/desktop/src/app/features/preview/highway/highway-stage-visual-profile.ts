@@ -47,13 +47,17 @@ export type HighwayStageVisualProfile = {
 	};
 	/** Named monotonic time-to-depth parameters. */
 	projection: {
-		/** Ease-out exponent for calibrated time-to-depth projection. */
-		timeToDepthExponent: number;
+		/** Perspective compression factor for calibrated time-to-depth projection. */
+		perspectiveCompression: number;
 	};
 	/** Compact target pads. */
 	targets: {
-		/** Target pad height at the near edge (CSS px). */
+		/** Maximum target pad height at the near edge (CSS px). */
 		heightNear: number;
+		/** Minimum target pad height on narrow local lanes (CSS px). */
+		minHeight: number;
+		/** Target height as a fraction of the local lane width. */
+		heightLaneWidthRatio: number;
 		/** Interior fill alpha (darker/more solid gameplay base). */
 		interiorAlpha: number;
 		/** Lane-colored outline thickness. */
@@ -71,10 +75,14 @@ export type HighwayStageVisualProfile = {
 		squareNearSize: number;
 		/** Square head half-size at the far edge (CSS px). */
 		squareFarSize: number;
+		/** Maximum square-head half-size as a fraction of the local lane width. */
+		squareMaxLaneWidthRatio: number;
 		/** Cymbal disc radius at the near edge (CSS px). */
 		circleNearRadius: number;
 		/** Cymbal disc radius at the far edge (CSS px). */
 		circleFarRadius: number;
+		/** Maximum cymbal radius as a fraction of the local lane width. */
+		circleMaxLaneWidthRatio: number;
 		/** Kick rail thickness at the near edge (CSS px). */
 		kickRailNearThickness: number;
 		/** Kick rail thickness at the far edge (CSS px). */
@@ -121,37 +129,41 @@ export type HighwayStageVisualProfile = {
  */
 export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 	scene: {
-		maxRoadViewportWidth: 640,
-		roadViewportWidthRatio: 0.42,
-		minRoadViewportWidth: 270,
+		maxRoadViewportWidth: 560,
+		roadViewportWidthRatio: 0.32,
+		minRoadViewportWidth: 250,
 		sideScenePadding: 24,
 		horizonRatio: 0.27,
-		hitLineRatio: 0.86,
+		hitLineRatio: 0.74,
 	},
 	road: {
-		topWidthRatio: 0.22,
-		bottomWidthRatio: 0.82,
+		topWidthRatio: 0.16,
+		bottomWidthRatio: 0.66,
 		borderWidthNear: 2.25,
 		borderWidthFar: 1,
 		laneDividerAlpha: 0.1,
 	},
 	projection: {
-		timeToDepthExponent: 1.35,
+		perspectiveCompression: 0.4,
 	},
 	targets: {
-		heightNear: 12,
+		heightNear: 11,
+		minHeight: 7,
+		heightLaneWidthRatio: 0.24,
 		interiorAlpha: 0.48,
 		outlineWidth: 1.75,
-		laneInsetRatio: 0.13,
-		bottomLipRatio: 0.14,
+		laneInsetRatio: 0.16,
+		bottomLipRatio: 0.12,
 		topTaperInset: 4,
 	},
 	notes: {
-		squareNearSize: 13.5,
-		squareFarSize: 4.5,
-		circleNearRadius: 11.5,
-		circleFarRadius: 4,
-		kickRailNearThickness: 6.5,
+		squareNearSize: 11,
+		squareFarSize: 4,
+		squareMaxLaneWidthRatio: 0.23,
+		circleNearRadius: 9.5,
+		circleFarRadius: 3.75,
+		circleMaxLaneWidthRatio: 0.21,
+		kickRailNearThickness: 6,
 		kickRailFarThickness: 2,
 		sustainAlpha: 0.26,
 	},
@@ -187,19 +199,18 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
  * - receives finite values; non-finite input yields 0;
  * - returns finite values clamped to `[0, 1]`;
  * - monotonic non-decreasing for valid profile values;
- * - has a non-zero slope at the hit line so nearby notes do not collapse into
- *   the same lower-road Y positions;
- * - compresses naturally toward the horizon instead of compressing the near
- *   field.
+ * - strongly expands the lower field while compressing primarily toward the
+ *   horizon.
  *
- * Implementation: calibrated ease-out time-to-depth mapping.
+ * Implementation: calibrated perspective-style mapping.
  *
- * `depth = 1 - (1 - p)^timeToDepthExponent`
+ * `depth = p / (p + perspectiveCompression * (1 - p))`
  *
- * This is the projection-correction pass requested after same-song reference
- * comparison. The previous near-field `p^nearFieldExponent` mapping had an
- * almost-zero slope at the hit line; this ease-out mapping restores readable
- * vertical spacing in the lower road while still compressing the far horizon.
+ * This camera-calibration pass replaces the earlier generic ease-out curve with
+ * a named perspective-style mapping so the lower field opens up more
+ * aggressively while the far horizon still compresses. Lower compression values
+ * produce a longer, gameplay-like near field; higher values flatten it back
+ * toward the hit line.
  */
 export function stageDepthForProgress(
 	progress: number,
@@ -207,8 +218,9 @@ export function stageDepthForProgress(
 ): number {
 	if (!Number.isFinite(progress)) return 0;
 	const p = clamp(progress, 0, 1);
-	const exponent = Math.max(0.1, profile.projection.timeToDepthExponent);
-	const depth = clamp(1 - Math.pow(1 - p, exponent), 0, 1);
+	const compression = Math.max(0.01, profile.projection.perspectiveCompression);
+	const denominator = p + compression * (1 - p);
+	const depth = denominator <= 0 ? 0 : clamp(p / denominator, 0, 1);
 	return Number.isFinite(depth) ? depth : 0;
 }
 

@@ -21,7 +21,7 @@ describe("highway-stage-visual-profile", () => {
 		expect(HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault).toBe(false);
 	});
 
-	it("keeps the road narrower than the canvas on a wide scene", () => {
+	it("keeps the road markedly narrower than the canvas on a wide scene", () => {
 		const { scene, road } = HIGHWAY_STAGE_VISUAL_PROFILE;
 		const canvasWidth = 1440;
 		const viewport = Math.min(
@@ -29,19 +29,19 @@ describe("highway-stage-visual-profile", () => {
 			canvasWidth * scene.roadViewportWidthRatio,
 		);
 		const bottomRoadWidth = viewport * road.bottomWidthRatio;
-		// Bottom road must be materially narrower than the canvas (34–48% band).
-		expect(bottomRoadWidth).toBeLessThan(canvasWidth * 0.5);
-		expect(bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.3);
+		// Camera-calibration pass: target-row road is intentionally long/narrow.
+		expect(bottomRoadWidth).toBeLessThan(canvasWidth * 0.24);
+		expect(bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.18);
 		// Each side retains substantial dark negative space.
-		expect(canvasWidth - bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.5);
+		expect(canvasWidth - bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.7);
 	});
 
-	it("uses profile-owned camera ratios inside the calibrated deeper-stage bands", () => {
+	it("uses profile-owned camera ratios inside the calibrated gameplay-camera bands", () => {
 		const { scene } = HIGHWAY_STAGE_VISUAL_PROFILE;
 		expect(scene.horizonRatio).toBeGreaterThanOrEqual(0.24);
 		expect(scene.horizonRatio).toBeLessThanOrEqual(0.32);
-		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.84);
-		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.9);
+		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.72);
+		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.77);
 	});
 
 	describe("stageDepthForProgress", () => {
@@ -73,14 +73,14 @@ describe("highway-stage-visual-profile", () => {
 			}
 		});
 
-		it("has a non-zero near-field lift and still compresses naturally toward the horizon", () => {
+		it("strongly opens the lower field while still compressing toward the horizon", () => {
 			const profile = HIGHWAY_STAGE_VISUAL_PROFILE;
-			// Corrected ease-out should lift even tiny near-field progress values.
-			expect(stageDepthForProgress(0.01, profile)).toBeGreaterThan(0.005);
-			// Midpoint should already be meaningfully away from the hit line.
-			expect(stageDepthForProgress(0.5, profile)).toBeGreaterThan(0.55);
+			// Perspective mapping should lift even tiny near-field progress values.
+			expect(stageDepthForProgress(0.01, profile)).toBeGreaterThan(0.02);
+			// Midpoint should already be far away from the hit line under the gameplay camera.
+			expect(stageDepthForProgress(0.5, profile)).toBeGreaterThan(0.7);
 			// Far notes still compress strongly near the horizon.
-			expect(stageDepthForProgress(0.9, profile)).toBeGreaterThan(0.9);
+			expect(stageDepthForProgress(0.9, profile)).toBeGreaterThan(0.95);
 		});
 
 		it("returns 0 for non-finite input instead of propagating NaN/Infinity", () => {
@@ -90,12 +90,12 @@ describe("highway-stage-visual-profile", () => {
 			expect(stageDepthForProgress(Number.NEGATIVE_INFINITY, profile)).toBe(0);
 		});
 
-		it("stays monotonic for a range of calibrated ease-out exponents", () => {
+		it("stays monotonic for a range of calibrated perspective compression values", () => {
 			const base = HIGHWAY_STAGE_VISUAL_PROFILE;
-			for (const exponent of [0.8, 1, 1.35, 1.8, 2.5]) {
+			for (const compression of [0.25, 0.4, 0.55, 0.8, 1.1]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
-					projection: { timeToDepthExponent: exponent },
+					projection: { perspectiveCompression: compression },
 				};
 				let previous = -Infinity;
 				let monotonic = true;

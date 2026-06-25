@@ -47,6 +47,14 @@ function expectSquareHead(
 	return head as Extract<HighwayProjectedHead, { visualKind: "square-head" }>;
 }
 
+function normalizedGap(
+	nearY: number,
+	farY: number,
+	geometry: { hitLineY: number; horizonY: number },
+): number {
+	return (nearY - farY) / (geometry.hitLineY - geometry.horizonY);
+}
+
 describe("highway-projection", () => {
 	it("filters notes by interval intersection, not only start time", () => {
 		const visible = filterVisibleHighwayNotes(
@@ -188,19 +196,19 @@ describe("highway-projection", () => {
 			const geometry = buildHighwayGeometry(1600, 720);
 			const roadLeft = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
 			const roadRight = geometry.roadCenterX + geometry.bottomRoadWidth / 2;
-			// Road is materially narrower than the canvas (34–48% band on wide).
-			expect(geometry.bottomRoadWidth).toBeLessThan(1600 * 0.5);
-			expect(geometry.bottomRoadWidth).toBeGreaterThan(1600 * 0.3);
+			// Camera-calibration pass: road is long and narrow on wide desktop windows.
+			expect(geometry.bottomRoadWidth).toBeLessThan(1600 * 0.24);
+			expect(geometry.bottomRoadWidth).toBeGreaterThan(1600 * 0.18);
 			// Centered within 1 CSS px tolerance.
 			expect(Math.abs(geometry.roadCenterX - 1600 / 2)).toBeLessThanOrEqual(1);
 			// Each side retains substantial dark negative space.
-			expect(roadLeft).toBeGreaterThan(1600 * 0.2);
-			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.2);
-			// Calibrated pass: horizon is pushed higher to lengthen the road while the
-			// hit line sits lower to deepen the near field.
+			expect(roadLeft).toBeGreaterThan(1600 * 0.35);
+			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.35);
+			// Calibration pass: hit line rises materially while horizon stays in the same band.
 			expect(geometry.horizonY).toBeGreaterThan(720 * 0.24);
 			expect(geometry.horizonY).toBeLessThan(720 * 0.32);
-			expect(geometry.hitLineY).toBeGreaterThan(720 * 0.84);
+			expect(geometry.hitLineY).toBeGreaterThanOrEqual(720 * 0.72);
+			expect(geometry.hitLineY).toBeLessThanOrEqual(720 * 0.77);
 		});
 
 		it("caps the road viewport with the profile maximum on very wide canvases", () => {
@@ -336,7 +344,7 @@ describe("highway-projection", () => {
 	});
 
 	describe("projection correction pass (fast preset)", () => {
-		it("keeps near-to-far heads strictly ordered with usable lower-field spacing", () => {
+		it("keeps near-to-far heads strictly ordered with measurable lower-field spacing", () => {
 			const geometry = buildHighwayGeometry(900, 480);
 			const preset = HIGHWAY_SPEED_PRESETS[0]!;
 			const projected = projectHighwayNotes({
@@ -351,6 +359,17 @@ describe("highway-projection", () => {
 					pitchedNote({ id: "n050", chartSeconds: 0.5, endChartSeconds: 0.5 }),
 					pitchedNote({ id: "n100", chartSeconds: 1, endChartSeconds: 1 }),
 					pitchedNote({ id: "n200", chartSeconds: 2, endChartSeconds: 2 }),
+					pitchedNote({
+						id: "kick",
+						chartLane: 0,
+						pitchedLane: null,
+						visualKind: "kick-rail",
+						chartSeconds: 0.3,
+						endChartSeconds: 0.6,
+						length: 96,
+						fill: "#ff9a3c",
+						stroke: "#ffd8ae",
+					}),
 				],
 				playbackSeconds: 0,
 				previewOffsetSeconds: 0,
@@ -364,16 +383,29 @@ describe("highway-projection", () => {
 			const y050 = expectSquareHead(byId.get("n050"));
 			const y100 = expectSquareHead(byId.get("n100"));
 			const y200 = expectSquareHead(byId.get("n200"));
+			const kick = byId.get("kick");
+			const nearGap005_010 = normalizedGap(y005.centerY, y010.centerY, geometry);
+			const nearGap010_020 = normalizedGap(y010.centerY, y020.centerY, geometry);
+			const midGap050_100 = normalizedGap(y050.centerY, y100.centerY, geometry);
+			const farGap100_200 = normalizedGap(y100.centerY, y200.centerY, geometry);
 			// Near to far = lower to higher on screen (larger y to smaller y).
 			expect(y005.centerY).toBeGreaterThan(y010.centerY);
 			expect(y010.centerY).toBeGreaterThan(y020.centerY);
 			expect(y020.centerY).toBeGreaterThan(y050.centerY);
 			expect(y050.centerY).toBeGreaterThan(y100.centerY);
 			expect(y100.centerY).toBeGreaterThan(y200.centerY);
-			// Lower-field spacing must be visibly usable and not collapse at the hit line.
-			expect(y005.centerY - y010.centerY).toBeGreaterThan(4);
-			expect(y010.centerY - y020.centerY).toBeGreaterThan(8);
-			expect(y020.centerY - y050.centerY).toBeGreaterThan(18);
+			// Measurable lower-field spacing, normalized by visible road depth.
+			expect(nearGap005_010).toBeGreaterThan(0.03);
+			expect(nearGap010_020).toBeGreaterThan(0.06);
+			// Far field compresses more per second than the near field.
+			expect(farGap100_200 / 1).toBeLessThan(nearGap010_020 / 0.1);
+			expect(farGap100_200 / 1).toBeLessThan(midGap050_100 / 0.5);
+			// Camera invariants remain intact.
+			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.24);
+			expect(geometry.hitLineY / geometry.cssHeight).toBeGreaterThanOrEqual(0.72);
+			expect(buildHighwayTargets(geometry)).toHaveLength(4);
+			expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);
+			expect(kick?.visualKind).toBe("kick-rail");
 		});
 
 		it("does not render a head that is already in the past", () => {
@@ -433,9 +465,50 @@ describe("highway-projection", () => {
 				preset,
 				geometry,
 			});
+			const sustain = projected.sustains[0];
 			expect(projected.heads).toHaveLength(0);
 			expect(projected.sustains).toHaveLength(1);
-			expect(projected.sustains[0]?.nearY).toBe(geometry.hitLineY);
+			expect(sustain?.nearY).toBe(geometry.hitLineY);
+		});
+
+		it("clamps projected head sizes relative to local lane width and keeps compact targets", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const projected = projectHighwayNotes({
+				notes: [
+					pitchedNote({ id: "square", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "cymbal",
+						chartLane: 3,
+						pitchedLane: "blue",
+						visualKind: "cymbal-head",
+						chartSeconds: 0.1,
+						endChartSeconds: 0.1,
+					}),
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset: HIGHWAY_SPEED_PRESETS[0]!,
+				geometry,
+			});
+			const square = expectSquareHead(
+				projected.heads.find((head) => head.id === "square"),
+			);
+			const cymbal = projected.heads.find((head) => head.id === "cymbal");
+			expect(cymbal?.visualKind).toBe("cymbal-head");
+			const targets = buildHighwayTargets(geometry);
+			const squareBounds = roadBoundsAtDepth(geometry, square.depth);
+			expect(square.radius).toBeLessThanOrEqual(
+				squareBounds.laneWidth * HIGHWAY_STAGE_VISUAL_PROFILE.notes.squareMaxLaneWidthRatio,
+			);
+			if (cymbal?.visualKind === "cymbal-head") {
+				const cymbalBounds = roadBoundsAtDepth(geometry, cymbal.depth);
+				expect(cymbal.radius).toBeLessThanOrEqual(
+					cymbalBounds.laneWidth * HIGHWAY_STAGE_VISUAL_PROFILE.notes.circleMaxLaneWidthRatio,
+				);
+			}
+			for (const target of targets) {
+				expect(target.rightX - target.leftX).toBeLessThan(geometry.bottomRoadWidth / 4);
+			}
 		});
 	});
 });
