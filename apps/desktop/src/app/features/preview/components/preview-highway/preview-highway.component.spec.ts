@@ -19,6 +19,7 @@ function createCanvasContext() {
 		fillRect: vi.fn(),
 		strokeRect: vi.fn(),
 		createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+		createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
 		beginPath: vi.fn(),
 		moveTo: vi.fn(),
 		lineTo: vi.fn(),
@@ -78,9 +79,13 @@ function createComponent(options?: {
 		clientWidth: 480,
 		clientHeight: 360,
 		getBoundingClientRect: vi.fn(() => ({ width: 999, height: 999 })),
-	} as HTMLDivElement;
-	(component as never).canvasRef = { nativeElement: canvas };
-	(component as never).containerRef = { nativeElement: container };
+	} as unknown as HTMLDivElement;
+	const refs = component as unknown as {
+		canvasRef?: { nativeElement: HTMLCanvasElement };
+		containerRef?: { nativeElement: HTMLDivElement };
+	};
+	refs.canvasRef = { nativeElement: canvas };
+	refs.containerRef = { nativeElement: container };
 	return { component, canvas, context, requestAnimationFrame, cancelAnimationFrame };
 }
 
@@ -232,6 +237,48 @@ describe("PreviewHighwayComponent", () => {
 		expect(drawsAfterPlay).toBe(initialDraws + 1);
 		expect(drawsAfterPlaybackTicks).toBe(drawsAfterPlay);
 		expect(drawsAfterSeek).toBe(drawsAfterPlaybackTicks + 1);
+		vi.unstubAllGlobals();
+	});
+
+	it("defaults the technical HUD to off and draws it compactly only when enabled", () => {
+		vi.stubGlobal("ResizeObserver", FakeResizeObserver as never);
+		const { component, context } = createComponent();
+		component.chartData = {
+			resolution: 192,
+			offsetSeconds: 0,
+			hasAccurateTiming: true,
+			limitations: [],
+			noteEvents: [previewNoteEvent(192, 1, 1)],
+			sectionEvents: [],
+			timing: {
+				resolution: 192,
+				offsetSeconds: 0,
+				hasAccurateTiming: true,
+				tempos: [{ tick: 0, bpm: 120, seconds: 0, source: "generated-chart" }],
+				timeSignatures: [
+					{ tick: 0, numerator: 4, denominator: 4, seconds: 0, source: "generated-chart" },
+				],
+				sections: [],
+				notes: { count: 1, firstTick: 192, lastTick: 192, firstSeconds: 1, lastSeconds: 1 },
+				diagnostics: [],
+				summary: {
+					status: "ok",
+					label: "ok",
+					errorCount: 0,
+					warningCount: 0,
+					infoCount: 0,
+					importantMessages: [],
+				},
+			},
+		} as never;
+		component.ngAfterViewInit();
+		// With valid chart data there is no limitation overlay, so the stage
+		// profile default (HUD hidden) means no HUD text is drawn.
+		expect((context.fillText as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+
+		// Enabling the session-only toggle triggers a compact HUD render.
+		component.hudEnabled = true;
+		expect((context.fillText as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
 		vi.unstubAllGlobals();
 	});
 });
