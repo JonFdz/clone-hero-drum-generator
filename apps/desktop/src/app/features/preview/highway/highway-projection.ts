@@ -199,6 +199,9 @@ export function projectHighwayLines(input: {
 	return input.lines
 		.map((line) => {
 			const effectiveSeconds = line.chartSeconds + input.previewOffsetSeconds;
+			if (effectiveSeconds < input.playbackSeconds) {
+				return null;
+			}
 			const depth = depthForEffectiveSeconds(
 				effectiveSeconds,
 				input.playbackSeconds,
@@ -220,6 +223,7 @@ export function projectHighwayLines(input: {
 				depth,
 			} satisfies HighwayProjectedLine;
 		})
+		.filter((line): line is HighwayProjectedLine => line !== null)
 		.sort((a, b) => a.y - b.y || a.tick - b.tick);
 }
 
@@ -276,6 +280,9 @@ function projectHead(
 		return null;
 	}
 	const effectiveSeconds = note.chartSeconds + input.previewOffsetSeconds;
+	if (effectiveSeconds < input.playbackSeconds) {
+		return null;
+	}
 	const depth = depthForEffectiveSeconds(
 		effectiveSeconds,
 		input.playbackSeconds,
@@ -358,9 +365,13 @@ function projectSustain(
 	endChartSeconds: number,
 ): HighwayProjectedSustain | null {
 	if (note.length <= 0) return null;
+	const playbackChartSeconds = Math.max(
+		0,
+		input.playbackSeconds - input.previewOffsetSeconds,
+	);
 	const clippedStart = clamp(
 		note.chartSeconds,
-		startChartSeconds,
+		Math.max(startChartSeconds, playbackChartSeconds),
 		endChartSeconds,
 	);
 	const clippedEnd = clamp(

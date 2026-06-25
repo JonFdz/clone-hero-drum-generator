@@ -73,12 +73,13 @@ describe("highway-stage-visual-profile", () => {
 			}
 		});
 
-		it("keeps the midpoint lower for readability, then compresses hard near the far horizon", () => {
+		it("has a non-zero near-field lift and still compresses naturally toward the horizon", () => {
 			const profile = HIGHWAY_STAGE_VISUAL_PROFILE;
-			// Calibration pass goal: more readable near/mid spacing, so midpoint depth
-			// should remain below half the road depth.
-			expect(stageDepthForProgress(0.5, profile)).toBeLessThan(0.45);
-			// But far notes should still compress strongly toward the horizon.
+			// Corrected ease-out should lift even tiny near-field progress values.
+			expect(stageDepthForProgress(0.01, profile)).toBeGreaterThan(0.005);
+			// Midpoint should already be meaningfully away from the hit line.
+			expect(stageDepthForProgress(0.5, profile)).toBeGreaterThan(0.55);
+			// Far notes still compress strongly near the horizon.
 			expect(stageDepthForProgress(0.9, profile)).toBeGreaterThan(0.9);
 		});
 
@@ -89,28 +90,12 @@ describe("highway-stage-visual-profile", () => {
 			expect(stageDepthForProgress(Number.NEGATIVE_INFINITY, profile)).toBe(0);
 		});
 
-		it("stays monotonic for a range of calibrated profile parameters", () => {
+		it("stays monotonic for a range of calibrated ease-out exponents", () => {
 			const base = HIGHWAY_STAGE_VISUAL_PROFILE;
-			for (const params of [
-				{
-					nearFieldExponent: 1.2,
-					farCompressionStart: 0.6,
-					farCompressionExponent: 2,
-				},
-				{
-					nearFieldExponent: 1.75,
-					farCompressionStart: 0.68,
-					farCompressionExponent: 2.9,
-				},
-				{
-					nearFieldExponent: 2.4,
-					farCompressionStart: 0.75,
-					farCompressionExponent: 4,
-				},
-			]) {
+			for (const exponent of [0.8, 1, 1.35, 1.8, 2.5]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
-					projection: params,
+					projection: { timeToDepthExponent: exponent },
 				};
 				let previous = -Infinity;
 				let monotonic = true;

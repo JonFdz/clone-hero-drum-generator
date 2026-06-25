@@ -45,14 +45,10 @@ export type HighwayStageVisualProfile = {
 		/** Internal lane divider alpha (quieter than outer borders). */
 		laneDividerAlpha: number;
 	};
-	/** Named monotonic depth curve parameters. */
+	/** Named monotonic time-to-depth parameters. */
 	projection: {
-		/** Exponent applied through the near and mid field to improve note spacing. */
-		nearFieldExponent: number;
-		/** Start of the stronger far-horizon compression blend, normalized 0..1. */
-		farCompressionStart: number;
-		/** Exponent for the far-horizon ease-out tail. */
-		farCompressionExponent: number;
+		/** Ease-out exponent for calibrated time-to-depth projection. */
+		timeToDepthExponent: number;
 	};
 	/** Compact target pads. */
 	targets: {
@@ -140,9 +136,7 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 		laneDividerAlpha: 0.1,
 	},
 	projection: {
-		nearFieldExponent: 1.75,
-		farCompressionStart: 0.68,
-		farCompressionExponent: 2.9,
+		timeToDepthExponent: 1.35,
 	},
 	targets: {
 		heightNear: 12,
@@ -193,20 +187,19 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
  * - receives finite values; non-finite input yields 0;
  * - returns finite values clamped to `[0, 1]`;
  * - monotonic non-decreasing for valid profile values;
- * - keeps the near and mid field lower/longer for gameplay readability;
- * - compresses distant notes strongly only near the far horizon.
+ * - has a non-zero slope at the hit line so nearby notes do not collapse into
+ *   the same lower-road Y positions;
+ * - compresses naturally toward the horizon instead of compressing the near
+ *   field.
  *
- * Implementation: a two-phase monotonic blend.
+ * Implementation: calibrated ease-out time-to-depth mapping.
  *
- * 1. `near = p^nearFieldExponent` keeps the near and mid sections stretched
- *    so note clusters are less vertically compressed.
- * 2. `tail = 1 - (1 - p)^farCompressionExponent` is a stronger ease-out tail
- *    that approaches the horizon aggressively.
- * 3. `smoothstep(farCompressionStart, 1, p)` blends from the near-field curve
- *    into the far-horizon tail late in the visible window.
+ * `depth = 1 - (1 - p)^timeToDepthExponent`
  *
- * This preserves ordering, remains finite, and avoids sudden jumps while
- * moving the visual spacing closer to a longer, deeper gameplay road.
+ * This is the projection-correction pass requested after same-song reference
+ * comparison. The previous near-field `p^nearFieldExponent` mapping had an
+ * almost-zero slope at the hit line; this ease-out mapping restores readable
+ * vertical spacing in the lower road while still compressing the far horizon.
  */
 export function stageDepthForProgress(
 	progress: number,
@@ -214,24 +207,9 @@ export function stageDepthForProgress(
 ): number {
 	if (!Number.isFinite(progress)) return 0;
 	const p = clamp(progress, 0, 1);
-	const nearExponent = Math.max(0.1, profile.projection.nearFieldExponent);
-	const farStart = clamp(profile.projection.farCompressionStart, 0, 0.9999);
-	const farExponent = Math.max(0.1, profile.projection.farCompressionExponent);
-	const near = Math.pow(p, nearExponent);
-	const tail = 1 - Math.pow(1 - p, farExponent);
-	const blend = smoothstep(farStart, 1, p);
-	const depth = clamp(lerp(near, tail, blend), 0, 1);
+	const exponent = Math.max(0.1, profile.projection.timeToDepthExponent);
+	const depth = clamp(1 - Math.pow(1 - p, exponent), 0, 1);
 	return Number.isFinite(depth) ? depth : 0;
-}
-
-function smoothstep(edge0: number, edge1: number, value: number): number {
-	if (edge0 === edge1) return value >= edge1 ? 1 : 0;
-	const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
-	return t * t * (3 - 2 * t);
-}
-
-function lerp(start: number, end: number, progress: number): number {
-	return start + (end - start) * progress;
 }
 
 function clamp(value: number, min: number, max: number): number {

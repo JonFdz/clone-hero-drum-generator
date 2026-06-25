@@ -13,6 +13,7 @@ import {
 } from "./highway-projection";
 import {
 	HIGHWAY_SPEED_PRESETS,
+	type HighwayProjectedHead,
 	type HighwaySemanticNote,
 } from "./highway-model";
 import {
@@ -37,6 +38,13 @@ function pitchedNote(
 		stroke: "#fff0b0",
 		...overrides,
 	};
+}
+
+function expectSquareHead(
+	head: HighwayProjectedHead | undefined,
+): Extract<HighwayProjectedHead, { visualKind: "square-head" }> {
+	expect(head?.visualKind).toBe("square-head");
+	return head as Extract<HighwayProjectedHead, { visualKind: "square-head" }>;
 }
 
 describe("highway-projection", () => {
@@ -324,6 +332,98 @@ describe("highway-projection", () => {
 				expect(depth).toBeGreaterThanOrEqual(0);
 				expect(depth).toBeLessThanOrEqual(1);
 			}
+		});
+	});
+
+	describe("projection correction pass (fast preset)", () => {
+		it("keeps near-to-far heads strictly ordered with usable lower-field spacing", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const preset = HIGHWAY_SPEED_PRESETS[0]!;
+			const projected = projectHighwayNotes({
+				notes: [
+					pitchedNote({ id: "n005", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({ id: "n010", chartSeconds: 0.1, endChartSeconds: 0.1 }),
+					pitchedNote({ id: "n020", chartSeconds: 0.2, endChartSeconds: 0.2 }),
+					pitchedNote({ id: "n050", chartSeconds: 0.5, endChartSeconds: 0.5 }),
+					pitchedNote({ id: "n100", chartSeconds: 1, endChartSeconds: 1 }),
+					pitchedNote({ id: "n200", chartSeconds: 2, endChartSeconds: 2 }),
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset,
+				geometry,
+			});
+			const byId = new Map(projected.heads.map((head) => [head.id, head]));
+			const y005 = expectSquareHead(byId.get("n005"));
+			const y010 = expectSquareHead(byId.get("n010"));
+			const y020 = expectSquareHead(byId.get("n020"));
+			const y050 = expectSquareHead(byId.get("n050"));
+			const y100 = expectSquareHead(byId.get("n100"));
+			const y200 = expectSquareHead(byId.get("n200"));
+			// Near to far = lower to higher on screen (larger y to smaller y).
+			expect(y005.centerY).toBeGreaterThan(y010.centerY);
+			expect(y010.centerY).toBeGreaterThan(y020.centerY);
+			expect(y020.centerY).toBeGreaterThan(y050.centerY);
+			expect(y050.centerY).toBeGreaterThan(y100.centerY);
+			expect(y100.centerY).toBeGreaterThan(y200.centerY);
+			// Lower-field spacing must be visibly usable and not collapse at the hit line.
+			expect(y005.centerY - y010.centerY).toBeGreaterThan(4);
+			expect(y010.centerY - y020.centerY).toBeGreaterThan(8);
+			expect(y020.centerY - y050.centerY).toBeGreaterThan(18);
+		});
+
+		it("does not render a head that is already in the past", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const preset = HIGHWAY_SPEED_PRESETS[0]!;
+			const projected = projectHighwayNotes({
+				notes: [
+					pitchedNote({ id: "past-head", chartSeconds: -0.05, endChartSeconds: -0.05 }),
+					pitchedNote({ id: "future-head", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset,
+				geometry,
+			});
+			expect(projected.heads.map((head) => head.id)).toEqual(["future-head"]);
+		});
+
+		it("does not render a musical line that is already in the past", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const preset = HIGHWAY_SPEED_PRESETS[0]!;
+			const lines = projectHighwayLines({
+				lines: [
+					{ tick: -48, kind: "beat", chartSeconds: -0.05, measure: 0, beat: 0 },
+					{ tick: 48, kind: "beat", chartSeconds: 0.05, measure: 1, beat: 1 },
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset,
+				geometry,
+			});
+			expect(lines.map((line) => line.tick)).toEqual([48]);
+		});
+
+		it("clips a sustain crossing playback to the hit line without rendering a duplicate head", () => {
+			const geometry = buildHighwayGeometry(900, 480);
+			const preset = HIGHWAY_SPEED_PRESETS[0]!;
+			const projected = projectHighwayNotes({
+				notes: [
+					pitchedNote({
+						id: "crossing",
+						chartSeconds: -0.05,
+						endChartSeconds: 0.2,
+						length: 96,
+					}),
+				],
+				playbackSeconds: 0,
+				previewOffsetSeconds: 0,
+				preset,
+				geometry,
+			});
+			expect(projected.heads).toHaveLength(0);
+			expect(projected.sustains).toHaveLength(1);
+			expect(projected.sustains[0]?.nearY).toBe(geometry.hitLineY);
 		});
 	});
 });
