@@ -49,6 +49,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	@ViewChild("container") private readonly containerRef?: ElementRef<HTMLDivElement>;
 	@ViewChild("canvas") private readonly canvasRef?: ElementRef<HTMLCanvasElement>;
 
+	private readonly document = inject(DOCUMENT);
 	private readonly renderer = new HighwayRenderer();
 	private readonly _chartData = signal<ChartPreviewData | null>(null);
 	private readonly _currentTime = signal(0);
@@ -70,8 +71,6 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private frameCount = 0;
 	private fpsWindowStartedAt = 0;
 	private lastRenderedFrame: HighwayFrameData | null = null;
-
-	constructor(private readonly document: Document = inject(DOCUMENT)) {}
 
 	@Input() set chartData(value: ChartPreviewData | null) {
 		this._chartData.set(value);
