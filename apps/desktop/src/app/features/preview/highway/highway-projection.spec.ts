@@ -423,7 +423,9 @@ describe("highway-projection", () => {
 			expect(farGap100_200 / 1).toBeLessThan(nearGap010_020 / 0.1);
 			expect(farGap100_200 / 1).toBeLessThan(midGap050_100 / 0.5);
 			// Camera invariants remain intact.
-			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(0.33);
+			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(
+				0.33,
+			);
 			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.38);
 			expect(geometry.hitLineY / geometry.cssHeight).toBeGreaterThanOrEqual(
 				0.88,
