@@ -47,14 +47,8 @@ export type HighwayStageVisualProfile = {
 	};
 	/** Named monotonic time-to-depth parameters. */
 	projection: {
-		/** Perspective compression factor for the generic single-curve mapping. */
+		/** Perspective compression factor for the shared gameplay projection. */
 		perspectiveCompression: number;
-		/** Fast-only near-field duration kept almost linear for readability. */
-		fastNearFieldSeconds: number;
-		/** Fraction of playable road height occupied by Fast's near field. */
-		fastNearFieldDepthRatio: number;
-		/** Far-field compression used for Fast's upper-road segment. */
-		fastFarFieldCompression: number;
 	};
 	/** Compact target pads. */
 	targets: {
@@ -150,9 +144,6 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 	},
 	projection: {
 		perspectiveCompression: 0.4,
-		fastNearFieldSeconds: 0.7,
-		fastNearFieldDepthRatio: 0.57,
-		fastFarFieldCompression: 0.32,
 	},
 	targets: {
 		heightNear: 11,
@@ -214,12 +205,11 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
  *
  * `depth = p / (p + perspectiveCompression * (1 - p))`
  *
- * This function remains the generic single-curve perspective mapping. The
- * dedicated near-field spacing pass now layers a Fast-only piecewise gameplay
- * projection above it inside `highway-projection.ts`: a mostly linear lower
- * segment for readability, then a compressed far-field segment toward the
- * horizon. That keeps this helper reusable while letting Fast breathe much
- * more near the targets.
+ * This function is the shared gameplay projection for every speed preset.
+ * Fast, Normal, and Slow all use the same road camera and time-to-depth model;
+ * the presets differ only by visible travel duration. That preserves one
+ * stable composition while allowing faster presets to create more spacing by
+ * covering less future chart time.
  */
 export function stageDepthForProgress(
 	progress: number,

@@ -21,6 +21,13 @@ describe("highway-stage-visual-profile", () => {
 		expect(HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault).toBe(false);
 	});
 
+	it("does not retain Fast-only projection fields in the shared profile", () => {
+		const projection = HIGHWAY_STAGE_VISUAL_PROFILE.projection as Record<string, unknown>;
+		expect(Object.hasOwn(projection, "fastNearFieldSeconds")).toBe(false);
+		expect(Object.hasOwn(projection, "fastNearFieldDepthRatio")).toBe(false);
+		expect(Object.hasOwn(projection, "fastFarFieldCompression")).toBe(false);
+	});
+
 	it("keeps the road horizontally restrained without making it tiny on a wide scene", () => {
 		const { scene, road } = HIGHWAY_STAGE_VISUAL_PROFILE;
 		const canvasWidth = 1440;
@@ -97,10 +104,7 @@ describe("highway-stage-visual-profile", () => {
 			for (const compression of [0.25, 0.4, 0.55, 0.8, 1.1]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
-					projection: {
-						...base.projection,
-						perspectiveCompression: compression,
-					},
+					projection: { perspectiveCompression: compression },
 				};
 				let previous = -Infinity;
 				let monotonic = true;
