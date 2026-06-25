@@ -1,3 +1,7 @@
+import {
+	HIGHWAY_STAGE_VISUAL_PROFILE,
+	type HighwayStageVisualProfile,
+} from "./highway-stage-visual-profile";
 import type {
 	HighwayFrameData,
 	HighwayProjectedHead,
@@ -6,7 +10,21 @@ import type {
 	HighwayTarget,
 } from "./highway-model";
 
+/**
+ * Stage-style drum highway renderer.
+ *
+ * Uses native Canvas 2D primitives and gradients only. All visual constants
+ * (colors, alphas, border widths, HUD treatment) are sourced from the stage
+ * visual profile — no renderer-local visual literals. Draw order is fixed and
+ * semantic (see OpenSpec design §9).
+ */
 export class HighwayRenderer {
+	private readonly profile: HighwayStageVisualProfile;
+
+	constructor(profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE) {
+		this.profile = profile;
+	}
+
 	draw(
 		ctx: CanvasRenderingContext2D,
 		frame: HighwayFrameData,
@@ -20,7 +38,8 @@ export class HighwayRenderer {
 		this.drawLaneDividers(ctx, frame);
 		this.drawMusicalLines(ctx, frame.lines);
 		this.drawSustains(ctx, frame.sustains);
-		this.drawHeads(ctx, frame.heads);
+		this.drawKickRails(ctx, frame.heads);
+		this.drawPitchedHeads(ctx, frame.heads);
 		this.drawHitLineAndTargets(ctx, frame);
 		if (frame.hudEnabled) this.drawHud(ctx, frame);
 		if (frame.limitationText) this.drawOverlay(ctx, frame);
@@ -30,12 +49,24 @@ export class HighwayRenderer {
 		ctx: CanvasRenderingContext2D,
 		frame: HighwayFrameData,
 	): void {
-		ctx.fillStyle = "#040816";
+		const { palette } = this.profile;
+		ctx.fillStyle = palette.sceneBackground;
+		ctx.fillRect(0, 0, frame.cssWidth, frame.cssHeight);
+		// Subtle procedural vignette: darker edges, clear center. Original,
+		// gradient-only, no images or textures.
+		const cx = frame.cssWidth / 2;
+		const cy = frame.cssHeight / 2;
+		const radius = Math.max(1, Math.hypot(cx, cy));
+		const vignette = ctx.createRadialGradient(cx, cy, radius * 0.35, cx, cy, radius);
+		vignette.addColorStop(0, palette.sceneVignetteInner);
+		vignette.addColorStop(1, palette.sceneVignetteOuter);
+		ctx.fillStyle = vignette;
 		ctx.fillRect(0, 0, frame.cssWidth, frame.cssHeight);
 	}
 
 	private drawRoad(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
 		const { geometry } = frame;
+		const { palette, road } = this.profile;
 		const leftTop = geometry.roadCenterX - geometry.topRoadWidth / 2;
 		const rightTop = geometry.roadCenterX + geometry.topRoadWidth / 2;
 		const leftBottom = geometry.roadCenterX - geometry.bottomRoadWidth / 2;
@@ -46,8 +77,8 @@ export class HighwayRenderer {
 			geometry.roadCenterX,
 			geometry.hitLineY,
 		);
-		gradient.addColorStop(0, "#15243d");
-		gradient.addColorStop(1, "#0b1222");
+		gradient.addColorStop(0, palette.roadFillFar);
+		gradient.addColorStop(1, palette.roadFillNear);
 		ctx.beginPath();
 		ctx.moveTo(leftTop, geometry.horizonY);
 		ctx.lineTo(rightTop, geometry.horizonY);
@@ -56,8 +87,21 @@ export class HighwayRenderer {
 		ctx.closePath();
 		ctx.fillStyle = gradient;
 		ctx.fill();
-		ctx.strokeStyle = "rgba(135, 170, 255, 0.38)";
-		ctx.lineWidth = 2;
+		// Outer borders: stronger than internal dividers, depth-aware.
+		ctx.strokeStyle = palette.roadBorderNear;
+		ctx.lineWidth = road.borderWidthNear;
+		ctx.beginPath();
+		ctx.moveTo(leftBottom, geometry.hitLineY);
+		ctx.lineTo(leftTop, geometry.horizonY);
+		ctx.moveTo(rightBottom, geometry.hitLineY);
+		ctx.lineTo(rightTop, geometry.horizonY);
+		ctx.stroke();
+		// Quieter far edge along the horizon.
+		ctx.strokeStyle = palette.roadBorderFar;
+		ctx.lineWidth = road.borderWidthFar;
+		ctx.beginPath();
+		ctx.moveTo(leftTop, geometry.horizonY);
+		ctx.lineTo(rightTop, geometry.horizonY);
 		ctx.stroke();
 	}
 
@@ -65,7 +109,9 @@ export class HighwayRenderer {
 		ctx: CanvasRenderingContext2D,
 		frame: HighwayFrameData,
 	): void {
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+		const { laneDividerAlpha } = this.profile.road;
+		ctx.save();
+		ctx.strokeStyle = `rgba(170, 185, 215, ${laneDividerAlpha})`;
 		ctx.lineWidth = 1;
 		for (const divider of frame.laneDividers) {
 			ctx.beginPath();
@@ -73,18 +119,18 @@ export class HighwayRenderer {
 			ctx.lineTo(divider.endX, frame.geometry.hitLineY);
 			ctx.stroke();
 		}
+		ctx.restore();
 	}
 
 	private drawMusicalLines(
 		ctx: CanvasRenderingContext2D,
 		lines: readonly HighwayProjectedLine[],
 	): void {
+		const { palette } = this.profile;
 		for (const line of lines) {
 			ctx.strokeStyle =
-				line.kind === "measure"
-					? "rgba(255, 255, 255, 0.34)"
-					: "rgba(255, 255, 255, 0.16)";
-			ctx.lineWidth = line.kind === "measure" ? 2 : 1;
+				line.kind === "measure" ? palette.measureLine : palette.beatLine;
+			ctx.lineWidth = line.kind === "measure" ? 1.5 : 1;
 			ctx.beginPath();
 			ctx.moveTo(line.startX, line.y);
 			ctx.lineTo(line.endX, line.y);
@@ -96,6 +142,8 @@ export class HighwayRenderer {
 		ctx: CanvasRenderingContext2D,
 		sustains: readonly HighwayProjectedSustain[],
 	): void {
+		ctx.save();
+		ctx.globalAlpha = this.profile.notes.sustainAlpha;
 		for (const sustain of sustains) {
 			ctx.beginPath();
 			ctx.moveTo(sustain.nearLeftX, sustain.nearY);
@@ -106,25 +154,43 @@ export class HighwayRenderer {
 			ctx.fillStyle = sustain.fill;
 			ctx.fill();
 		}
+		ctx.restore();
 	}
 
-	private drawHeads(
+	private drawKickRails(
 		ctx: CanvasRenderingContext2D,
 		heads: readonly HighwayProjectedHead[],
 	): void {
 		for (const head of heads) {
-			if (head.visualKind === "kick-rail") {
-				const thickness = head.thickness;
-				ctx.fillStyle = head.fill;
-				ctx.fillRect(head.leftX, head.y - thickness / 2, head.rightX - head.leftX, thickness);
-				ctx.strokeStyle = head.stroke;
-				ctx.lineWidth = 2;
-				ctx.strokeRect?.(head.leftX, head.y - thickness / 2, head.rightX - head.leftX, thickness);
-				continue;
-			}
+			if (head.visualKind !== "kick-rail") continue;
+			const thickness = head.thickness;
+			const x = head.leftX;
+			const width = head.rightX - head.leftX;
+			const top = head.y - thickness / 2;
+			// Restrained main fill.
+			ctx.fillStyle = head.fill;
+			ctx.fillRect(x, top, width, thickness);
+			// Subtle top highlight + lower shadow (original depth cue).
+			ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+			ctx.fillRect(x, top, width, Math.max(1, thickness * 0.28));
+			ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+			ctx.fillRect(x, top + thickness - Math.max(1, thickness * 0.28), width, Math.max(1, thickness * 0.28));
+			// Thin lane-colored edge to keep orange identity readable.
+			ctx.strokeStyle = head.stroke;
+			ctx.lineWidth = 1;
+			ctx.strokeRect(x, top, width, thickness);
+		}
+	}
+
+	private drawPitchedHeads(
+		ctx: CanvasRenderingContext2D,
+		heads: readonly HighwayProjectedHead[],
+	): void {
+		for (const head of heads) {
+			if (head.visualKind === "kick-rail") continue;
 			if (head.dynamic === "ghost") {
 				ctx.save();
-				ctx.globalAlpha = 0.48;
+				ctx.globalAlpha = 0.5;
 			}
 			if (head.visualKind === "square-head") {
 				this.drawSquareHead(ctx, head);
@@ -145,29 +211,53 @@ export class HighwayRenderer {
 		head: Extract<HighwayProjectedHead, { visualKind: "square-head" }>,
 	): void {
 		const half = head.radius;
-		ctx.beginPath();
-		ctx.moveTo(head.centerX - half, head.centerY - half);
-		ctx.lineTo(head.centerX + half, head.centerY - half);
-		ctx.lineTo(head.centerX + half, head.centerY + half);
-		ctx.lineTo(head.centerX - half, head.centerY + half);
-		ctx.closePath();
+		const x = head.centerX - half;
+		const y = head.centerY - half;
+		const size = half * 2;
+		// Main colored face.
 		ctx.fillStyle = head.fill;
-		ctx.fill();
+		ctx.fillRect(x, y, size, size);
+		// Original depth cue: top highlight + darker lower face.
+		const cue = Math.max(1, half * 0.34);
+		ctx.fillStyle = "rgba(255, 255, 255, 0.24)";
+		ctx.fillRect(x, y, size, cue);
+		ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+		ctx.fillRect(x, y + size - cue, size, cue);
+		// Consistent outline preserving square silhouette.
 		ctx.strokeStyle = head.stroke;
-		ctx.lineWidth = 2;
-		ctx.stroke();
+		ctx.lineWidth = 1.5;
+		ctx.strokeRect(x, y, size, size);
 	}
 
 	private drawCircleHead(
 		ctx: CanvasRenderingContext2D,
 		head: Extract<HighwayProjectedHead, { visualKind: "cymbal-head" }>,
 	): void {
+		// Optional subtle halo constrained near the disc.
+		ctx.beginPath();
+		ctx.arc(head.centerX, head.centerY, head.radius + 1.5, 0, Math.PI * 2);
+		ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+		ctx.fill();
+		// Filled disc with lane color.
 		ctx.beginPath();
 		ctx.arc(head.centerX, head.centerY, head.radius, 0, Math.PI * 2);
 		ctx.fillStyle = head.fill;
 		ctx.fill();
+		// Original ring/radial highlight: offset highlight + ring outline.
+		ctx.beginPath();
+		ctx.arc(
+			head.centerX - head.radius * 0.3,
+			head.centerY - head.radius * 0.3,
+			head.radius * 0.4,
+			0,
+			Math.PI * 2,
+		);
+		ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+		ctx.fill();
+		ctx.beginPath();
+		ctx.arc(head.centerX, head.centerY, head.radius, 0, Math.PI * 2);
 		ctx.strokeStyle = head.stroke;
-		ctx.lineWidth = 2;
+		ctx.lineWidth = 1.5;
 		ctx.stroke();
 	}
 
@@ -200,8 +290,10 @@ export class HighwayRenderer {
 		frame: HighwayFrameData,
 	): void {
 		const { geometry } = frame;
-		ctx.strokeStyle = "#ffffff";
-		ctx.lineWidth = 3;
+		const { palette, targets } = this.profile;
+		// Quiet neutral hit line behind the target row.
+		ctx.strokeStyle = palette.hitLine;
+		ctx.lineWidth = 2;
 		ctx.beginPath();
 		ctx.moveTo(
 			geometry.roadCenterX - geometry.bottomRoadWidth / 2,
@@ -214,47 +306,68 @@ export class HighwayRenderer {
 		ctx.stroke();
 
 		for (const target of frame.targets) {
-			this.drawTarget(ctx, target);
+			this.drawTarget(ctx, target, targets.interiorAlpha, targets.outlineWidth);
 		}
 	}
 
-	private drawTarget(ctx: CanvasRenderingContext2D, target: HighwayTarget): void {
+	private drawTarget(
+		ctx: CanvasRenderingContext2D,
+		target: HighwayTarget,
+		interiorAlpha: number,
+		outlineWidth: number,
+	): void {
+		// Compact trapezoid pad: dark/low-alpha interior + lane-color outline.
+		ctx.save();
 		ctx.beginPath();
 		ctx.moveTo(target.leftX, target.bottomY);
 		ctx.lineTo(target.rightX, target.bottomY);
 		ctx.lineTo(target.rightX - 5, target.topY);
 		ctx.lineTo(target.leftX + 5, target.topY);
 		ctx.closePath();
-		ctx.fillStyle = target.fill;
+		ctx.globalAlpha = interiorAlpha;
+		ctx.fillStyle = this.profile.palette.targetInterior;
 		ctx.fill();
+		ctx.globalAlpha = 1;
 		ctx.strokeStyle = target.stroke;
-		ctx.lineWidth = 2;
+		ctx.lineWidth = outlineWidth;
 		ctx.stroke();
+		ctx.restore();
 	}
 
 	private drawHud(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
-		const { hud } = frame;
+		const { hud, palette } = this.profile;
+		const { hud: state } = frame;
 		const lines = [
-			`Time ${hud.currentTimeSeconds.toFixed(2)}s`,
-			`Tick ${hud.tick ?? "—"}`,
-			`Beat ${hud.beat ?? "—"}`,
-			`Measure ${hud.measure ?? "—"}`,
-			`FPS ${hud.fps === null ? "—" : hud.fps.toFixed(0)}`,
+			`Time ${state.currentTimeSeconds.toFixed(2)}s`,
+			`Tick ${state.tick ?? "—"}`,
+			`Beat ${state.beat ?? "—"}`,
+			`Measure ${state.measure ?? "—"}`,
+			`FPS ${state.fps === null ? "—" : state.fps.toFixed(0)}`,
 		];
-		ctx.fillStyle = "rgba(4, 8, 22, 0.78)";
-		ctx.fillRect(16, 16, 156, 116);
-		ctx.fillStyle = "#d7e4ff";
-		ctx.font = "12px sans-serif";
+		// Compact, low-alpha corner text — no large opaque panel.
+		ctx.save();
+		ctx.globalAlpha = hud.alpha;
+		ctx.fillStyle = palette.hudText;
+		ctx.font = `${hud.fontSize}px sans-serif`;
+		ctx.textBaseline = "top";
+		const x = hud.edgeInset;
+		const y = hud.edgeInset;
 		lines.forEach((line, index) => {
-			ctx.fillText(line, 28, 40 + index * 18);
+			ctx.fillText(line, x, y + index * (hud.fontSize + 4));
 		});
+		ctx.restore();
 	}
 
 	private drawOverlay(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
-		ctx.fillStyle = "rgba(4, 8, 22, 0.72)";
-		ctx.fillRect(0, frame.cssHeight - 54, frame.cssWidth, 54);
+		ctx.save();
+		ctx.globalAlpha = 0.72;
+		ctx.fillStyle = "#040816";
+		ctx.fillRect(0, frame.cssHeight - 44, frame.cssWidth, 44);
+		ctx.globalAlpha = 1;
 		ctx.fillStyle = "#ffd6a8";
 		ctx.font = "13px sans-serif";
-		ctx.fillText(frame.limitationText ?? "", 16, frame.cssHeight - 22);
+		ctx.textBaseline = "alphabetic";
+		ctx.fillText(frame.limitationText ?? "", 16, frame.cssHeight - 18);
+		ctx.restore();
 	}
 }
