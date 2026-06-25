@@ -55,8 +55,10 @@ the hit line, and note size relative to local lane width.
 The calibrated intent is:
 
 - a materially narrower centered road;
-- more black negative space on wide scenes;
-- a higher target row with a long, narrow gameplay road;
+- more black negative space on wide scenes, primarily at the left and right;
+- a tall gameplay field that occupies most of the Canvas height;
+- a lower hit line / higher horizon pairing that yields roughly 70–75% playable road span;
+- a shorter Fast travel window so fewer future notes are visible at once;
 - more readable note spacing through the near and mid sections;
 - perspective-style lower-field expansion with compression pushed toward the far horizon;
 - no duplicate/piled-up passed heads or musical lines at the hit line;
@@ -71,14 +73,16 @@ The calibrated intent is:
 - Road viewport width is `min(maxRoadViewportWidth, canvasWidth * roadViewportWidthRatio)`,
   floored by `minRoadViewportWidth`, and never exceeds the canvas minus safe
   scene padding.
-- On wide canvases the bottom road lands in roughly the 18–24% band of canvas
-  width and the top road in the 4–7% band, with substantial dark negative
+- On wide canvases the bottom road lands in roughly the 33–38% band of canvas
+  width and the top road in the 8–10% band, with substantial dark negative
   space on both sides.
 - The road is centered within a 1 CSS px tolerance.
-- The horizon remains in the established higher band (~24–32% height) so the
-  road still feels long and deep.
-- The hit line/target row is materially higher (~72–77% height), matching a
-  gameplay-like camera instead of a low, stage-floor viewpoint.
+- The canvas shell itself is responsively bounded so the Highway has enough
+  real vertical pixels for a long gameplay field instead of a short strip.
+- The horizon sits in roughly the 18–22% height band.
+- The hit line/target row sits in roughly the 88–91% height band.
+- Together, the playable road span occupies roughly 70–75% of the Canvas
+  height.
 - The depth curve is a named, profile-driven, monotonic, finite function
   clamped to `[0, 1]` (`stageDepthForProgress`). The calibrated curve is the
   perspective-style mapping `p / (p + perspectiveCompression * (1 - p))`,
@@ -87,6 +91,8 @@ The calibrated intent is:
 - Passed heads and passed beat/measure lines are not rendered once their
   effective seconds fall behind playback. Sustains that cross playback are
   clipped safely to the hit line without spawning a duplicate head there.
+- Fast uses a shorter look-ahead than before so its visible field is materially
+  less dense near the targets; Normal and Slow remain unchanged.
 
 ## Draw order
 

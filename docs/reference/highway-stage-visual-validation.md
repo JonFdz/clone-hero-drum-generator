@@ -33,6 +33,8 @@ projection, and note sizing now behave materially closer to gameplay spacing.
 
 Priority comparison axes for this pass:
 
+- vertical road occupancy within the canvas;
+- lateral negative space versus excessive top/bottom dead space;
 - road width feel;
 - target-row vertical position;
 - horizon / stage-depth feel;
@@ -51,25 +53,30 @@ accent/ghost cases, sustains, tempo data, and meter data.
 1. Open Preview and select Highway.
 2. Use the HUD to match the same Tick / Beat / Measure position against the
    same-song reference before judging spacing.
-3. Compare the road width feel against the previous iteration: confirm a
+3. Confirm the Highway occupies most of the canvas vertically rather than
+   appearing as a tiny road floating in the center.
+4. Confirm the black negative space is primarily lateral, not excessive above
+   or below the road.
+5. Compare the road width feel against the previous iteration: confirm a
    materially narrower centered road with more black space around it.
-4. Confirm the road does not stretch to near full screen width.
-5. Compare the target-row vertical position against the reference: it should
-   sit materially higher than the previous pass.
-6. Compare the horizon feel against the previous iteration: confirm a farther,
+6. Confirm the road does not stretch to near full screen width.
+7. Compare the target-row vertical position against the reference: it should
+   sit materially lower than the previous pass while still leaving a readable
+   near field.
+8. Compare the horizon feel against the previous iteration: confirm a farther,
    longer, deeper stage perspective.
-7. Compare the number of visible future notes at the same musical position:
+9. Compare the number of visible future notes at the same musical position:
    the field should not feel materially denser than the reference.
-8. Confirm four colored pitched targets are visible, compact, darker inside,
+10. Confirm four colored pitched targets are visible, compact, darker inside,
    and more clearly framed (not solid blocks).
-9. Compare note scale against the previous iteration: square and cymbal heads
+11. Compare note scale against the previous iteration: square and cymbal heads
    should feel more compact relative to their lanes.
-10. Compare note spacing feel against the previous iteration: clusters should
+12. Compare note spacing feel against the previous iteration: clusters should
    be more readable vertically through the near and mid sections.
-11. Confirm there is no lower-road pile-up from recently passed heads or
+13. Confirm there is no lower-road pile-up from recently passed heads or
    beat/measure lines at the hit line during repeated passages.
-12. Confirm kick is a separate orange rail, never a target or fifth lane.
-13. Confirm squares, circles, rail, and sustains remain distinct.
+14. Confirm kick is a separate orange rail, never a target or fifth lane.
+15. Confirm squares, circles, rail, and sustains remain distinct.
 
 ### Ordinary desktop window
 
@@ -77,10 +84,12 @@ accent/ghost cases, sustains, tempo data, and meter data.
 2. Use the HUD to compare the same Tick / Beat / Measure against the reference.
 3. Compare note spacing feel against the previous iteration: the mid field
    should feel less vertically compressed.
-4. Confirm recently passed heads and beat/measure lines do not stack at the hit
+4. Confirm the number of visible future notes is materially lower in Fast than
+   the previous pass at the same musical position.
+5. Confirm recently passed heads and beat/measure lines do not stack at the hit
    line.
-5. Confirm notes, targets, rails, and sustains are legible.
-6. Confirm beat/measure lines remain secondary.
+6. Confirm notes, targets, rails, and sustains are legible.
+7. Confirm beat/measure lines remain secondary.
 
 ### Narrow window
 
