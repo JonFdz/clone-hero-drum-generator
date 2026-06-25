@@ -97,7 +97,10 @@ describe("highway-stage-visual-profile", () => {
 			for (const compression of [0.25, 0.4, 0.55, 0.8, 1.1]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
-					projection: { perspectiveCompression: compression },
+					projection: {
+						...base.projection,
+						perspectiveCompression: compression,
+					},
 				};
 				let previous = -Infinity;
 				let monotonic = true;

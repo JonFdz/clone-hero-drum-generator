@@ -18,6 +18,7 @@ import {
 } from "./highway-model";
 import {
 	HIGHWAY_STAGE_VISUAL_PROFILE,
+	stageDepthForProgress,
 	type HighwayStageVisualProfile,
 } from "./highway-stage-visual-profile";
 
@@ -194,7 +195,7 @@ describe("highway-projection", () => {
 		});
 		expect(fast.startChartSeconds).toBe(normal.startChartSeconds);
 		expect(normal.startChartSeconds).toBe(slow.startChartSeconds);
-		expect(fast.endChartSeconds).toBeCloseTo(11.5, 5);
+		expect(fast.endChartSeconds).toBeCloseTo(10.9, 5);
 		expect(normal.endChartSeconds).toBeCloseTo(14, 5);
 		expect(slow.endChartSeconds).toBeCloseTo(15.5, 5);
 		expect(fast.endChartSeconds).toBeLessThan(normal.endChartSeconds);
@@ -358,7 +359,7 @@ describe("highway-projection", () => {
 	});
 
 	describe("projection correction pass (fast preset)", () => {
-		it("keeps near-to-far heads strictly ordered with materially larger lower-field spacing", () => {
+		it("keeps near-to-far heads strictly ordered with much larger useful near-field spacing", () => {
 			const geometry = buildHighwayGeometry(900, 480);
 			const preset = HIGHWAY_SPEED_PRESETS[0]!;
 			const projected = projectHighwayNotes({
@@ -370,9 +371,9 @@ describe("highway-projection", () => {
 					}),
 					pitchedNote({ id: "n010", chartSeconds: 0.1, endChartSeconds: 0.1 }),
 					pitchedNote({ id: "n020", chartSeconds: 0.2, endChartSeconds: 0.2 }),
-					pitchedNote({ id: "n050", chartSeconds: 0.5, endChartSeconds: 0.5 }),
-					pitchedNote({ id: "n100", chartSeconds: 1, endChartSeconds: 1 }),
-					pitchedNote({ id: "n200", chartSeconds: 2, endChartSeconds: 2 }),
+					pitchedNote({ id: "n040", chartSeconds: 0.4, endChartSeconds: 0.4 }),
+					pitchedNote({ id: "n080", chartSeconds: 0.8, endChartSeconds: 0.8 }),
+					pitchedNote({ id: "n130", chartSeconds: 1.3, endChartSeconds: 1.3 }),
 					pitchedNote({
 						id: "kick",
 						chartLane: 0,
@@ -394,9 +395,9 @@ describe("highway-projection", () => {
 			const y005 = expectSquareHead(byId.get("n005"));
 			const y010 = expectSquareHead(byId.get("n010"));
 			const y020 = expectSquareHead(byId.get("n020"));
-			const y050 = expectSquareHead(byId.get("n050"));
-			const y100 = expectSquareHead(byId.get("n100"));
-			const y200 = expectSquareHead(byId.get("n200"));
+			const y040 = expectSquareHead(byId.get("n040"));
+			const y080 = expectSquareHead(byId.get("n080"));
+			const y130 = expectSquareHead(byId.get("n130"));
 			const kick = byId.get("kick");
 			const nearGap005_010 = normalizedGap(
 				y005.centerY,
@@ -408,20 +409,48 @@ describe("highway-projection", () => {
 				y020.centerY,
 				geometry,
 			);
-			const midGap050_100 = normalizedGap(y050.centerY, y100.centerY, geometry);
-			const farGap100_200 = normalizedGap(y100.centerY, y200.centerY, geometry);
+			const nearGap020_040 = normalizedGap(
+				y020.centerY,
+				y040.centerY,
+				geometry,
+			);
+			const farGap080_130 = normalizedGap(
+				y080.centerY,
+				y130.centerY,
+				geometry,
+			);
+			const previousSingleCurveLookAheadSeconds = 3;
+			const baselineNearGap010_020 = normalizedGap(
+				geometry.hitLineY -
+					stageDepthForProgress(
+						0.1 / previousSingleCurveLookAheadSeconds,
+						HIGHWAY_STAGE_VISUAL_PROFILE,
+					) *
+						(geometry.hitLineY - geometry.horizonY),
+				geometry.hitLineY -
+					stageDepthForProgress(
+						0.2 / previousSingleCurveLookAheadSeconds,
+						HIGHWAY_STAGE_VISUAL_PROFILE,
+					) *
+						(geometry.hitLineY - geometry.horizonY),
+				geometry,
+			);
 			// Near to far = lower to higher on screen (larger y to smaller y).
 			expect(y005.centerY).toBeGreaterThan(y010.centerY);
 			expect(y010.centerY).toBeGreaterThan(y020.centerY);
-			expect(y020.centerY).toBeGreaterThan(y050.centerY);
-			expect(y050.centerY).toBeGreaterThan(y100.centerY);
-			expect(y100.centerY).toBeGreaterThan(y200.centerY);
-			// Measurable lower-field spacing, normalized by visible road depth.
-			expect(nearGap005_010).toBeGreaterThan(0.035);
-			expect(nearGap010_020).toBeGreaterThan(0.07);
+			expect(y020.centerY).toBeGreaterThan(y040.centerY);
+			expect(y040.centerY).toBeGreaterThan(y080.centerY);
+			expect(y080.centerY).toBeGreaterThan(y130.centerY);
+			// Measurable lower-field spacing, normalized by playable road height.
+			expect(nearGap005_010).toBeGreaterThan(0.04);
+			expect(nearGap010_020).toBeGreaterThan(0.08);
+			expect(nearGap020_040).toBeGreaterThan(0.12);
+			// Near-field spacing is intentionally larger than under the previous
+			// denser single-curve Fast mapping.
+			expect(nearGap010_020).toBeGreaterThan(baselineNearGap010_020);
 			// Far field compresses more per second than the near field.
-			expect(farGap100_200 / 1).toBeLessThan(nearGap010_020 / 0.1);
-			expect(farGap100_200 / 1).toBeLessThan(midGap050_100 / 0.5);
+			expect(farGap080_130 / 0.5).toBeLessThan(nearGap010_020 / 0.1);
+			expect(farGap080_130 / 0.5).toBeLessThan(nearGap020_040 / 0.2);
 			// Camera invariants remain intact.
 			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(
 				0.33,

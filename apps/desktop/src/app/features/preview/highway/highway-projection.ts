@@ -462,7 +462,49 @@ function depthForEffectiveSeconds(
 ): number {
 	const deltaSeconds = effectiveSeconds - playbackSeconds;
 	const progress = clamp(deltaSeconds / preset.lookAheadSeconds, 0, 1);
-	return stageDepthForProgress(progress, profile);
+	if (preset.id !== "fast") {
+		return stageDepthForProgress(progress, profile);
+	}
+	return fastPiecewiseDepthForProgress(progress, preset.lookAheadSeconds, profile);
+}
+
+function fastPiecewiseDepthForProgress(
+	progress: number,
+	lookAheadSeconds: number,
+	profile: HighwayStageVisualProfile,
+): number {
+	const p = clamp(progress, 0, 1);
+	const nearFieldSeconds = clamp(
+		profile.projection.fastNearFieldSeconds,
+		0.01,
+		lookAheadSeconds - 0.01,
+	);
+	const nearFieldProgress = clamp(nearFieldSeconds / lookAheadSeconds, 0.01, 0.99);
+	const nearFieldDepth = clamp(
+		profile.projection.fastNearFieldDepthRatio,
+		0.5,
+		0.6,
+	);
+	if (p <= nearFieldProgress) {
+		return clamp((p / nearFieldProgress) * nearFieldDepth, 0, 1);
+	}
+	const farProgress = clamp(
+		(p - nearFieldProgress) / (1 - nearFieldProgress),
+		0,
+		1,
+	);
+	const farCompression = Math.max(
+		0.01,
+		profile.projection.fastFarFieldCompression,
+	);
+	const farCurve = stageDepthForProgress(farProgress, {
+		...profile,
+		projection: {
+			...profile.projection,
+			perspectiveCompression: farCompression,
+		},
+	});
+	return clamp(nearFieldDepth + (1 - nearFieldDepth) * farCurve, 0, 1);
 }
 
 function isFiniteSustain(sustain: HighwayProjectedSustain): boolean {
