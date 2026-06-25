@@ -20,7 +20,9 @@ import {
 	type HighwayStageVisualProfile,
 } from "./highway-stage-visual-profile";
 
-function pitchedNote(overrides: Partial<HighwaySemanticNote> = {}): HighwaySemanticNote {
+function pitchedNote(
+	overrides: Partial<HighwaySemanticNote> = {},
+): HighwaySemanticNote {
 	return {
 		id: "pitched",
 		tick: 192,
@@ -41,7 +43,12 @@ describe("highway-projection", () => {
 	it("filters notes by interval intersection, not only start time", () => {
 		const visible = filterVisibleHighwayNotes(
 			[
-				pitchedNote({ id: "overlap", chartSeconds: 0.2, endChartSeconds: 0.9, length: 96 }),
+				pitchedNote({
+					id: "overlap",
+					chartSeconds: 0.2,
+					endChartSeconds: 0.9,
+					length: 96,
+				}),
 				pitchedNote({ id: "inside", chartSeconds: 1, endChartSeconds: 1 }),
 				pitchedNote({ id: "outside", chartSeconds: 5, endChartSeconds: 5 }),
 			],
@@ -88,9 +95,32 @@ describe("highway-projection", () => {
 		const projected = projectHighwayNotes({
 			notes: [
 				pitchedNote({ id: "square", chartSeconds: 1.2 }),
-				pitchedNote({ id: "circle", chartLane: 3, pitchedLane: "blue", visualKind: "cymbal-head", chartSeconds: 1.5 }),
-				pitchedNote({ id: "tail", chartLane: 4, pitchedLane: "green", chartSeconds: 1.8, endChartSeconds: 3.2, length: 192 }),
-				pitchedNote({ id: "kick", chartLane: 0, pitchedLane: null, visualKind: "kick-rail", chartSeconds: 2, endChartSeconds: 2.8, length: 96, fill: "#ff9a3c", stroke: "#ffd8ae" }),
+				pitchedNote({
+					id: "circle",
+					chartLane: 3,
+					pitchedLane: "blue",
+					visualKind: "cymbal-head",
+					chartSeconds: 1.5,
+				}),
+				pitchedNote({
+					id: "tail",
+					chartLane: 4,
+					pitchedLane: "green",
+					chartSeconds: 1.8,
+					endChartSeconds: 3.2,
+					length: 192,
+				}),
+				pitchedNote({
+					id: "kick",
+					chartLane: 0,
+					pitchedLane: null,
+					visualKind: "kick-rail",
+					chartSeconds: 2,
+					endChartSeconds: 2.8,
+					length: 96,
+					fill: "#ff9a3c",
+					stroke: "#ffd8ae",
+				}),
 			],
 			playbackSeconds: 0,
 			previewOffsetSeconds: 0,
@@ -114,7 +144,12 @@ describe("highway-projection", () => {
 		const preset = HIGHWAY_SPEED_PRESETS[1]!;
 		const projected = projectHighwayNotes({
 			notes: [
-				pitchedNote({ id: "invalid-tail", chartSeconds: 1, endChartSeconds: Number.NaN, length: 96 }),
+				pitchedNote({
+					id: "invalid-tail",
+					chartSeconds: 1,
+					endChartSeconds: Number.NaN,
+					length: 96,
+				}),
 			],
 			playbackSeconds: 0,
 			previewOffsetSeconds: 0,
@@ -203,13 +238,20 @@ describe("highway-projection", () => {
 		it("never introduces a fifth kick target, center, or divider", () => {
 			const geometry = buildHighwayGeometry(1280, 600);
 			const targets = buildHighwayTargets(geometry);
-			expect(targets.map((t) => t.lane)).toEqual(["red", "yellow", "blue", "green"]);
+			expect(targets.map((t) => t.lane)).toEqual([
+				"red",
+				"yellow",
+				"blue",
+				"green",
+			]);
 			// Kick rail is a road-contained rail, not a lane center/target/divider.
 			const rail = projectKickRailAtDepth(geometry, 0);
 			const centers = buildHighwayLaneCenters(geometry, 0);
 			expect(rail.width).toBeGreaterThan(0);
 			expect(centers).not.toContain(rail.leftX);
-			expect(targets).not.toContainEqual(expect.objectContaining({ lane: expect.stringContaining("kick") }));
+			expect(targets).not.toContainEqual(
+				expect.objectContaining({ lane: expect.stringContaining("kick") }),
+			);
 		});
 
 		it("keeps the kick rail inside road bounds at near and far depths", () => {
@@ -255,7 +297,13 @@ describe("highway-projection", () => {
 				lines: [
 					{ tick: 0, kind: "beat", chartSeconds: 0.4, measure: 0, beat: 2 },
 					{ tick: 192, kind: "beat", chartSeconds: 0.8, measure: 1, beat: 1 },
-					{ tick: 384, kind: "measure", chartSeconds: 1.2, measure: 1, beat: 1 },
+					{
+						tick: 384,
+						kind: "measure",
+						chartSeconds: 1.2,
+						measure: 1,
+						beat: 1,
+					},
 				],
 				playbackSeconds: 0,
 				previewOffsetSeconds: 0,

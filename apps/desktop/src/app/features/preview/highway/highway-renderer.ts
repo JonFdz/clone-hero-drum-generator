@@ -21,7 +21,9 @@ import type {
 export class HighwayRenderer {
 	private readonly profile: HighwayStageVisualProfile;
 
-	constructor(profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE) {
+	constructor(
+		profile: HighwayStageVisualProfile = HIGHWAY_STAGE_VISUAL_PROFILE,
+	) {
 		this.profile = profile;
 	}
 
@@ -57,14 +59,24 @@ export class HighwayRenderer {
 		const cx = frame.cssWidth / 2;
 		const cy = frame.cssHeight / 2;
 		const radius = Math.max(1, Math.hypot(cx, cy));
-		const vignette = ctx.createRadialGradient(cx, cy, radius * 0.35, cx, cy, radius);
+		const vignette = ctx.createRadialGradient(
+			cx,
+			cy,
+			radius * 0.35,
+			cx,
+			cy,
+			radius,
+		);
 		vignette.addColorStop(0, palette.sceneVignetteInner);
 		vignette.addColorStop(1, palette.sceneVignetteOuter);
 		ctx.fillStyle = vignette;
 		ctx.fillRect(0, 0, frame.cssWidth, frame.cssHeight);
 	}
 
-	private drawRoad(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
+	private drawRoad(
+		ctx: CanvasRenderingContext2D,
+		frame: HighwayFrameData,
+	): void {
 		const { geometry } = frame;
 		const { palette, road } = this.profile;
 		const leftTop = geometry.roadCenterX - geometry.topRoadWidth / 2;
@@ -174,7 +186,12 @@ export class HighwayRenderer {
 			ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
 			ctx.fillRect(x, top, width, Math.max(1, thickness * 0.28));
 			ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
-			ctx.fillRect(x, top + thickness - Math.max(1, thickness * 0.28), width, Math.max(1, thickness * 0.28));
+			ctx.fillRect(
+				x,
+				top + thickness - Math.max(1, thickness * 0.28),
+				width,
+				Math.max(1, thickness * 0.28),
+			);
 			// Thin lane-colored edge to keep orange identity readable.
 			ctx.strokeStyle = head.stroke;
 			ctx.lineWidth = 1;
@@ -263,7 +280,10 @@ export class HighwayRenderer {
 
 	private drawAccent(
 		ctx: CanvasRenderingContext2D,
-		head: Extract<HighwayProjectedHead, { visualKind: "square-head" | "cymbal-head" }>,
+		head: Extract<
+			HighwayProjectedHead,
+			{ visualKind: "square-head" | "cymbal-head" }
+		>,
 	): void {
 		ctx.save();
 		ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
@@ -334,7 +354,10 @@ export class HighwayRenderer {
 		ctx.restore();
 	}
 
-	private drawHud(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
+	private drawHud(
+		ctx: CanvasRenderingContext2D,
+		frame: HighwayFrameData,
+	): void {
 		const { hud, palette } = this.profile;
 		const { hud: state } = frame;
 		const lines = [
@@ -358,7 +381,10 @@ export class HighwayRenderer {
 		ctx.restore();
 	}
 
-	private drawOverlay(ctx: CanvasRenderingContext2D, frame: HighwayFrameData): void {
+	private drawOverlay(
+		ctx: CanvasRenderingContext2D,
+		frame: HighwayFrameData,
+	): void {
 		ctx.save();
 		ctx.globalAlpha = 0.72;
 		ctx.fillStyle = "#040816";

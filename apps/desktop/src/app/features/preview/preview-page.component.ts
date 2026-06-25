@@ -40,7 +40,9 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 	readonly isPlaying = signal(false);
 	readonly visualMode = signal<PreviewVisualMode>("chart");
 	readonly highwayPreset = signal<HighwaySpeedPresetId>("normal");
-	readonly highwayHudEnabled = signal(HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault);
+	readonly highwayHudEnabled = signal(
+		HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault,
+	);
 	readonly highwayPresets = HIGHWAY_SPEED_PRESETS;
 	readonly previewSeekEpoch = signal(0);
 	private animationFrameId: number | null = null;

@@ -38,7 +38,12 @@ function createCanvasContext() {
 	} as unknown as CanvasRenderingContext2D;
 }
 
-function previewNoteEvent(tick: number, lane: number, seconds: number, length = 0) {
+function previewNoteEvent(
+	tick: number,
+	lane: number,
+	seconds: number,
+	length = 0,
+) {
 	return {
 		tick,
 		lane,
@@ -56,12 +61,13 @@ function createComponent(options?: {
 }) {
 	const requestAnimationFrame =
 		options?.requestAnimationFrame ?? vi.fn(() => 123);
-	const cancelAnimationFrame =
-		options?.cancelAnimationFrame ?? vi.fn();
+	const cancelAnimationFrame = options?.cancelAnimationFrame ?? vi.fn();
 	const document = {
 		defaultView: {
 			devicePixelRatio: options?.devicePixelRatio ?? 3,
-			matchMedia: vi.fn(() => ({ matches: options?.matchMediaMatches ?? false })),
+			matchMedia: vi.fn(() => ({
+				matches: options?.matchMediaMatches ?? false,
+			})),
 			requestAnimationFrame,
 			cancelAnimationFrame,
 			performance: { now: vi.fn(() => 1000) },
@@ -86,7 +92,13 @@ function createComponent(options?: {
 	};
 	refs.canvasRef = { nativeElement: canvas };
 	refs.containerRef = { nativeElement: container };
-	return { component, canvas, context, requestAnimationFrame, cancelAnimationFrame };
+	return {
+		component,
+		canvas,
+		context,
+		requestAnimationFrame,
+		cancelAnimationFrame,
+	};
 }
 
 describe("PreviewHighwayComponent", () => {
@@ -178,8 +190,12 @@ describe("PreviewHighwayComponent", () => {
 		} as never;
 		component.ngAfterViewInit();
 
-		expect(component.accessibleSummary()).toContain("read-only generated-chart playback preview");
-		expect(component.accessibleSummary()).toContain("Tempo timing is unavailable");
+		expect(component.accessibleSummary()).toContain(
+			"read-only generated-chart playback preview",
+		);
+		expect(component.accessibleSummary()).toContain(
+			"Tempo timing is unavailable",
+		);
 		vi.unstubAllGlobals();
 	});
 
@@ -210,7 +226,13 @@ describe("PreviewHighwayComponent", () => {
 					},
 				],
 				sections: [],
-				notes: { count: 1, firstTick: 192, lastTick: 192, firstSeconds: 1, lastSeconds: 1 },
+				notes: {
+					count: 1,
+					firstTick: 192,
+					lastTick: 192,
+					firstSeconds: 1,
+					lastSeconds: 1,
+				},
 				diagnostics: [],
 				summary: {
 					status: "ok",
@@ -223,16 +245,21 @@ describe("PreviewHighwayComponent", () => {
 			},
 		} as never;
 		component.ngAfterViewInit();
-		const initialDraws = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		const initialDraws = (context.clearRect as ReturnType<typeof vi.fn>).mock
+			.calls.length;
 
 		component.isPlaying = true;
-		const drawsAfterPlay = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		const drawsAfterPlay = (context.clearRect as ReturnType<typeof vi.fn>).mock
+			.calls.length;
 		for (const time of [0.1, 0.2, 0.3, 0.4, 0.5]) {
 			component.currentTime = time;
 		}
-		const drawsAfterPlaybackTicks = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		const drawsAfterPlaybackTicks = (
+			context.clearRect as ReturnType<typeof vi.fn>
+		).mock.calls.length;
 		component.seekEpoch = 1;
-		const drawsAfterSeek = (context.clearRect as ReturnType<typeof vi.fn>).mock.calls.length;
+		const drawsAfterSeek = (context.clearRect as ReturnType<typeof vi.fn>).mock
+			.calls.length;
 
 		expect(drawsAfterPlay).toBe(initialDraws + 1);
 		expect(drawsAfterPlaybackTicks).toBe(drawsAfterPlay);
@@ -256,10 +283,22 @@ describe("PreviewHighwayComponent", () => {
 				hasAccurateTiming: true,
 				tempos: [{ tick: 0, bpm: 120, seconds: 0, source: "generated-chart" }],
 				timeSignatures: [
-					{ tick: 0, numerator: 4, denominator: 4, seconds: 0, source: "generated-chart" },
+					{
+						tick: 0,
+						numerator: 4,
+						denominator: 4,
+						seconds: 0,
+						source: "generated-chart",
+					},
 				],
 				sections: [],
-				notes: { count: 1, firstTick: 192, lastTick: 192, firstSeconds: 1, lastSeconds: 1 },
+				notes: {
+					count: 1,
+					firstTick: 192,
+					lastTick: 192,
+					firstSeconds: 1,
+					lastSeconds: 1,
+				},
 				diagnostics: [],
 				summary: {
 					status: "ok",
@@ -274,11 +313,11 @@ describe("PreviewHighwayComponent", () => {
 		component.ngAfterViewInit();
 		// With valid chart data there is no limitation overlay, so the stage
 		// profile default (HUD hidden) means no HUD text is drawn.
-		expect((context.fillText as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+		expect(context.fillText as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
 
 		// Enabling the session-only toggle triggers a compact HUD render.
 		component.hudEnabled = true;
-		expect((context.fillText as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+		expect(context.fillText as ReturnType<typeof vi.fn>).toHaveBeenCalled();
 		vi.unstubAllGlobals();
 	});
 });

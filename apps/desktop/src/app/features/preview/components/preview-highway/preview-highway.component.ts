@@ -47,8 +47,10 @@ import {
 	styleUrl: "./preview-highway.component.css",
 })
 export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
-	@ViewChild("container") private readonly containerRef?: ElementRef<HTMLDivElement>;
-	@ViewChild("canvas") private readonly canvasRef?: ElementRef<HTMLCanvasElement>;
+	@ViewChild("container")
+	private readonly containerRef?: ElementRef<HTMLDivElement>;
+	@ViewChild("canvas")
+	private readonly canvasRef?: ElementRef<HTMLCanvasElement>;
 
 	constructor(private readonly document: Document = inject(DOCUMENT)) {}
 
@@ -59,7 +61,9 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private readonly _isPlaying = signal(false);
 	private readonly _seekEpoch = signal(0);
 	private readonly _preset = signal<HighwaySpeedPresetId>("normal");
-	private readonly _hudEnabled = signal(HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault);
+	private readonly _hudEnabled = signal(
+		HIGHWAY_STAGE_VISUAL_PROFILE.hud.enabledByDefault,
+	);
 	private readonly fps = signal<number | null>(null);
 	private readonly limitationText = signal<string | null>(null);
 	private readonly visibleNoteCount = signal(0);
@@ -186,7 +190,8 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 			this.fpsWindowStartedAt = this.now();
 			const tick = () => {
 				this.renderFrame();
-				this.animationFrameId = this.windowRef()?.requestAnimationFrame(tick) ?? null;
+				this.animationFrameId =
+					this.windowRef()?.requestAnimationFrame(tick) ?? null;
 			};
 			this.animationFrameId =
 				this.windowRef()?.requestAnimationFrame(tick) ?? null;
@@ -264,7 +269,9 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 		const tick =
 			this.timingMap === null
 				? null
-				: Math.round(tickAtChartSeconds(this.timingMap, chartSecondsAtPlayback));
+				: Math.round(
+						tickAtChartSeconds(this.timingMap, chartSecondsAtPlayback),
+					);
 		const musicalPosition =
 			this.timingMap && tick !== null
 				? musicalPositionAtTick(this.timingMap, tick)

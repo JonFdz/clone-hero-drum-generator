@@ -89,17 +89,22 @@ export function buildHighwayLaneCenters(
 export function buildHighwayLaneDividers(
 	geometry: HighwayGeometry,
 ): HighwayLaneDivider[] {
-	return Array.from({ length: HIGHWAY_PITCHED_LANES.length - 1 }, (_, index) => {
-		const lane = index + 1;
-		return {
-			startX:
-				geometry.roadCenterX - geometry.topRoadWidth / 2 +
-				(geometry.topRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
-			endX:
-				geometry.roadCenterX - geometry.bottomRoadWidth / 2 +
-				(geometry.bottomRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
-		};
-	});
+	return Array.from(
+		{ length: HIGHWAY_PITCHED_LANES.length - 1 },
+		(_, index) => {
+			const lane = index + 1;
+			return {
+				startX:
+					geometry.roadCenterX -
+					geometry.topRoadWidth / 2 +
+					(geometry.topRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
+				endX:
+					geometry.roadCenterX -
+					geometry.bottomRoadWidth / 2 +
+					(geometry.bottomRoadWidth / HIGHWAY_PITCHED_LANES.length) * lane,
+			};
+		},
+	);
 }
 
 export function buildHighwayTargets(
@@ -158,9 +163,21 @@ export function projectHighwayNotes(input: {
 	const heads: HighwayProjectedHead[] = [];
 	const sustains: HighwayProjectedSustain[] = [];
 	for (const note of input.notes) {
-		const sustain = projectSustain(note, input, profile, window.startChartSeconds, window.endChartSeconds);
+		const sustain = projectSustain(
+			note,
+			input,
+			profile,
+			window.startChartSeconds,
+			window.endChartSeconds,
+		);
 		if (sustain) sustains.push(sustain);
-		const head = projectHead(note, input, profile, window.startChartSeconds, window.endChartSeconds);
+		const head = projectHead(
+			note,
+			input,
+			profile,
+			window.startChartSeconds,
+			window.endChartSeconds,
+		);
 		if (head) heads.push(head);
 	}
 	return {
@@ -251,7 +268,10 @@ function projectHead(
 	startChartSeconds: number,
 	endChartSeconds: number,
 ): HighwayProjectedHead | null {
-	if (note.chartSeconds < startChartSeconds || note.chartSeconds > endChartSeconds) {
+	if (
+		note.chartSeconds < startChartSeconds ||
+		note.chartSeconds > endChartSeconds
+	) {
 		return null;
 	}
 	const effectiveSeconds = note.chartSeconds + input.previewOffsetSeconds;
@@ -337,9 +357,21 @@ function projectSustain(
 	endChartSeconds: number,
 ): HighwayProjectedSustain | null {
 	if (note.length <= 0) return null;
-	const clippedStart = clamp(note.chartSeconds, startChartSeconds, endChartSeconds);
-	const clippedEnd = clamp(note.endChartSeconds, startChartSeconds, endChartSeconds);
-	if (!Number.isFinite(clippedStart) || !Number.isFinite(clippedEnd) || clippedEnd <= clippedStart) {
+	const clippedStart = clamp(
+		note.chartSeconds,
+		startChartSeconds,
+		endChartSeconds,
+	);
+	const clippedEnd = clamp(
+		note.endChartSeconds,
+		startChartSeconds,
+		endChartSeconds,
+	);
+	if (
+		!Number.isFinite(clippedStart) ||
+		!Number.isFinite(clippedEnd) ||
+		clippedEnd <= clippedStart
+	) {
 		return null;
 	}
 	const startEffective = clippedStart + input.previewOffsetSeconds;

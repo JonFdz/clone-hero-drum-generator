@@ -30,7 +30,11 @@ function createContext() {
 	} as unknown as CanvasRenderingContext2D;
 }
 
-function squareHead(overrides: Partial<Extract<HighwayProjectedHead, { visualKind: "square-head" }>> = {}) {
+function squareHead(
+	overrides: Partial<
+		Extract<HighwayProjectedHead, { visualKind: "square-head" }>
+	> = {},
+) {
 	return {
 		id: "square",
 		visualKind: "square-head",
@@ -45,7 +49,11 @@ function squareHead(overrides: Partial<Extract<HighwayProjectedHead, { visualKin
 	} as Extract<HighwayProjectedHead, { visualKind: "square-head" }>;
 }
 
-function cymbalHead(overrides: Partial<Extract<HighwayProjectedHead, { visualKind: "cymbal-head" }>> = {}) {
+function cymbalHead(
+	overrides: Partial<
+		Extract<HighwayProjectedHead, { visualKind: "cymbal-head" }>
+	> = {},
+) {
 	return {
 		id: "circle",
 		visualKind: "cymbal-head",
@@ -60,7 +68,11 @@ function cymbalHead(overrides: Partial<Extract<HighwayProjectedHead, { visualKin
 	} as Extract<HighwayProjectedHead, { visualKind: "cymbal-head" }>;
 }
 
-function kickHead(overrides: Partial<Extract<HighwayProjectedHead, { visualKind: "kick-rail" }>> = {}) {
+function kickHead(
+	overrides: Partial<
+		Extract<HighwayProjectedHead, { visualKind: "kick-rail" }>
+	> = {},
+) {
 	return {
 		id: "kick",
 		visualKind: "kick-rail",
@@ -132,10 +144,42 @@ function frame(overrides: Partial<HighwayFrameData> = {}): HighwayFrameData {
 			},
 		],
 		targets: [
-			{ lane: "red", leftX: 150, rightX: 220, topY: 286, bottomY: 304, fill: "#ff4d5f", stroke: "#ffc4ca" },
-			{ lane: "yellow", leftX: 225, rightX: 295, topY: 286, bottomY: 304, fill: "#ffd84d", stroke: "#fff0b0" },
-			{ lane: "blue", leftX: 300, rightX: 370, topY: 286, bottomY: 304, fill: "#4f95ff", stroke: "#bdd7ff" },
-			{ lane: "green", leftX: 375, rightX: 445, topY: 286, bottomY: 304, fill: "#57da68", stroke: "#caefd0" },
+			{
+				lane: "red",
+				leftX: 150,
+				rightX: 220,
+				topY: 286,
+				bottomY: 304,
+				fill: "#ff4d5f",
+				stroke: "#ffc4ca",
+			},
+			{
+				lane: "yellow",
+				leftX: 225,
+				rightX: 295,
+				topY: 286,
+				bottomY: 304,
+				fill: "#ffd84d",
+				stroke: "#fff0b0",
+			},
+			{
+				lane: "blue",
+				leftX: 300,
+				rightX: 370,
+				topY: 286,
+				bottomY: 304,
+				fill: "#4f95ff",
+				stroke: "#bdd7ff",
+			},
+			{
+				lane: "green",
+				leftX: 375,
+				rightX: 445,
+				topY: 286,
+				bottomY: 304,
+				fill: "#57da68",
+				stroke: "#caefd0",
+			},
 		],
 		laneDividers: [
 			{ startX: 250, endX: 205 },
@@ -211,7 +255,10 @@ describe("HighwayRenderer", () => {
 
 		renderer.draw(
 			ctx,
-			frame({ heads: [kickHead({ thickness: 7, leftX: 200, rightX: 440 })], sustains: [] }),
+			frame({
+				heads: [kickHead({ thickness: 7, leftX: 200, rightX: 440 })],
+				sustains: [],
+			}),
 			1,
 		);
 
@@ -226,7 +273,11 @@ describe("HighwayRenderer", () => {
 		const renderer = new HighwayRenderer();
 		const ctx = createContext();
 
-		renderer.draw(ctx, frame({ heads: [cymbalHead({ dynamic: "ghost" })], sustains: [] }), 1);
+		renderer.draw(
+			ctx,
+			frame({ heads: [cymbalHead({ dynamic: "ghost" })], sustains: [] }),
+			1,
+		);
 
 		// save/restore brackets the ghost treatment.
 		expect(ctx.save).toHaveBeenCalled();
@@ -238,7 +289,11 @@ describe("HighwayRenderer", () => {
 		const ctx = createContext();
 		const strokeSpy = vi.spyOn(ctx, "stroke");
 
-		renderer.draw(ctx, frame({ heads: [squareHead({ dynamic: "accent" })], sustains: [] }), 1);
+		renderer.draw(
+			ctx,
+			frame({ heads: [squareHead({ dynamic: "accent" })], sustains: [] }),
+			1,
+		);
 
 		expect(strokeSpy).toHaveBeenCalled();
 	});
