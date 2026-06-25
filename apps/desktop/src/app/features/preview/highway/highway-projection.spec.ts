@@ -319,8 +319,15 @@ describe("highway-projection", () => {
 			};
 			const geometry = buildHighwayGeometry(1400, 600, narrowProfile);
 			const full = buildHighwayGeometry(1400, 600);
+			const expectedViewport = Math.min(
+				narrowProfile.scene.maxRoadViewportWidth,
+				1400 * narrowProfile.scene.roadViewportWidthRatio,
+			);
 			expect(geometry.bottomRoadWidth).toBeLessThan(full.bottomRoadWidth);
-			expect(geometry.bottomRoadWidth).toBeLessThan(360);
+			expect(geometry.bottomRoadWidth).toBeCloseTo(
+				expectedViewport * narrowProfile.road.bottomWidthRatio,
+				5,
+			);
 		});
 
 		it("projects musical lines with finite clamped depths and monotonic screen ordering", () => {
