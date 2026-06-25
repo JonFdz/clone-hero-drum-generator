@@ -248,7 +248,12 @@ export class HighwayRenderer {
 		ctx.fillStyle = `rgba(255, 255, 255, ${this.profile.notes.squareHighlightAlpha})`;
 		ctx.fillRect(x, y, size, Math.max(1, half * 0.24));
 		ctx.fillStyle = `rgba(0, 0, 0, ${this.profile.notes.squareShadowAlpha})`;
-		ctx.fillRect(x, y + size - Math.max(1, half * 0.3), size, Math.max(1, half * 0.3));
+		ctx.fillRect(
+			x,
+			y + size - Math.max(1, half * 0.3),
+			size,
+			Math.max(1, half * 0.3),
+		);
 		ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
 		ctx.fillRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
 		ctx.strokeStyle = head.stroke;
@@ -374,7 +379,12 @@ export class HighwayRenderer {
 	): void {
 		ctx.save();
 		const taper = this.profile.targets.topTaperInset;
-		const gradient = ctx.createLinearGradient(0, target.topY, 0, target.bottomY);
+		const gradient = ctx.createLinearGradient(
+			0,
+			target.topY,
+			0,
+			target.bottomY,
+		);
 		gradient.addColorStop(0, "rgba(18, 24, 36, 0.96)");
 		gradient.addColorStop(1, this.profile.palette.targetInterior);
 		ctx.beginPath();
