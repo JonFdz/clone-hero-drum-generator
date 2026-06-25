@@ -59,10 +59,9 @@ The calibrated intent is:
 - a tall gameplay field that occupies most of the Canvas height;
 - a lower hit line / higher horizon pairing that yields roughly 70–75% playable road span;
 - a shorter Fast travel window so fewer future notes are visible at once;
-- a dedicated near-field gameplay segment that uses most of the lower road for readability;
-- a separate far-field segment that compresses the remaining notes toward the horizon;
 - more readable note spacing through the near and mid sections;
-- piecewise projection instead of relying on one global smooth curve;
+- one shared gameplay projection across Fast, Normal, and Slow;
+- Fast behaving like Normal with faster travel, not like a different visual mode;
 - no duplicate/piled-up passed heads or musical lines at the hit line;
 - compact note/target sizing tied to local lane geometry;
 - tiny corner-oriented technical HUD metrics.
@@ -85,12 +84,11 @@ The calibrated intent is:
 - The hit line/target row sits in roughly the 88–91% height band.
 - Together, the playable road span occupies roughly 70–75% of the Canvas
   height.
-- The base depth curve is a named, profile-driven, monotonic, finite function
-  clamped to `[0, 1]` (`stageDepthForProgress`). Fast now layers a smooth
-  piecewise gameplay projection above that base curve: the first ~0.7s of
-  future chart time occupies ~57% of the playable road almost linearly, then
-  the remaining future time is mapped into the upper road with stronger
-  compression toward the horizon.
+- The depth curve is a named, profile-driven, monotonic, finite shared
+  function clamped to `[0, 1]` (`stageDepthForProgress`). Fast, Normal, and
+  Slow all use this same gameplay projection and therefore share the same road
+  camera, target-row composition, and near/far field distribution. Faster
+  presets create more spacing only because they cover less future chart time.
 - Passed heads and passed beat/measure lines are not rendered once their
   effective seconds fall behind playback. Sustains that cross playback are
   clipped safely to the hit line without spawning a duplicate head there.

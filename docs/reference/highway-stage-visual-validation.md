@@ -39,8 +39,8 @@ Priority comparison axes for this pass:
 - target-row vertical position;
 - horizon / stage-depth feel;
 - note spacing feel (especially near + mid sections);
-- smooth transition between the readable near field and compressed far field;
 - number of visible future notes at matching Tick / Beat / Measure positions;
+- stability of the shared camera when switching Fast/Normal/Slow;
 - absence of lower-road pile-up from recently passed events;
 - target scale and darkness;
 - note scale relative to lane width (square + cymbal heads);
@@ -74,10 +74,11 @@ accent/ghost cases, sustains, tempo data, and meter data.
    should feel more compact relative to their lanes.
 12. Compare note spacing feel against the previous iteration: clusters should
    be more readable vertically through the near and mid sections.
-13. Focus on repeated fast notes near the target row and confirm they no longer
-   bunch together in the lower road.
-14. Confirm the transition into the upper-road compressed region feels smooth,
-   without an obvious projection jump.
+13. Switch between Normal and Fast at the same musical position and confirm the
+   road geometry, target row, and camera composition do not jump into a
+   different visual mode.
+14. Focus on repeated fast notes near the target row and confirm they gain more
+   separation through faster travel rather than through a different camera.
 15. Confirm there is no lower-road pile-up from recently passed heads or
    beat/measure lines at the hit line during repeated passages.
 16. Confirm kick is a separate orange rail, never a target or fifth lane.
