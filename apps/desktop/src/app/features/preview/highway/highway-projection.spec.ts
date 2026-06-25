@@ -414,11 +414,7 @@ describe("highway-projection", () => {
 				y040.centerY,
 				geometry,
 			);
-			const farGap080_130 = normalizedGap(
-				y080.centerY,
-				y130.centerY,
-				geometry,
-			);
+			const farGap080_130 = normalizedGap(y080.centerY, y130.centerY, geometry);
 			const previousSingleCurveLookAheadSeconds = 3;
 			const baselineNearGap010_020 = normalizedGap(
 				geometry.hitLineY -

@@ -465,7 +465,11 @@ function depthForEffectiveSeconds(
 	if (preset.id !== "fast") {
 		return stageDepthForProgress(progress, profile);
 	}
-	return fastPiecewiseDepthForProgress(progress, preset.lookAheadSeconds, profile);
+	return fastPiecewiseDepthForProgress(
+		progress,
+		preset.lookAheadSeconds,
+		profile,
+	);
 }
 
 function fastPiecewiseDepthForProgress(
@@ -479,7 +483,11 @@ function fastPiecewiseDepthForProgress(
 		0.01,
 		lookAheadSeconds - 0.01,
 	);
-	const nearFieldProgress = clamp(nearFieldSeconds / lookAheadSeconds, 0.01, 0.99);
+	const nearFieldProgress = clamp(
+		nearFieldSeconds / lookAheadSeconds,
+		0.01,
+		0.99,
+	);
 	const nearFieldDepth = clamp(
 		profile.projection.fastNearFieldDepthRatio,
 		0.5,
