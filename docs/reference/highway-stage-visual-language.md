@@ -45,6 +45,22 @@ Kick:          separate orange horizontal rail inside the road
 - Accent and ghost preserve the base square/circle identity.
 - Sustains preserve current timing and draw before heads/rails.
 
+## Projection and calibration pass
+
+This iteration is explicitly a **projection and calibration pass**. The main
+visual gap after the first stage-style pass was not generic polish but camera
+geometry, time-to-depth mapping, note scale, target scale, and HUD emphasis.
+
+The calibrated intent is:
+
+- a materially narrower centered road;
+- more black negative space on wide scenes;
+- a higher/farther-feeling horizon and a lower hit line;
+- smaller and more compact heads and target pads;
+- more readable note spacing through the near and mid sections;
+- stronger compression only near the far horizon;
+- tiny corner-oriented technical HUD metrics.
+
 ## Scene and camera principles
 
 - The Canvas fills its component container; the playable road lives inside a
@@ -57,13 +73,14 @@ Kick:          separate orange horizontal rail inside the road
   width and the top road in the 8–16% band, with substantial dark negative
   space on both sides.
 - The road is centered within a 1 CSS px tolerance.
-- The horizon sits in the upper-middle scene (~30–40% height); the hit line
-  sits near the lower portion (~78–86% height), leaving a spacious near field.
+- The horizon sits higher than the initial stage-style pass (~24–32% height)
+  so the road feels longer and deeper.
+- The hit line sits lower (~84–90% height), enlarging the near field.
 - The depth curve is a named, profile-driven, monotonic, finite function
-  clamped to `[0, 1]` (`stageDepthForProgress`). It leaves readable spacing
-  between notes near the target row and compresses distant notes smoothly
-  toward the horizon. It preserves temporal ordering of notes, sustains, and
-  musical lines.
+  clamped to `[0, 1]` (`stageDepthForProgress`). The calibrated curve keeps the
+  near and mid field lower/longer for gameplay readability, then blends into a
+  stronger far-horizon compression tail late in the visible window. It
+  preserves temporal ordering of notes, sustains, and musical lines.
 
 ## Draw order
 
@@ -83,7 +100,8 @@ The renderer retains this fixed semantic order:
 ## Target row
 
 - Four compact pads aligned with pitched lanes.
-- Dark / low-alpha interior with a lane-colored outline/highlight.
+- Darker interior and clearer framing than the initial stage-style pass.
+- Lane-colored outline/highlight remains the lane identity carrier.
 - Never large opaque solid blocks.
 - Geometry derives from the same road bounds and lane widths used for
   projection — no renderer-only interpretation.
@@ -94,13 +112,15 @@ The renderer retains this fixed semantic order:
 - Square-derived head carrying lane color.
 - Original depth cue: a narrow top highlight and a darker lower face, plus a
   consistent outline.
-- Compact silhouette; never oversized blocks that mask the road.
+- Calibrated smaller than the initial stage-style pass; never oversized blocks
+  that mask the road.
 
 ## Cymbals (discs)
 
 - Circular/disc-derived head carrying lane color.
 - Original disc treatment: filled disc, ring outline, offset radial
   highlight, and a subtle halo constrained near the disc.
+- Calibrated smaller and less soft than the initial stage-style pass.
 - Visually distinct from the square head at every useful depth.
 - No copied cymbal mesh, cone, logo, or texture.
 
@@ -114,7 +134,8 @@ The renderer retains this fixed semantic order:
 ## Kick rails and sustains
 
 - Kick is an orange horizontal rail bounded inside the road, thinner and less
-  dominant than the Phase 19B baseline, with a restrained highlight/shadow.
+  dominant than the Phase 19B baseline, and slightly more restrained than the
+  first stage-style calibration, with a restrained highlight/shadow.
 - Kick sustains are road-contained orange bands behind rails, drawn before
   rails, and quieter than the terminal rail.
 - Pitched sustains are lane-contained bands behind heads, drawn before heads.
@@ -133,8 +154,9 @@ The renderer retains this fixed semantic order:
 - The technical HUD defaults to **off** for the stage profile.
 - The existing session-only toggle remains available; the setting is not
   persisted.
-- When enabled, the HUD is small, low-alpha, neutral-colored text in a
-  non-obstructive corner with no large opaque panel.
+- When enabled, the HUD is intentionally tiny and split across corners:
+  **FPS top-left**, **Tick / Beat / Measure top-right**.
+- It uses low-alpha neutral text only; there is no large opaque panel.
 - The HUD must not obscure the road, horizon, or near notes.
 - No per-frame accessibility announcements (`aria-live` or equivalent).
 - The Canvas accessible summary remains stable and descriptive.

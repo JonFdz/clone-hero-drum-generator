@@ -27,26 +27,46 @@ regression, and reduced-motion/destroy cleanup regressions.
 
 ## Manual validation
 
+This iteration is explicitly a **projection and calibration pass**. Manual
+review should compare not only whether the Highway is "pretty" but whether it
+feels materially closer in gameplay readability and spatial composition.
+
+Priority comparison axes for this pass:
+
+- road width feel;
+- horizon / stage-depth feel;
+- note spacing feel (especially near + mid sections);
+- target scale and darkness;
+- note scale (square + cymbal heads);
+- HUD subtlety and corner placement.
+
 Use a generated chart that contains kick, standard pitched notes, cymbals,
 accent/ghost cases, sustains, tempo data, and meter data.
 
 ### Wide desktop window
 
 1. Open Preview and select Highway.
-2. Confirm a large dark scene surrounds a narrower centered road.
+2. Compare the road width feel against the previous iteration: confirm a
+   materially narrower centered road with more black space around it.
 3. Confirm the road does not stretch to near full screen width.
-4. Confirm the horizon, road, and hit line read as one coherent stage-like
-   perspective.
-5. Confirm four colored pitched targets are visible and compact (outline-led,
-   not solid blocks).
-6. Confirm kick is a separate orange rail, never a target or fifth lane.
-7. Confirm squares, circles, rail, and sustains remain distinct.
+4. Compare the horizon feel against the previous iteration: confirm a farther,
+   longer, deeper stage perspective.
+5. Confirm four colored pitched targets are visible, compact, darker inside,
+   and more clearly framed (not solid blocks).
+6. Compare note scale against the previous iteration: square and cymbal heads
+   should feel more compact.
+7. Compare note spacing feel against the previous iteration: clusters should be
+   more readable vertically through the near and mid sections.
+8. Confirm kick is a separate orange rail, never a target or fifth lane.
+9. Confirm squares, circles, rail, and sustains remain distinct.
 
 ### Ordinary desktop window
 
 1. Confirm the road stays centered and safely bounded.
-2. Confirm notes, targets, rails, and sustains are legible.
-3. Confirm beat/measure lines remain secondary.
+2. Compare note spacing feel against the previous iteration: the mid field
+   should feel less vertically compressed.
+3. Confirm notes, targets, rails, and sustains are legible.
+4. Confirm beat/measure lines remain secondary.
 
 ### Narrow window
 
@@ -67,8 +87,8 @@ accent/ghost cases, sustains, tempo data, and meter data.
 2. Confirm visual timing remains aligned with the existing Preview transport
    (the Preview audio clock is the only timing authority).
 3. Confirm sustain/head ordering remains correct.
-4. Toggle the technical HUD and confirm it remains compact and
-   non-obstructive.
+4. Toggle the technical HUD and confirm it remains tiny, corner-oriented, and
+   non-obstructive (FPS top-left; Tick / Beat / Measure top-right).
 
 ### Reduced motion
 
