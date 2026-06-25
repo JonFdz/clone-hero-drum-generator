@@ -44,6 +44,8 @@ export type HighwayStageVisualProfile = {
 		borderWidthFar: number;
 		/** Internal lane divider alpha (quieter than outer borders). */
 		laneDividerAlpha: number;
+		/** Subtle glow alpha for outer borders. */
+		borderGlowAlpha: number;
 	};
 	/** Named monotonic time-to-depth parameters. */
 	projection: {
@@ -68,6 +70,18 @@ export type HighwayStageVisualProfile = {
 		bottomLipRatio: number;
 		/** Top taper inset (CSS px). */
 		topTaperInset: number;
+		/** Shared platform height behind the targets (CSS px). */
+		platformHeight: number;
+		/** Shared platform bottom depth beyond the hit line (CSS px). */
+		platformDepth: number;
+		/** Alpha for the target-zone platform fill. */
+		platformAlpha: number;
+		/** Alpha for the target-zone platform top edge. */
+		platformEdgeAlpha: number;
+		/** Alpha for the neutral target outer rim. */
+		neutralOutlineAlpha: number;
+		/** Alpha for subtle lane-colored target glow. */
+		laneGlowAlpha: number;
 	};
 	/** Note-head, kick-rail and sustain dimensions. */
 	notes: {
@@ -77,16 +91,34 @@ export type HighwayStageVisualProfile = {
 		squareFarSize: number;
 		/** Maximum square-head half-size as a fraction of the local lane width. */
 		squareMaxLaneWidthRatio: number;
+		/** Alpha for the square-head top highlight. */
+		squareHighlightAlpha: number;
+		/** Alpha for the square-head lower shadow. */
+		squareShadowAlpha: number;
+		/** Inner-face inset ratio for square heads. */
+		squareFaceInsetRatio: number;
 		/** Cymbal disc radius at the near edge (CSS px). */
 		circleNearRadius: number;
 		/** Cymbal disc radius at the far edge (CSS px). */
 		circleFarRadius: number;
 		/** Maximum cymbal radius as a fraction of the local lane width. */
 		circleMaxLaneWidthRatio: number;
+		/** Alpha for the cymbal halo. */
+		circleHaloAlpha: number;
+		/** Alpha for the cymbal highlight. */
+		circleHighlightAlpha: number;
+		/** Alpha for the cymbal inner-edge shading. */
+		circleInnerShadeAlpha: number;
 		/** Kick rail thickness at the near edge (CSS px). */
 		kickRailNearThickness: number;
 		/** Kick rail thickness at the far edge (CSS px). */
 		kickRailFarThickness: number;
+		/** Alpha for the kick rail top highlight. */
+		kickHighlightAlpha: number;
+		/** Alpha for the kick rail lower shadow. */
+		kickShadowAlpha: number;
+		/** Outline width for the kick rail. */
+		kickOutlineWidth: number;
 		/** Alpha applied to sustain bands (quieter than their terminal head/rail). */
 		sustainAlpha: number;
 	};
@@ -138,9 +170,10 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 	road: {
 		topWidthRatio: 0.17,
 		bottomWidthRatio: 0.7,
-		borderWidthNear: 2.25,
-		borderWidthFar: 1,
-		laneDividerAlpha: 0.1,
+		borderWidthNear: 2.6,
+		borderWidthFar: 1.15,
+		laneDividerAlpha: 0.085,
+		borderGlowAlpha: 0.14,
 	},
 	projection: {
 		perspectiveCompression: 0.4,
@@ -149,27 +182,42 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 		heightNear: 11,
 		minHeight: 7,
 		heightLaneWidthRatio: 0.24,
-		interiorAlpha: 0.48,
-		outlineWidth: 1.75,
+		interiorAlpha: 0.64,
+		outlineWidth: 1.9,
 		laneInsetRatio: 0.16,
 		bottomLipRatio: 0.12,
 		topTaperInset: 4,
+		platformHeight: 16,
+		platformDepth: 8,
+		platformAlpha: 0.78,
+		platformEdgeAlpha: 0.2,
+		neutralOutlineAlpha: 0.16,
+		laneGlowAlpha: 0.18,
 	},
 	notes: {
 		squareNearSize: 11,
 		squareFarSize: 4,
 		squareMaxLaneWidthRatio: 0.23,
+		squareHighlightAlpha: 0.24,
+		squareShadowAlpha: 0.3,
+		squareFaceInsetRatio: 0.12,
 		circleNearRadius: 9.5,
 		circleFarRadius: 3.75,
 		circleMaxLaneWidthRatio: 0.21,
+		circleHaloAlpha: 0.08,
+		circleHighlightAlpha: 0.24,
+		circleInnerShadeAlpha: 0.14,
 		kickRailNearThickness: 6,
 		kickRailFarThickness: 2,
+		kickHighlightAlpha: 0.18,
+		kickShadowAlpha: 0.28,
+		kickOutlineWidth: 0.9,
 		sustainAlpha: 0.26,
 	},
 	hud: {
 		enabledByDefault: false,
-		fontSize: 9,
-		alpha: 0.38,
+		fontSize: 8,
+		alpha: 0.32,
 		edgeInset: 8,
 	},
 	palette: {

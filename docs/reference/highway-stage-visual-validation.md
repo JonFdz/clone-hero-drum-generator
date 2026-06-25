@@ -69,20 +69,25 @@ accent/ghost cases, sustains, tempo data, and meter data.
 9. Compare the number of visible future notes at the same musical position:
    the field should not feel materially denser than the reference.
 10. Confirm four colored pitched targets are visible, compact, darker inside,
-   and more clearly framed (not solid blocks).
+   more clearly framed, and anchored by a stronger gameplay platform (not solid
+   blocks).
 11. Compare note scale against the previous iteration: square and cymbal heads
    should feel more compact relative to their lanes.
-12. Compare note spacing feel against the previous iteration: clusters should
-   be more readable vertically through the near and mid sections.
-13. Switch between Normal and Fast at the same musical position and confirm the
+12. Confirm square heads read as compact physical pieces rather than flat UI
+   tiles.
+13. Confirm cymbal heads read as intentional discs/gems rather than plain
+   circles.
+14. Switch between Normal and Fast at the same musical position and confirm the
    road geometry, target row, and camera composition do not jump into a
    different visual mode.
-14. Focus on repeated fast notes near the target row and confirm they gain more
+15. Focus on repeated fast notes near the target row and confirm they gain more
    separation through faster travel rather than through a different camera.
-15. Confirm there is no lower-road pile-up from recently passed heads or
+16. Confirm kick rails remain inside the road, clearly readable, and visually
+   integrated into the highway rather than looking like flat bars.
+17. Confirm there is no lower-road pile-up from recently passed heads or
    beat/measure lines at the hit line during repeated passages.
-16. Confirm kick is a separate orange rail, never a target or fifth lane.
-17. Confirm squares, circles, rail, and sustains remain distinct.
+18. Confirm kick is a separate orange rail, never a target or fifth lane.
+19. Confirm squares, circles, rail, and sustains remain distinct.
 
 ### Ordinary desktop window
 

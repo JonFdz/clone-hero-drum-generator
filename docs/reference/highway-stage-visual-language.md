@@ -113,6 +113,9 @@ The renderer retains this fixed semantic order:
 ## Target row
 
 - Four compact pads aligned with pitched lanes.
+- A darker, more anchored gameplay platform sits behind the targets so the hit
+  zone reads as a strong strike area rather than thin outlines floating on the
+  road.
 - Darker interior and clearer framing than the initial stage-style pass.
 - Lane-colored outline/highlight remains the lane identity carrier.
 - Never large opaque solid blocks.
@@ -125,8 +128,8 @@ The renderer retains this fixed semantic order:
 ## Standard pitched notes (squares / prisms)
 
 - Square-derived head carrying lane color.
-- Original depth cue: a narrow top highlight and a darker lower face, plus a
-  consistent outline.
+- Compact prism/gem-like face treatment: restrained top highlight, darker lower
+  face, subtle inner face, and a consistent outline.
 - Calibrated smaller than the initial stage-style pass; never oversized blocks
   that mask the road.
 - Head size is clamped relative to the current local lane width.
@@ -134,8 +137,8 @@ The renderer retains this fixed semantic order:
 ## Cymbals (discs)
 
 - Circular/disc-derived head carrying lane color.
-- Original disc treatment: filled disc, ring outline, offset radial
-  highlight, and a subtle halo constrained near the disc.
+- Disc/gem treatment: filled disc, controlled halo, offset highlight, inner
+  edge shading, and a clean ring outline.
 - Calibrated smaller and less soft than the initial stage-style pass.
 - Visually distinct from the square head at every useful depth.
 - No copied cymbal mesh, cone, logo, or texture.
@@ -151,7 +154,9 @@ The renderer retains this fixed semantic order:
 
 - Kick is an orange horizontal rail bounded inside the road, thinner and less
   dominant than the Phase 19B baseline, and slightly more restrained than the
-  first stage-style calibration, with a restrained highlight/shadow.
+  first stage-style calibration.
+- The rail uses a cleaner dimensional treatment so it feels integrated into the
+  highway language rather than like a flat bar.
 - Kick sustains are road-contained orange bands behind rails, drawn before
   rails, and quieter than the terminal rail.
 - Pitched sustains are lane-contained bands behind heads, drawn before heads.
@@ -162,6 +167,8 @@ The renderer retains this fixed semantic order:
 - Beat lines are subtle neutral-gray horizontal guides.
 - Measure lines are distinguishable from beats but not by a bright saturated
   color.
+- Outer road borders are stronger than the internal dividers; internal dividers
+  remain secondary to preserve the dark-road composition.
 - Musical lines never compete with notes and are never confused with the
   orange kick rail.
 
