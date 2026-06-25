@@ -22,7 +22,10 @@ describe("highway-stage-visual-profile", () => {
 	});
 
 	it("does not retain Fast-only projection fields in the shared profile", () => {
-		const projection = HIGHWAY_STAGE_VISUAL_PROFILE.projection as Record<string, unknown>;
+		const projection = HIGHWAY_STAGE_VISUAL_PROFILE.projection as Record<
+			string,
+			unknown
+		>;
 		expect(Object.hasOwn(projection, "fastNearFieldSeconds")).toBe(false);
 		expect(Object.hasOwn(projection, "fastNearFieldDepthRatio")).toBe(false);
 		expect(Object.hasOwn(projection, "fastFarFieldCompression")).toBe(false);

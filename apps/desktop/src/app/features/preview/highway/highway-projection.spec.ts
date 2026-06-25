@@ -366,12 +366,24 @@ describe("highway-projection", () => {
 			const normalPreset = HIGHWAY_SPEED_PRESETS[1]!;
 			const playableHeight = geometry.hitLineY - geometry.horizonY;
 			const progress = 0.5;
-			const sharedDepth = stageDepthForProgress(progress, HIGHWAY_STAGE_VISUAL_PROFILE);
+			const sharedDepth = stageDepthForProgress(
+				progress,
+				HIGHWAY_STAGE_VISUAL_PROFILE,
+			);
 			expect(sharedDepth).toBeGreaterThan(0);
 			expect(sharedDepth).toBeLessThan(1);
-			const fastDepthAtProgress = stageDepthForProgress(progress, HIGHWAY_STAGE_VISUAL_PROFILE);
-			const normalDepthAtProgress = stageDepthForProgress(progress, HIGHWAY_STAGE_VISUAL_PROFILE);
-			const slowDepthAtProgress = stageDepthForProgress(progress, HIGHWAY_STAGE_VISUAL_PROFILE);
+			const fastDepthAtProgress = stageDepthForProgress(
+				progress,
+				HIGHWAY_STAGE_VISUAL_PROFILE,
+			);
+			const normalDepthAtProgress = stageDepthForProgress(
+				progress,
+				HIGHWAY_STAGE_VISUAL_PROFILE,
+			);
+			const slowDepthAtProgress = stageDepthForProgress(
+				progress,
+				HIGHWAY_STAGE_VISUAL_PROFILE,
+			);
 			expect(fastDepthAtProgress).toBeCloseTo(normalDepthAtProgress, 10);
 			expect(normalDepthAtProgress).toBeCloseTo(slowDepthAtProgress, 10);
 
@@ -381,18 +393,24 @@ describe("highway-projection", () => {
 				stageDepthForProgress(
 					deltaSeconds / fastPreset.lookAheadSeconds,
 					HIGHWAY_STAGE_VISUAL_PROFILE,
-				) * playableHeight;
+				) *
+					playableHeight;
 			const normalProjectedY =
 				geometry.hitLineY -
 				stageDepthForProgress(
 					deltaSeconds / normalPreset.lookAheadSeconds,
 					HIGHWAY_STAGE_VISUAL_PROFILE,
-				) * playableHeight;
+				) *
+					playableHeight;
 			expect(fastProjectedY).toBeLessThan(normalProjectedY);
 
 			const fastProjected = projectHighwayNotes({
 				notes: [
-					pitchedNote({ id: "n005", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "n005",
+						chartSeconds: 0.05,
+						endChartSeconds: 0.05,
+					}),
 					pitchedNote({ id: "n010", chartSeconds: 0.1, endChartSeconds: 0.1 }),
 					pitchedNote({ id: "n020", chartSeconds: 0.2, endChartSeconds: 0.2 }),
 					pitchedNote({ id: "n040", chartSeconds: 0.4, endChartSeconds: 0.4 }),
@@ -417,7 +435,11 @@ describe("highway-projection", () => {
 			});
 			const normalProjected = projectHighwayNotes({
 				notes: [
-					pitchedNote({ id: "n005", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "n005",
+						chartSeconds: 0.05,
+						endChartSeconds: 0.05,
+					}),
 					pitchedNote({ id: "n010", chartSeconds: 0.1, endChartSeconds: 0.1 }),
 					pitchedNote({ id: "n020", chartSeconds: 0.2, endChartSeconds: 0.2 }),
 					pitchedNote({ id: "n040", chartSeconds: 0.4, endChartSeconds: 0.4 }),
@@ -427,8 +449,12 @@ describe("highway-projection", () => {
 				preset: normalPreset,
 				geometry,
 			});
-			const fastById = new Map(fastProjected.heads.map((head) => [head.id, head]));
-			const normalById = new Map(normalProjected.heads.map((head) => [head.id, head]));
+			const fastById = new Map(
+				fastProjected.heads.map((head) => [head.id, head]),
+			);
+			const normalById = new Map(
+				normalProjected.heads.map((head) => [head.id, head]),
+			);
 			const fast005 = expectSquareHead(fastById.get("n005"));
 			const fast010 = expectSquareHead(fastById.get("n010"));
 			const fast020 = expectSquareHead(fastById.get("n020"));
@@ -440,10 +466,26 @@ describe("highway-projection", () => {
 			const normal020 = expectSquareHead(normalById.get("n020"));
 			const normal040 = expectSquareHead(normalById.get("n040"));
 			const kick = fastById.get("kick");
-			const fastGap005_010 = normalizedGap(fast005.centerY, fast010.centerY, geometry);
-			const fastGap010_020 = normalizedGap(fast010.centerY, fast020.centerY, geometry);
-			const fastGap020_040 = normalizedGap(fast020.centerY, fast040.centerY, geometry);
-			const normalGap010_020 = normalizedGap(normal010.centerY, normal020.centerY, geometry);
+			const fastGap005_010 = normalizedGap(
+				fast005.centerY,
+				fast010.centerY,
+				geometry,
+			);
+			const fastGap010_020 = normalizedGap(
+				fast010.centerY,
+				fast020.centerY,
+				geometry,
+			);
+			const fastGap020_040 = normalizedGap(
+				fast020.centerY,
+				fast040.centerY,
+				geometry,
+			);
+			const normalGap010_020 = normalizedGap(
+				normal010.centerY,
+				normal020.centerY,
+				geometry,
+			);
 
 			expect(fast005.centerY).toBeGreaterThan(fast010.centerY);
 			expect(fast010.centerY).toBeGreaterThan(fast020.centerY);
@@ -458,7 +500,9 @@ describe("highway-projection", () => {
 			expect(normal005.centerY).toBeGreaterThan(normal010.centerY);
 			expect(normal010.centerY).toBeGreaterThan(normal020.centerY);
 			expect(normal020.centerY).toBeGreaterThan(normal040.centerY);
-			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(0.33);
+			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeGreaterThan(
+				0.33,
+			);
 			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.38);
 			expect(buildHighwayTargets(geometry)).toHaveLength(4);
 			expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);
