@@ -75,7 +75,9 @@ function createComponent(options?: {
 		getContext: vi.fn(() => context),
 	} as unknown as HTMLCanvasElement;
 	const container = {
-		getBoundingClientRect: () => ({ width: 480, height: 360 }),
+		clientWidth: 480,
+		clientHeight: 360,
+		getBoundingClientRect: vi.fn(() => ({ width: 999, height: 999 })),
 	} as HTMLDivElement;
 	(component as never).canvasRef = { nativeElement: canvas };
 	(component as never).containerRef = { nativeElement: container };
@@ -83,6 +85,19 @@ function createComponent(options?: {
 }
 
 describe("PreviewHighwayComponent", () => {
+	it("sizes the canvas from container content-box dimensions, not border-box rect", () => {
+		vi.stubGlobal("ResizeObserver", FakeResizeObserver as never);
+		const { component, canvas } = createComponent();
+
+		component.ngAfterViewInit();
+
+		expect(canvas.style.width).toBe("480px");
+		expect(canvas.style.height).toBe("360px");
+		expect(canvas.width).toBe(960);
+		expect(canvas.height).toBe(720);
+		vi.unstubAllGlobals();
+	});
+
 	it("caps DPR-backed canvas resize at 2x", () => {
 		vi.stubGlobal("ResizeObserver", FakeResizeObserver as never);
 		const { component, canvas } = createComponent({ devicePixelRatio: 3 });

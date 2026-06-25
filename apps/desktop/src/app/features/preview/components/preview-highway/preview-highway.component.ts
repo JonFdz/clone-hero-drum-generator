@@ -1,4 +1,4 @@
-import { CommonModule } from "@angular/common";
+import { CommonModule, DOCUMENT } from "@angular/common";
 import {
 	AfterViewInit,
 	ChangeDetectionStrategy,
@@ -8,6 +8,7 @@ import {
 	OnDestroy,
 	ViewChild,
 	computed,
+	inject,
 	signal,
 } from "@angular/core";
 import type { ChartPreviewData } from "../../../../services/desktop-bridge.service";
@@ -70,7 +71,7 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 	private fpsWindowStartedAt = 0;
 	private lastRenderedFrame: HighwayFrameData | null = null;
 
-	constructor(private readonly document: Document = globalThis.document) {}
+	constructor(private readonly document: Document = inject(DOCUMENT)) {}
 
 	@Input() set chartData(value: ChartPreviewData | null) {
 		this._chartData.set(value);
@@ -169,9 +170,8 @@ export class PreviewHighwayComponent implements AfterViewInit, OnDestroy {
 		const canvas = this.canvasRef?.nativeElement;
 		const container = this.containerRef?.nativeElement;
 		if (!canvas || !container) return;
-		const rect = container.getBoundingClientRect();
-		const cssWidth = Math.max(0, Math.round(rect.width));
-		const cssHeight = Math.max(0, Math.round(rect.height));
+		const cssWidth = Math.max(0, Math.round(container.clientWidth));
+		const cssHeight = Math.max(0, Math.round(container.clientHeight));
 		const dpr = this.devicePixelRatio();
 		canvas.width = Math.round(cssWidth * dpr);
 		canvas.height = Math.round(cssHeight * dpr);
