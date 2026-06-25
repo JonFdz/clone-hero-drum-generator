@@ -246,9 +246,8 @@ function projectHead(
 	if (laneIndex < 0) return null;
 	const bounds = roadBoundsAtDepth(input.geometry, depth);
 	const centerX = bounds.leftX + (laneIndex + 0.5) * bounds.laneWidth;
-	return {
+	const pitchedHeadBase = {
 		id: note.id,
-		visualKind: note.visualKind,
 		depth,
 		centerX,
 		centerY: y,
@@ -256,6 +255,16 @@ function projectHead(
 		fill: note.fill,
 		stroke: note.stroke,
 		dynamic: note.dynamic,
+	};
+	if (note.visualKind === "square-head") {
+		return {
+			...pitchedHeadBase,
+			visualKind: "square-head",
+		};
+	}
+	return {
+		...pitchedHeadBase,
+		visualKind: "cymbal-head",
 	};
 }
 

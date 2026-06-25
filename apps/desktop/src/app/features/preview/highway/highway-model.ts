@@ -56,6 +56,17 @@ export type HighwayRoadBounds = {
 	laneWidth: number;
 };
 
+type HighwayProjectedPitchedHeadBase = {
+	id: string;
+	depth: number;
+	centerX: number;
+	centerY: number;
+	radius: number;
+	fill: string;
+	stroke: string;
+	dynamic: HighwayDynamicKind;
+};
+
 export type HighwayProjectedHead =
 	| {
 		id: string;
@@ -68,17 +79,12 @@ export type HighwayProjectedHead =
 		fill: string;
 		stroke: string;
 	}
-	| {
-		id: string;
-		visualKind: "square-head" | "cymbal-head";
-		depth: number;
-		centerX: number;
-		centerY: number;
-		radius: number;
-		fill: string;
-		stroke: string;
-		dynamic: HighwayDynamicKind;
-	};
+	| (HighwayProjectedPitchedHeadBase & {
+		visualKind: "square-head";
+	})
+	| (HighwayProjectedPitchedHeadBase & {
+		visualKind: "cymbal-head";
+	});
 
 export type HighwayProjectedSustain = {
 	id: string;

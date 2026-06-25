@@ -56,7 +56,7 @@ export function buildHighwaySemanticNotes(
 	for (const [tick, events] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
 		const lanesAtTick = new Set(events.map((event) => event.lane));
 		for (const event of events) {
-			if (!isBaseLane(event.lane)) continue;
+			if (!isBaseSourceEvent(event)) continue;
 			const key = `${tick}-${event.lane}`;
 			const occurrence = occurrenceByTickLane.get(key) ?? 0;
 			occurrenceByTickLane.set(key, occurrence + 1);
@@ -137,6 +137,12 @@ function resolveDynamicKind(
 
 function isBaseLane(lane: number): lane is HighwayChartLane {
 	return Number.isInteger(lane) && lane >= 0 && lane <= 4;
+}
+
+function isBaseSourceEvent(
+	event: HighwaySourceNoteEvent,
+): event is HighwaySourceNoteEvent & { lane: HighwayChartLane } {
+	return isBaseLane(event.lane);
 }
 
 function isValidSourceEvent(
