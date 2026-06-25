@@ -113,10 +113,10 @@ export function buildHighwayTargets(
 ): HighwayTarget[] {
 	const bounds = roadBoundsAtDepth(geometry, 0);
 	const targetHeight = Math.max(
-		10,
-		Math.min(profile.targets.heightNear, geometry.cssHeight * 0.045),
+		9,
+		Math.min(profile.targets.heightNear, geometry.cssHeight * 0.04),
 	);
-	const inset = Math.max(4, bounds.laneWidth * 0.08);
+	const inset = Math.max(4, bounds.laneWidth * profile.targets.laneInsetRatio);
 	return HIGHWAY_PITCHED_LANES.map((lane, index) => {
 		const laneLeft = bounds.leftX + index * bounds.laneWidth + inset;
 		const laneRight = bounds.leftX + (index + 1) * bounds.laneWidth - inset;
@@ -125,7 +125,8 @@ export function buildHighwayTargets(
 			leftX: laneLeft,
 			rightX: laneRight,
 			topY: geometry.hitLineY - targetHeight,
-			bottomY: geometry.hitLineY + targetHeight * 0.22,
+			bottomY:
+				geometry.hitLineY + targetHeight * profile.targets.bottomLipRatio,
 			fill: lane.fill,
 			stroke: lane.stroke,
 		};

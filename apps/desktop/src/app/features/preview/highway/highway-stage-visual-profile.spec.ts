@@ -36,12 +36,12 @@ describe("highway-stage-visual-profile", () => {
 		expect(canvasWidth - bottomRoadWidth).toBeGreaterThan(canvasWidth * 0.5);
 	});
 
-	it("uses profile-owned camera ratios inside the documented bands", () => {
+	it("uses profile-owned camera ratios inside the calibrated deeper-stage bands", () => {
 		const { scene } = HIGHWAY_STAGE_VISUAL_PROFILE;
-		expect(scene.horizonRatio).toBeGreaterThanOrEqual(0.3);
-		expect(scene.horizonRatio).toBeLessThanOrEqual(0.4);
-		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.78);
-		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.86);
+		expect(scene.horizonRatio).toBeGreaterThanOrEqual(0.24);
+		expect(scene.horizonRatio).toBeLessThanOrEqual(0.32);
+		expect(scene.hitLineRatio).toBeGreaterThanOrEqual(0.84);
+		expect(scene.hitLineRatio).toBeLessThanOrEqual(0.9);
 	});
 
 	describe("stageDepthForProgress", () => {
@@ -73,11 +73,13 @@ describe("highway-stage-visual-profile", () => {
 			}
 		});
 
-		it("compresses distant notes toward the horizon (more than half the depth past midpoint)", () => {
+		it("keeps the midpoint lower for readability, then compresses hard near the far horizon", () => {
 			const profile = HIGHWAY_STAGE_VISUAL_PROFILE;
-			// An ease-out curve should place the midpoint progress above 0.5 depth,
-			// i.e. distant notes occupy less vertical space than near notes.
-			expect(stageDepthForProgress(0.5, profile)).toBeGreaterThan(0.5);
+			// Calibration pass goal: more readable near/mid spacing, so midpoint depth
+			// should remain below half the road depth.
+			expect(stageDepthForProgress(0.5, profile)).toBeLessThan(0.45);
+			// But far notes should still compress strongly toward the horizon.
+			expect(stageDepthForProgress(0.9, profile)).toBeGreaterThan(0.9);
 		});
 
 		it("returns 0 for non-finite input instead of propagating NaN/Infinity", () => {
@@ -87,17 +89,21 @@ describe("highway-stage-visual-profile", () => {
 			expect(stageDepthForProgress(Number.NEGATIVE_INFINITY, profile)).toBe(0);
 		});
 
-		it("stays monotonic for a range of profile exponents (curve is well-behaved)", () => {
+		it("stays monotonic for a range of calibrated profile parameters", () => {
 			const base = HIGHWAY_STAGE_VISUAL_PROFILE;
-			for (const exponent of [0.5, 1, 2.2, 4, 8]) {
+			for (const params of [
+				{ nearFieldExponent: 1.2, farCompressionStart: 0.6, farCompressionExponent: 2 },
+				{ nearFieldExponent: 1.75, farCompressionStart: 0.68, farCompressionExponent: 2.9 },
+				{ nearFieldExponent: 2.4, farCompressionStart: 0.75, farCompressionExponent: 4 },
+			]) {
 				const profile: HighwayStageVisualProfile = {
 					...base,
-					projection: { depthExponent: exponent, nearFieldBias: 0 },
+					projection: params,
 				};
 				let previous = -Infinity;
 				let monotonic = true;
-				for (let i = 0; i <= 50; i += 1) {
-					const depth = stageDepthForProgress(i / 50, profile);
+				for (let i = 0; i <= 100; i += 1) {
+					const depth = stageDepthForProgress(i / 100, profile);
 					if (depth < previous - 1e-12) monotonic = false;
 					previous = depth;
 				}

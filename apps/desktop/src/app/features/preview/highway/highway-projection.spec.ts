@@ -188,10 +188,11 @@ describe("highway-projection", () => {
 			// Each side retains substantial dark negative space.
 			expect(roadLeft).toBeGreaterThan(1600 * 0.2);
 			expect(1600 - roadRight).toBeGreaterThan(1600 * 0.2);
-			// Horizon sits in the upper-middle scene; hit line leaves a spacious near field.
-			expect(geometry.horizonY).toBeGreaterThan(720 * 0.28);
-			expect(geometry.horizonY).toBeLessThan(720 * 0.42);
-			expect(geometry.hitLineY).toBeGreaterThan(720 * 0.75);
+			// Calibrated pass: horizon is pushed higher to lengthen the road while the
+			// hit line sits lower to deepen the near field.
+			expect(geometry.horizonY).toBeGreaterThan(720 * 0.24);
+			expect(geometry.horizonY).toBeLessThan(720 * 0.32);
+			expect(geometry.hitLineY).toBeGreaterThan(720 * 0.84);
 		});
 
 		it("caps the road viewport with the profile maximum on very wide canvases", () => {

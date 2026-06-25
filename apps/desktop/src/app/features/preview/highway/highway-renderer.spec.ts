@@ -23,6 +23,7 @@ function createContext() {
 		restore: vi.fn(),
 		font: "",
 		textBaseline: "alphabetic",
+		textAlign: "left",
 		fillStyle: "",
 		strokeStyle: "",
 		globalAlpha: 1,
@@ -341,7 +342,7 @@ describe("HighwayRenderer", () => {
 		expect(strokeSpy).toHaveBeenCalled();
 	});
 
-	it("defaults the HUD from the stage profile (off) but draws when enabled", () => {
+	it("defaults the HUD from the stage profile (off) but draws compact corner metrics when enabled", () => {
 		const profileOff = HIGHWAY_STAGE_VISUAL_PROFILE;
 		expect(profileOff.hud.enabledByDefault).toBe(false);
 
@@ -352,6 +353,22 @@ describe("HighwayRenderer", () => {
 
 		const ctxOn = createContext();
 		renderer.draw(ctxOn, frame({ hudEnabled: true }), 1);
-		expect(ctxOn.fillText).toHaveBeenCalled();
+		expect(ctxOn.fillText).toHaveBeenCalledTimes(4);
+		// FPS is top-left.
+		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[0]).toEqual([
+			"FPS 60",
+			HIGHWAY_STAGE_VISUAL_PROFILE.hud.edgeInset,
+			HIGHWAY_STAGE_VISUAL_PROFILE.hud.edgeInset,
+		]);
+		// Tick/Beat/Measure are top-right and right-aligned.
+		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[1]?.[0]).toBe(
+			"Tick 192",
+		);
+		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[2]?.[0]).toBe(
+			"Beat 2",
+		);
+		expect((ctxOn.fillText as ReturnType<typeof vi.fn>).mock.calls[3]?.[0]).toBe(
+			"Measure 1",
+		);
 	});
 });

@@ -27,7 +27,7 @@ export type HighwayStageVisualProfile = {
 		minRoadViewportWidth: number;
 		/** Minimum dark scene padding retained on each side of the road. */
 		sideScenePadding: number;
-		/** Horizon Y as a fraction of scene height (lower = deeper stage). */
+		/** Horizon Y as a fraction of scene height (smaller = farther / deeper road). */
 		horizonRatio: number;
 		/** Hit-line / target-row Y as a fraction of scene height. */
 		hitLineRatio: number;
@@ -47,19 +47,27 @@ export type HighwayStageVisualProfile = {
 	};
 	/** Named monotonic depth curve parameters. */
 	projection: {
-		/** Base ease-out exponent for the depth curve (>1 compresses distance). */
-		depthExponent: number;
-		/** Extra curvature added to the exponent to widen the near field. */
-		nearFieldBias: number;
+		/** Exponent applied through the near and mid field to improve note spacing. */
+		nearFieldExponent: number;
+		/** Start of the stronger far-horizon compression blend, normalized 0..1. */
+		farCompressionStart: number;
+		/** Exponent for the far-horizon ease-out tail. */
+		farCompressionExponent: number;
 	};
 	/** Compact target pads. */
 	targets: {
 		/** Target pad height at the near edge (CSS px). */
 		heightNear: number;
-		/** Interior fill alpha (dark/low-alpha interior). */
+		/** Interior fill alpha (darker/more solid gameplay base). */
 		interiorAlpha: number;
 		/** Lane-colored outline thickness. */
 		outlineWidth: number;
+		/** Inset ratio within each lane at the hit line. */
+		laneInsetRatio: number;
+		/** Bottom lip depth as a fraction of target height. */
+		bottomLipRatio: number;
+		/** Top taper inset (CSS px). */
+		topTaperInset: number;
 	};
 	/** Note-head, kick-rail and sustain dimensions. */
 	notes: {
@@ -109,64 +117,69 @@ export type HighwayStageVisualProfile = {
 /**
  * The single production stage visual profile.
  *
- * Tuned so that on a wide canvas the bottom road lands in the 34–48% band of
- * canvas width, the top road stays in the 8–16% band, the horizon sits in the
- * upper-middle scene, and the hit line leaves a spacious near field. Narrow
- * canvases retain safe side padding via minRoadViewportWidth + sideScenePadding.
+ * This calibration pass intentionally pushes the composition closer to a long,
+ * narrow, centered gameplay road with more black negative space, smaller note
+ * pieces, and a more conservative HUD. The road is materially narrower on wide
+ * canvases, the horizon sits higher to lengthen the stage, and the near field
+ * is deeper thanks to a lower hit line.
  */
 export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
 	scene: {
-		maxRoadViewportWidth: 760,
-		roadViewportWidthRatio: 0.46,
-		minRoadViewportWidth: 300,
-		sideScenePadding: 18,
-		horizonRatio: 0.34,
-		hitLineRatio: 0.82,
+		maxRoadViewportWidth: 640,
+		roadViewportWidthRatio: 0.42,
+		minRoadViewportWidth: 270,
+		sideScenePadding: 24,
+		horizonRatio: 0.27,
+		hitLineRatio: 0.86,
 	},
 	road: {
-		topWidthRatio: 0.3,
-		bottomWidthRatio: 0.92,
-		borderWidthNear: 2.5,
+		topWidthRatio: 0.22,
+		bottomWidthRatio: 0.82,
+		borderWidthNear: 2.25,
 		borderWidthFar: 1,
-		laneDividerAlpha: 0.12,
+		laneDividerAlpha: 0.1,
 	},
 	projection: {
-		depthExponent: 2.2,
-		nearFieldBias: 0.2,
+		nearFieldExponent: 1.75,
+		farCompressionStart: 0.68,
+		farCompressionExponent: 2.9,
 	},
 	targets: {
-		heightNear: 16,
-		interiorAlpha: 0.18,
-		outlineWidth: 2,
+		heightNear: 12,
+		interiorAlpha: 0.48,
+		outlineWidth: 1.75,
+		laneInsetRatio: 0.13,
+		bottomLipRatio: 0.14,
+		topTaperInset: 4,
 	},
 	notes: {
-		squareNearSize: 17,
-		squareFarSize: 6,
-		circleNearRadius: 15,
-		circleFarRadius: 5,
-		kickRailNearThickness: 9,
-		kickRailFarThickness: 3,
-		sustainAlpha: 0.32,
+		squareNearSize: 13.5,
+		squareFarSize: 4.5,
+		circleNearRadius: 11.5,
+		circleFarRadius: 4,
+		kickRailNearThickness: 6.5,
+		kickRailFarThickness: 2,
+		sustainAlpha: 0.26,
 	},
 	hud: {
 		enabledByDefault: false,
-		fontSize: 11,
-		alpha: 0.62,
-		edgeInset: 12,
+		fontSize: 9,
+		alpha: 0.38,
+		edgeInset: 8,
 	},
 	palette: {
-		sceneBackground: "#05070f",
-		sceneVignetteInner: "rgba(10, 14, 26, 0)",
-		sceneVignetteOuter: "rgba(0, 0, 0, 0.55)",
-		roadFillNear: "#0c1322",
-		roadFillFar: "#070b16",
-		roadBorderNear: "rgba(150, 170, 205, 0.55)",
-		roadBorderFar: "rgba(110, 130, 165, 0.28)",
-		beatLine: "rgba(150, 160, 185, 0.14)",
-		measureLine: "rgba(175, 185, 210, 0.26)",
-		hitLine: "rgba(200, 210, 235, 0.5)",
-		targetInterior: "#080d18",
-		hudText: "#aebbdc",
+		sceneBackground: "#03050b",
+		sceneVignetteInner: "rgba(8, 10, 18, 0)",
+		sceneVignetteOuter: "rgba(0, 0, 0, 0.64)",
+		roadFillNear: "#0a101d",
+		roadFillFar: "#050914",
+		roadBorderNear: "rgba(140, 156, 188, 0.46)",
+		roadBorderFar: "rgba(98, 112, 144, 0.22)",
+		beatLine: "rgba(150, 160, 185, 0.1)",
+		measureLine: "rgba(175, 185, 210, 0.18)",
+		hitLine: "rgba(188, 198, 222, 0.24)",
+		targetInterior: "#03060c",
+		hudText: "#8f9dbf",
 	},
 };
 
@@ -177,17 +190,23 @@ export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
  * horizon) to a depth value in `[0, 1]` used to interpolate road width and Y.
  *
  * Contract:
- * - receives finite values; non-finite input is clamped to 0;
+ * - receives finite values; non-finite input yields 0;
  * - returns finite values clamped to `[0, 1]`;
- * - monotonic non-decreasing for the production profile;
- * - compresses distant notes smoothly toward the horizon (depth → 1) while
- *   leaving readable spacing between notes near the target row.
+ * - monotonic non-decreasing for valid profile values;
+ * - keeps the near and mid field lower/longer for gameplay readability;
+ * - compresses distant notes strongly only near the far horizon.
  *
- * Implementation: a generalized ease-out `1 - (1 - p)^k` where `k` is the
- * profile exponent plus the near-field bias. For any `k > 0` this is strictly
- * monotonic on `[0, 1]`, with `f(0) = 0` and `f(1) = 1`. Larger `k` increases
- * curvature, pushing more of the visible window into the near field and
- * compressing distant notes toward the horizon.
+ * Implementation: a two-phase monotonic blend.
+ *
+ * 1. `near = p^nearFieldExponent` keeps the near and mid sections stretched
+ *    so note clusters are less vertically compressed.
+ * 2. `tail = 1 - (1 - p)^farCompressionExponent` is a stronger ease-out tail
+ *    that approaches the horizon aggressively.
+ * 3. `smoothstep(farCompressionStart, 1, p)` blends from the near-field curve
+ *    into the far-horizon tail late in the visible window.
+ *
+ * This preserves ordering, remains finite, and avoids sudden jumps while
+ * moving the visual spacing closer to a longer, deeper gameplay road.
  */
 export function stageDepthForProgress(
 	progress: number,
@@ -195,13 +214,24 @@ export function stageDepthForProgress(
 ): number {
 	if (!Number.isFinite(progress)) return 0;
 	const p = clamp(progress, 0, 1);
-	const exponent = Math.max(
-		0.1,
-		profile.projection.depthExponent + profile.projection.nearFieldBias,
-	);
-	const shaped = 1 - Math.pow(1 - p, exponent);
-	const depth = clamp(shaped, 0, 1);
+	const nearExponent = Math.max(0.1, profile.projection.nearFieldExponent);
+	const farStart = clamp(profile.projection.farCompressionStart, 0, 0.9999);
+	const farExponent = Math.max(0.1, profile.projection.farCompressionExponent);
+	const near = Math.pow(p, nearExponent);
+	const tail = 1 - Math.pow(1 - p, farExponent);
+	const blend = smoothstep(farStart, 1, p);
+	const depth = clamp(lerp(near, tail, blend), 0, 1);
 	return Number.isFinite(depth) ? depth : 0;
+}
+
+function smoothstep(edge0: number, edge1: number, value: number): number {
+	if (edge0 === edge1) return value >= edge1 ? 1 : 0;
+	const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+	return t * t * (3 - 2 * t);
+}
+
+function lerp(start: number, end: number, progress: number): number {
+	return start + (end - start) * progress;
 }
 
 function clamp(value: number, min: number, max: number): number {

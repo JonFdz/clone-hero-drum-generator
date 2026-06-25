@@ -124,7 +124,7 @@ export class HighwayRenderer {
 		const { laneDividerAlpha } = this.profile.road;
 		ctx.save();
 		ctx.strokeStyle = `rgba(170, 185, 215, ${laneDividerAlpha})`;
-		ctx.lineWidth = 1;
+		ctx.lineWidth = 0.9;
 		for (const divider of frame.laneDividers) {
 			ctx.beginPath();
 			ctx.moveTo(divider.startX, frame.geometry.horizonY);
@@ -142,7 +142,7 @@ export class HighwayRenderer {
 		for (const line of lines) {
 			ctx.strokeStyle =
 				line.kind === "measure" ? palette.measureLine : palette.beatLine;
-			ctx.lineWidth = line.kind === "measure" ? 1.5 : 1;
+			ctx.lineWidth = line.kind === "measure" ? 1.2 : 0.8;
 			ctx.beginPath();
 			ctx.moveTo(line.startX, line.y);
 			ctx.lineTo(line.endX, line.y);
@@ -183,18 +183,18 @@ export class HighwayRenderer {
 			ctx.fillStyle = head.fill;
 			ctx.fillRect(x, top, width, thickness);
 			// Subtle top highlight + lower shadow (original depth cue).
-			ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
-			ctx.fillRect(x, top, width, Math.max(1, thickness * 0.28));
-			ctx.fillStyle = "rgba(0, 0, 0, 0.28)";
+			ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+			ctx.fillRect(x, top, width, Math.max(1, thickness * 0.22));
+			ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
 			ctx.fillRect(
 				x,
-				top + thickness - Math.max(1, thickness * 0.28),
+				top + thickness - Math.max(1, thickness * 0.22),
 				width,
-				Math.max(1, thickness * 0.28),
+				Math.max(1, thickness * 0.22),
 			);
 			// Thin lane-colored edge to keep orange identity readable.
 			ctx.strokeStyle = head.stroke;
-			ctx.lineWidth = 1;
+			ctx.lineWidth = 0.8;
 			ctx.strokeRect(x, top, width, thickness);
 		}
 	}
@@ -235,14 +235,14 @@ export class HighwayRenderer {
 		ctx.fillStyle = head.fill;
 		ctx.fillRect(x, y, size, size);
 		// Original depth cue: top highlight + darker lower face.
-		const cue = Math.max(1, half * 0.34);
-		ctx.fillStyle = "rgba(255, 255, 255, 0.24)";
+		const cue = Math.max(1, half * 0.28);
+		ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
 		ctx.fillRect(x, y, size, cue);
-		ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+		ctx.fillStyle = "rgba(0, 0, 0, 0.24)";
 		ctx.fillRect(x, y + size - cue, size, cue);
 		// Consistent outline preserving square silhouette.
 		ctx.strokeStyle = head.stroke;
-		ctx.lineWidth = 1.5;
+		ctx.lineWidth = 1.2;
 		ctx.strokeRect(x, y, size, size);
 	}
 
@@ -252,8 +252,8 @@ export class HighwayRenderer {
 	): void {
 		// Optional subtle halo constrained near the disc.
 		ctx.beginPath();
-		ctx.arc(head.centerX, head.centerY, head.radius + 1.5, 0, Math.PI * 2);
-		ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+		ctx.arc(head.centerX, head.centerY, head.radius + 1, 0, Math.PI * 2);
+		ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
 		ctx.fill();
 		// Filled disc with lane color.
 		ctx.beginPath();
@@ -269,12 +269,12 @@ export class HighwayRenderer {
 			0,
 			Math.PI * 2,
 		);
-		ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+		ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
 		ctx.fill();
 		ctx.beginPath();
 		ctx.arc(head.centerX, head.centerY, head.radius, 0, Math.PI * 2);
 		ctx.strokeStyle = head.stroke;
-		ctx.lineWidth = 1.5;
+		ctx.lineWidth = 1.2;
 		ctx.stroke();
 	}
 
@@ -287,7 +287,7 @@ export class HighwayRenderer {
 	): void {
 		ctx.save();
 		ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
-		ctx.lineWidth = 2;
+		ctx.lineWidth = 1.5;
 		if (head.visualKind === "square-head") {
 			const half = head.radius + 3;
 			ctx.beginPath();
@@ -313,7 +313,7 @@ export class HighwayRenderer {
 		const { palette, targets } = this.profile;
 		// Quiet neutral hit line behind the target row.
 		ctx.strokeStyle = palette.hitLine;
-		ctx.lineWidth = 2;
+		ctx.lineWidth = 1.4;
 		ctx.beginPath();
 		ctx.moveTo(
 			geometry.roadCenterX - geometry.bottomRoadWidth / 2,
@@ -338,16 +338,20 @@ export class HighwayRenderer {
 	): void {
 		// Compact trapezoid pad: dark/low-alpha interior + lane-color outline.
 		ctx.save();
+		const taper = this.profile.targets.topTaperInset;
 		ctx.beginPath();
 		ctx.moveTo(target.leftX, target.bottomY);
 		ctx.lineTo(target.rightX, target.bottomY);
-		ctx.lineTo(target.rightX - 5, target.topY);
-		ctx.lineTo(target.leftX + 5, target.topY);
+		ctx.lineTo(target.rightX - taper, target.topY);
+		ctx.lineTo(target.leftX + taper, target.topY);
 		ctx.closePath();
 		ctx.globalAlpha = interiorAlpha;
 		ctx.fillStyle = this.profile.palette.targetInterior;
 		ctx.fill();
 		ctx.globalAlpha = 1;
+		ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+		ctx.lineWidth = outlineWidth + 1;
+		ctx.stroke();
 		ctx.strokeStyle = target.stroke;
 		ctx.lineWidth = outlineWidth;
 		ctx.stroke();
@@ -360,23 +364,23 @@ export class HighwayRenderer {
 	): void {
 		const { hud, palette } = this.profile;
 		const { hud: state } = frame;
-		const lines = [
-			`Time ${state.currentTimeSeconds.toFixed(2)}s`,
-			`Tick ${state.tick ?? "—"}`,
-			`Beat ${state.beat ?? "—"}`,
-			`Measure ${state.measure ?? "—"}`,
-			`FPS ${state.fps === null ? "—" : state.fps.toFixed(0)}`,
-		];
-		// Compact, low-alpha corner text — no large opaque panel.
 		ctx.save();
 		ctx.globalAlpha = hud.alpha;
 		ctx.fillStyle = palette.hudText;
 		ctx.font = `${hud.fontSize}px sans-serif`;
 		ctx.textBaseline = "top";
-		const x = hud.edgeInset;
-		const y = hud.edgeInset;
+		ctx.textAlign = "left";
+		ctx.fillText(`FPS ${state.fps === null ? "—" : state.fps.toFixed(0)}`, hud.edgeInset, hud.edgeInset);
+		ctx.textAlign = "right";
+		const rightX = frame.cssWidth - hud.edgeInset;
+		const topY = hud.edgeInset;
+		const lines = [
+			`Tick ${state.tick ?? "—"}`,
+			`Beat ${state.beat ?? "—"}`,
+			`Measure ${state.measure ?? "—"}`,
+		];
 		lines.forEach((line, index) => {
-			ctx.fillText(line, x, y + index * (hud.fontSize + 4));
+			ctx.fillText(line, rightX, topY + index * (hud.fontSize + 2));
 		});
 		ctx.restore();
 	}
