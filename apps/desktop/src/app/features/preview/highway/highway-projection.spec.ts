@@ -384,8 +384,16 @@ describe("highway-projection", () => {
 			const y100 = expectSquareHead(byId.get("n100"));
 			const y200 = expectSquareHead(byId.get("n200"));
 			const kick = byId.get("kick");
-			const nearGap005_010 = normalizedGap(y005.centerY, y010.centerY, geometry);
-			const nearGap010_020 = normalizedGap(y010.centerY, y020.centerY, geometry);
+			const nearGap005_010 = normalizedGap(
+				y005.centerY,
+				y010.centerY,
+				geometry,
+			);
+			const nearGap010_020 = normalizedGap(
+				y010.centerY,
+				y020.centerY,
+				geometry,
+			);
 			const midGap050_100 = normalizedGap(y050.centerY, y100.centerY, geometry);
 			const farGap100_200 = normalizedGap(y100.centerY, y200.centerY, geometry);
 			// Near to far = lower to higher on screen (larger y to smaller y).
@@ -402,7 +410,9 @@ describe("highway-projection", () => {
 			expect(farGap100_200 / 1).toBeLessThan(midGap050_100 / 0.5);
 			// Camera invariants remain intact.
 			expect(geometry.bottomRoadWidth / geometry.cssWidth).toBeLessThan(0.24);
-			expect(geometry.hitLineY / geometry.cssHeight).toBeGreaterThanOrEqual(0.72);
+			expect(geometry.hitLineY / geometry.cssHeight).toBeGreaterThanOrEqual(
+				0.72,
+			);
 			expect(buildHighwayTargets(geometry)).toHaveLength(4);
 			expect(buildHighwayLaneDividers(geometry)).toHaveLength(3);
 			expect(kick?.visualKind).toBe("kick-rail");
@@ -475,7 +485,11 @@ describe("highway-projection", () => {
 			const geometry = buildHighwayGeometry(900, 480);
 			const projected = projectHighwayNotes({
 				notes: [
-					pitchedNote({ id: "square", chartSeconds: 0.05, endChartSeconds: 0.05 }),
+					pitchedNote({
+						id: "square",
+						chartSeconds: 0.05,
+						endChartSeconds: 0.05,
+					}),
 					pitchedNote({
 						id: "cymbal",
 						chartLane: 3,
@@ -498,16 +512,20 @@ describe("highway-projection", () => {
 			const targets = buildHighwayTargets(geometry);
 			const squareBounds = roadBoundsAtDepth(geometry, square.depth);
 			expect(square.radius).toBeLessThanOrEqual(
-				squareBounds.laneWidth * HIGHWAY_STAGE_VISUAL_PROFILE.notes.squareMaxLaneWidthRatio,
+				squareBounds.laneWidth *
+					HIGHWAY_STAGE_VISUAL_PROFILE.notes.squareMaxLaneWidthRatio,
 			);
 			if (cymbal?.visualKind === "cymbal-head") {
 				const cymbalBounds = roadBoundsAtDepth(geometry, cymbal.depth);
 				expect(cymbal.radius).toBeLessThanOrEqual(
-					cymbalBounds.laneWidth * HIGHWAY_STAGE_VISUAL_PROFILE.notes.circleMaxLaneWidthRatio,
+					cymbalBounds.laneWidth *
+						HIGHWAY_STAGE_VISUAL_PROFILE.notes.circleMaxLaneWidthRatio,
 				);
 			}
 			for (const target of targets) {
-				expect(target.rightX - target.leftX).toBeLessThan(geometry.bottomRoadWidth / 4);
+				expect(target.rightX - target.leftX).toBeLessThan(
+					geometry.bottomRoadWidth / 4,
+				);
 			}
 		});
 	});

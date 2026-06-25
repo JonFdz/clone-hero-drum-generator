@@ -325,11 +325,7 @@ function projectHead(
 					profile.notes.circleFarRadius,
 					depth,
 				)
-			: lerp(
-					profile.notes.squareNearSize,
-					profile.notes.squareFarSize,
-					depth,
-				);
+			: lerp(profile.notes.squareNearSize, profile.notes.squareFarSize, depth);
 	const maxLaneRelativeRadius =
 		note.visualKind === "cymbal-head"
 			? bounds.laneWidth * profile.notes.circleMaxLaneWidthRatio
