@@ -69,22 +69,22 @@ type HighwayProjectedPitchedHeadBase = {
 
 export type HighwayProjectedHead =
 	| {
-		id: string;
-		visualKind: "kick-rail";
-		depth: number;
-		y: number;
-		leftX: number;
-		rightX: number;
-		thickness: number;
-		fill: string;
-		stroke: string;
-	}
+			id: string;
+			visualKind: "kick-rail";
+			depth: number;
+			y: number;
+			leftX: number;
+			rightX: number;
+			thickness: number;
+			fill: string;
+			stroke: string;
+	  }
 	| (HighwayProjectedPitchedHeadBase & {
-		visualKind: "square-head";
-	})
+			visualKind: "square-head";
+	  })
 	| (HighwayProjectedPitchedHeadBase & {
-		visualKind: "cymbal-head";
-	});
+			visualKind: "cymbal-head";
+	  });
 
 export type HighwayProjectedSustain = {
 	id: string;

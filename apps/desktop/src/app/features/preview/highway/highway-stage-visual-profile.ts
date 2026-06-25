@@ -1,0 +1,276 @@
+// Phase 19B.1 — Highway Stage Visual Profile
+//
+// Single feature-owned source of truth for the stage-style drum highway
+// composition. The projection and renderer consume this profile instead of
+// duplicating visual-geometry literals. Chart semantics (lane data, kick
+// identity, note meaning) live in highway-model/highway-note-semantics and are
+// intentionally NOT owned by this profile.
+//
+// One production profile is exported. There is no user-selectable theme and no
+// persisted visual preference in this phase.
+
+/**
+ * Shape of the stage visual profile.
+ *
+ * The exact field set may evolve; the contract is that every profile-driven
+ * visual value used by geometry, projection and rendering is discoverable here
+ * rather than scattered as renderer/projection-local literals.
+ */
+export type HighwayStageVisualProfile = {
+	/** Scene framing: the playable road lives inside a bounded centered viewport. */
+	scene: {
+		/** Hard cap (CSS px) for the road viewport width on wide canvases. */
+		maxRoadViewportWidth: number;
+		/** Fraction of canvas width used for the road viewport before capping. */
+		roadViewportWidthRatio: number;
+		/** Minimum road viewport width (CSS px) before the road collapses. */
+		minRoadViewportWidth: number;
+		/** Minimum dark scene padding retained on each side of the road. */
+		sideScenePadding: number;
+		/** Horizon Y as a fraction of scene height (smaller = farther / deeper road). */
+		horizonRatio: number;
+		/** Hit-line / target-row Y as a fraction of scene height. */
+		hitLineRatio: number;
+	};
+	/** Road trapezoid and grid treatment. */
+	road: {
+		/** Top (far) road width as a fraction of the road viewport width. */
+		topWidthRatio: number;
+		/** Bottom (near) road width as a fraction of the road viewport width. */
+		bottomWidthRatio: number;
+		/** Outer border thickness at the near (hit-line) edge. */
+		borderWidthNear: number;
+		/** Outer border thickness at the far (horizon) edge. */
+		borderWidthFar: number;
+		/** Internal lane divider alpha (quieter than outer borders). */
+		laneDividerAlpha: number;
+		/** Subtle glow alpha for outer borders. */
+		borderGlowAlpha: number;
+	};
+	/** Named monotonic time-to-depth parameters. */
+	projection: {
+		/** Perspective compression factor for the shared gameplay projection. */
+		perspectiveCompression: number;
+	};
+	/** Compact target pads. */
+	targets: {
+		/** Maximum target pad height at the near edge (CSS px). */
+		heightNear: number;
+		/** Minimum target pad height on narrow local lanes (CSS px). */
+		minHeight: number;
+		/** Target height as a fraction of the local lane width. */
+		heightLaneWidthRatio: number;
+		/** Interior fill alpha (darker/more solid gameplay base). */
+		interiorAlpha: number;
+		/** Lane-colored outline thickness. */
+		outlineWidth: number;
+		/** Inset ratio within each lane at the hit line. */
+		laneInsetRatio: number;
+		/** Bottom lip depth as a fraction of target height. */
+		bottomLipRatio: number;
+		/** Top taper inset (CSS px). */
+		topTaperInset: number;
+		/** Shared platform height behind the targets (CSS px). */
+		platformHeight: number;
+		/** Shared platform bottom depth beyond the hit line (CSS px). */
+		platformDepth: number;
+		/** Alpha for the target-zone platform fill. */
+		platformAlpha: number;
+		/** Alpha for the target-zone platform top edge. */
+		platformEdgeAlpha: number;
+		/** Alpha for the neutral target outer rim. */
+		neutralOutlineAlpha: number;
+		/** Alpha for subtle lane-colored target glow. */
+		laneGlowAlpha: number;
+	};
+	/** Note-head, kick-rail and sustain dimensions. */
+	notes: {
+		/** Square head half-size at the near edge (CSS px). */
+		squareNearSize: number;
+		/** Square head half-size at the far edge (CSS px). */
+		squareFarSize: number;
+		/** Maximum square-head half-size as a fraction of the local lane width. */
+		squareMaxLaneWidthRatio: number;
+		/** Alpha for the square-head top highlight. */
+		squareHighlightAlpha: number;
+		/** Alpha for the square-head lower shadow. */
+		squareShadowAlpha: number;
+		/** Inner-face inset ratio for square heads. */
+		squareFaceInsetRatio: number;
+		/** Cymbal disc radius at the near edge (CSS px). */
+		circleNearRadius: number;
+		/** Cymbal disc radius at the far edge (CSS px). */
+		circleFarRadius: number;
+		/** Maximum cymbal radius as a fraction of the local lane width. */
+		circleMaxLaneWidthRatio: number;
+		/** Alpha for the cymbal halo. */
+		circleHaloAlpha: number;
+		/** Alpha for the cymbal highlight. */
+		circleHighlightAlpha: number;
+		/** Alpha for the cymbal inner-edge shading. */
+		circleInnerShadeAlpha: number;
+		/** Kick rail thickness at the near edge (CSS px). */
+		kickRailNearThickness: number;
+		/** Kick rail thickness at the far edge (CSS px). */
+		kickRailFarThickness: number;
+		/** Alpha for the kick rail top highlight. */
+		kickHighlightAlpha: number;
+		/** Alpha for the kick rail lower shadow. */
+		kickShadowAlpha: number;
+		/** Outline width for the kick rail. */
+		kickOutlineWidth: number;
+		/** Alpha applied to sustain bands (quieter than their terminal head/rail). */
+		sustainAlpha: number;
+	};
+	/** Compact technical HUD. */
+	hud: {
+		/** Default visibility for the stage profile (off by default). */
+		enabledByDefault: boolean;
+		/** HUD font size (CSS px). */
+		fontSize: number;
+		/** HUD text alpha. */
+		alpha: number;
+		/** Inset from the chosen corner (CSS px). */
+		edgeInset: number;
+	};
+	/** Original procedural Canvas palette (no external assets). */
+	palette: {
+		sceneBackground: string;
+		sceneVignetteInner: string;
+		sceneVignetteOuter: string;
+		roadFillNear: string;
+		roadFillFar: string;
+		roadBorderNear: string;
+		roadBorderFar: string;
+		beatLine: string;
+		measureLine: string;
+		hitLine: string;
+		targetInterior: string;
+		hudText: string;
+	};
+};
+
+/**
+ * The single production stage visual profile.
+ *
+ * This calibration pass intentionally separates horizontal framing from the
+ * usable gameplay field. The road stays centered and horizontally restrained
+ * with lateral black space, but it now occupies most of the useful vertical
+ * playfield so Fast notes have room to separate before reaching the targets.
+ */
+export const HIGHWAY_STAGE_VISUAL_PROFILE: HighwayStageVisualProfile = {
+	scene: {
+		maxRoadViewportWidth: 820,
+		roadViewportWidthRatio: 0.5,
+		minRoadViewportWidth: 320,
+		sideScenePadding: 24,
+		horizonRatio: 0.2,
+		hitLineRatio: 0.9,
+	},
+	road: {
+		topWidthRatio: 0.17,
+		bottomWidthRatio: 0.7,
+		borderWidthNear: 2.6,
+		borderWidthFar: 1.15,
+		laneDividerAlpha: 0.085,
+		borderGlowAlpha: 0.14,
+	},
+	projection: {
+		perspectiveCompression: 0.4,
+	},
+	targets: {
+		heightNear: 11,
+		minHeight: 7,
+		heightLaneWidthRatio: 0.24,
+		interiorAlpha: 0.64,
+		outlineWidth: 1.9,
+		laneInsetRatio: 0.16,
+		bottomLipRatio: 0.12,
+		topTaperInset: 4,
+		platformHeight: 16,
+		platformDepth: 8,
+		platformAlpha: 0.78,
+		platformEdgeAlpha: 0.2,
+		neutralOutlineAlpha: 0.16,
+		laneGlowAlpha: 0.18,
+	},
+	notes: {
+		squareNearSize: 11,
+		squareFarSize: 4,
+		squareMaxLaneWidthRatio: 0.23,
+		squareHighlightAlpha: 0.24,
+		squareShadowAlpha: 0.3,
+		squareFaceInsetRatio: 0.12,
+		circleNearRadius: 9.5,
+		circleFarRadius: 3.75,
+		circleMaxLaneWidthRatio: 0.21,
+		circleHaloAlpha: 0.08,
+		circleHighlightAlpha: 0.24,
+		circleInnerShadeAlpha: 0.14,
+		kickRailNearThickness: 6,
+		kickRailFarThickness: 2,
+		kickHighlightAlpha: 0.18,
+		kickShadowAlpha: 0.28,
+		kickOutlineWidth: 0.9,
+		sustainAlpha: 0.26,
+	},
+	hud: {
+		enabledByDefault: false,
+		fontSize: 8,
+		alpha: 0.32,
+		edgeInset: 8,
+	},
+	palette: {
+		sceneBackground: "#03050b",
+		sceneVignetteInner: "rgba(8, 10, 18, 0)",
+		sceneVignetteOuter: "rgba(0, 0, 0, 0.64)",
+		roadFillNear: "#0a101d",
+		roadFillFar: "#050914",
+		roadBorderNear: "rgba(140, 156, 188, 0.46)",
+		roadBorderFar: "rgba(98, 112, 144, 0.22)",
+		beatLine: "rgba(150, 160, 185, 0.1)",
+		measureLine: "rgba(175, 185, 210, 0.18)",
+		hitLine: "rgba(188, 198, 222, 0.24)",
+		targetInterior: "#03060c",
+		hudText: "#8f9dbf",
+	},
+};
+
+/**
+ * Named, profile-driven monotonic depth curve.
+ *
+ * Maps a normalized look-ahead progress (`0` at the hit line, `1` at the
+ * horizon) to a depth value in `[0, 1]` used to interpolate road width and Y.
+ *
+ * Contract:
+ * - receives finite values; non-finite input yields 0;
+ * - returns finite values clamped to `[0, 1]`;
+ * - monotonic non-decreasing for valid profile values;
+ * - strongly expands the lower field while compressing primarily toward the
+ *   horizon.
+ *
+ * Implementation: calibrated perspective-style mapping.
+ *
+ * `depth = p / (p + perspectiveCompression * (1 - p))`
+ *
+ * This function is the shared gameplay projection for every speed preset.
+ * Fast, Normal, and Slow all use the same road camera and time-to-depth model;
+ * the presets differ only by visible travel duration. That preserves one
+ * stable composition while allowing faster presets to create more spacing by
+ * covering less future chart time.
+ */
+export function stageDepthForProgress(
+	progress: number,
+	profile: HighwayStageVisualProfile,
+): number {
+	if (!Number.isFinite(progress)) return 0;
+	const p = clamp(progress, 0, 1);
+	const compression = Math.max(0.01, profile.projection.perspectiveCompression);
+	const denominator = p + compression * (1 - p);
+	const depth = denominator <= 0 ? 0 : clamp(p / denominator, 0, 1);
+	return Number.isFinite(depth) ? depth : 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
