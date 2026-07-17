@@ -8,8 +8,8 @@ import { join } from "node:path";
 import process from "node:process";
 import {
 	AUDITED_DIR_NAMES,
+	findBrowserHarnessImportViolations,
 	findAllViolations,
-	findProductionEntryViolations,
 	isAuditedFile,
 } from "./check-architecture.lib.mjs";
 
@@ -78,8 +78,18 @@ const violations = findAllViolations(entries, ROOT, {
 	onPushExceptions: ON_PUSH_EXCEPTIONS,
 });
 violations.push(
-	...findProductionEntryViolations(
-		readFileSync(join(process.cwd(), "src", "main.ts"), "utf8"),
+	...findBrowserHarnessImportViolations(
+		[
+			{
+				file: join(process.cwd(), "src", "main.ts"),
+				source: readFileSync(join(process.cwd(), "src", "main.ts"), "utf8"),
+			},
+			...walk(ROOT).map((file) => ({
+				file,
+				source: readFileSync(file, "utf8"),
+			})),
+		],
+		join(process.cwd(), "src"),
 	),
 );
 

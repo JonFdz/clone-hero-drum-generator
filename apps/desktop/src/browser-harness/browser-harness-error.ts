@@ -1,6 +1,6 @@
 export class BrowserHarnessError extends Error {
 	constructor(message: string) {
-		super(`BrowserHarnessError: ${message}`);
+		super(message);
 		this.name = "BrowserHarnessError";
 	}
 }

@@ -15,6 +15,13 @@ export function attachBrowserHarnessChrome(
 	harnessUi: HarnessUi,
 ): void {
 	if (!shouldShowHarnessUi(harnessUi)) return;
+	if (
+		documentRef.querySelector(
+			'aside[aria-label="Browser harness scenario"]',
+		)
+	) {
+		return;
+	}
 	const indicator = documentRef.createElement("aside");
 	indicator.setAttribute("aria-label", "Browser harness scenario");
 	indicator.textContent = harnessIndicatorText(scenarioId);

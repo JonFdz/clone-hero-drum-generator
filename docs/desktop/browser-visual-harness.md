@@ -19,6 +19,15 @@ Build the harness without serving it:
 pnpm --filter @chdg/desktop build:browser
 ```
 
+Production and harness artifacts are deliberately separate:
+
+| Build | Entry point | Output |
+|---|---|---|
+| `pnpm --filter @chdg/desktop build` | `src/main.ts` | `apps/desktop/dist/renderer/browser/` |
+| `pnpm --filter @chdg/desktop build:browser` | `src/browser-harness/main.browser.ts` | `apps/desktop/dist/browser-harness/browser/` |
+
+Running `build:browser` after the production build does not modify the renderer loaded by Electron.
+
 The development server is fixed to `http://127.0.0.1:4200`.
 
 ## Scenarios
@@ -56,7 +65,17 @@ This hides only the fixed harness indicator. Mock bridge behavior and applicatio
 
 The harness installs a complete `NonNullable<Window["chdg"]>` before Angular bootstraps. Angular continues to access it only through `DesktopBridgeService`.
 
-Deterministic safe operations include runtime/status reads, settings reads and in-memory writes, recent-project reads, in-memory mapping-profile operations, scenario-owned inspection/normalization responses, chart-preview reads, and in-memory project autosave. Autosave does not write a file.
+Deterministic safe operations include runtime/status reads, settings reads and in-memory writes, recent-project reads, and in-memory mapping-profile operations.
+
+Scenario-owned interactive operations enforce the following narrow contract:
+
+- Source inspection, fingerprinting, and normalization accept only the scenario's synthetic source path.
+- Source inspection accepts only the scenario track when a track is requested and does not represent `drumsOnly=false`.
+- Normalization accepts exactly the scenario-selected tracks and mapping overrides. Changing either rejects instead of returning unrelated static data.
+- `preview-ready` chart and audio requests must use the scenario output, `notes.chart`, and `song.ogg` paths. Chart data is returned in memory; audio remains explicitly unavailable.
+- Project-backed scenarios support in-memory autosave when project name, project file, source, audio, and output identity still match the active fixture. Metadata, analysis, generation status, offset, and output-state mutations may be saved in memory. Stateless scenarios and identity changes reject.
+
+No supported interaction reads or writes a file. Input combinations outside this contract reject with `BrowserHarnessError` rather than returning misleading fixture data.
 
 Other operations reject with a message such as:
 
@@ -93,9 +112,12 @@ For every relevant URL:
 
 - `apps/desktop/src/main.ts` remains the normal Electron renderer entry.
 - `apps/desktop/electron/preload.cts` remains the production source of `window.chdg`.
-- Only the `browser-harness` Angular configuration uses `main.browser.ts`.
-- The architecture gate rejects imports of `browser-harness/` from production `main.ts`.
+- Only the `browser-harness` Angular configuration uses `main.browser.ts`, and it writes outside `dist/renderer`.
+- Electron continues to load only `dist/renderer/browser/index.html`.
+- The architecture gate resolves module imports and rejects imports into `browser-harness/` from production `src/main.ts` or any file under `src/app/`.
 - Harness chrome is attached by browser startup code and is absent from production `AppComponent` markup.
+
+The repository does not disable Angular caching globally. In the supported macOS agent environment, Angular 19.2.26 aborts with exit code 134 immediately after `Building...` when its local persistent cache opens. The affected Angular package scripts set `CI=1`, which makes Angular's default `local` cache policy skip persistent caching for only those `ng build`/`ng serve` child processes. Electron compilation and other repository commands are unaffected. Build isolation still comes from distinct output paths, not cache behavior.
 
 ## Troubleshooting
 

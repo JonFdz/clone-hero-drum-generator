@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createBrowserBridge } from "./install-browser-bridge";
 import { resolveBrowserScenario } from "./scenario-registry";
 import { DesktopPreviewService } from "../app/services/desktop-preview.service";
+import { HARNESS_PATHS } from "./fixture-builders";
 
 describe("initial browser harness scenarios", () => {
 	it("keeps empty stateless and project-loaded project-backed", () => {
@@ -54,8 +55,14 @@ describe("initial browser harness scenarios", () => {
 
 	it("provides chart preview data while honestly rejecting browser audio", async () => {
 		const bridge = createBrowserBridge(resolveBrowserScenario("preview-ready"));
-		const chart = await bridge.getChartPreviewData({});
-		const audio = await bridge.getAudioPreviewSource({});
+		const chart = await bridge.getChartPreviewData({
+			outputDir: HARNESS_PATHS.OUTPUT,
+			chartPath: HARNESS_PATHS.CHART,
+		});
+		const audio = await bridge.getAudioPreviewSource({
+			outputDir: HARNESS_PATHS.OUTPUT,
+			generatedSongOggPath: HARNESS_PATHS.SONG_OGG,
+		});
 		expect(chart).toMatchObject({ ok: true, data: { resolution: 480 } });
 		expect(chart.ok && chart.data.noteEvents.length).toBeGreaterThan(0);
 		expect(audio).toMatchObject({
