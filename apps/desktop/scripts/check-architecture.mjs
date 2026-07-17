@@ -9,6 +9,7 @@ import process from "node:process";
 import {
 	AUDITED_DIR_NAMES,
 	findAllViolations,
+	findProductionEntryViolations,
 	isAuditedFile,
 } from "./check-architecture.lib.mjs";
 
@@ -76,6 +77,11 @@ const entries = files.map((file) => ({ file, source: readFileSync(file, "utf8") 
 const violations = findAllViolations(entries, ROOT, {
 	onPushExceptions: ON_PUSH_EXCEPTIONS,
 });
+violations.push(
+	...findProductionEntryViolations(
+		readFileSync(join(process.cwd(), "src", "main.ts"), "utf8"),
+	),
+);
 
 if (violations.length > 0) {
 	console.error("check:architecture failed:\n");

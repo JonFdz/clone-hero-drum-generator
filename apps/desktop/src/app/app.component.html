@@ -74,11 +74,7 @@
 			<div class="status-group">
 				<div class="status-pill" [class.unavailable]="!health().ok">
 					<span class="status-dot" aria-hidden="true"></span>
-					<span>{{
-						health().ok
-							? "Backend Connected"
-							: "Backend Unavailable"
-					}}</span>
+					<span>{{ runtimeStatusLabel() }}</span>
 				</div>
 				<div class="version-pill">v{{ appVersion() }}</div>
 			</div>

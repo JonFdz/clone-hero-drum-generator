@@ -7,12 +7,14 @@
   "scripts": {
     "build": "pnpm build:renderer && pnpm build:electron",
     "build:renderer": "ng build --configuration production",
+    "build:browser": "ng build --configuration browser-harness",
     "build:electron": "tsc -p tsconfig.electron.json",
     "typecheck": "ng build --configuration development && tsc -p tsconfig.electron.json --noEmit",
     "lint": "eslint .",
     "check:architecture": "node scripts/check-architecture.mjs",
     "test": "vitest run",
-    "dev": "pnpm build && electron dist/electron/main.js"
+    "dev": "pnpm build && electron dist/electron/main.js",
+    "dev:browser": "ng serve --configuration browser-harness --host 127.0.0.1 --port 4200"
   },
   "dependencies": {
     "@angular/animations": "^19.2.0",

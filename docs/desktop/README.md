@@ -2,6 +2,8 @@
 
 This folder documents the desktop product roadmap and visual direction for CHDG Desktop.
 
+For deterministic browser-based renderer inspection, see [Browser visual harness](browser-visual-harness.md).
+
 CHDG Desktop is intended to become a self-sufficient local desktop application for creating, validating, previewing, and adjusting Clone Hero drum charts from user-provided local files.
 
 ## Product direction

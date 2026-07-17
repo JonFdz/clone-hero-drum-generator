@@ -1,6 +1,11 @@
 {
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
+  "cli": {
+    "cache": {
+      "enabled": false
+    }
+  },
   "newProjectRoot": "projects",
   "projects": {
     "desktop": {
@@ -36,9 +41,26 @@
               "optimization": false,
               "sourceMap": true,
               "extractLicenses": false
+            },
+            "browser-harness": {
+              "browser": "src/browser-harness/main.browser.ts",
+              "tsConfig": "tsconfig.browser-harness.json",
+              "baseHref": "/",
+              "optimization": false,
+              "sourceMap": true,
+              "extractLicenses": false
             }
           },
           "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "browser-harness": {
+              "buildTarget": "desktop:build:browser-harness"
+            }
+          },
+          "defaultConfiguration": "browser-harness"
         }
       }
     }
