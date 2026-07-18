@@ -1,5 +1,16 @@
 # Design Workspace Agent Instructions
 
+> **Supersession note (2026-07-18):** The revised GitHub issue #89 and
+> `openspec/changes/chdg-design-v1/` supersede the baseline-only stopping rule
+> below. After Approval Checkpoint 1, issue #89 continues with exactly two
+> bounded IA alternatives: Workflow-first and Project workspace. Historical
+> baseline instructions remain here for provenance. Production-code and
+> design-only safety boundaries remain unchanged.
+>
+> Approval Checkpoint 2 selected the bounded hybrid responsibility model:
+> Workflow-first owns orientation and progression; compact project context and
+> page-local navigation own revisitation and long-page organization.
+
 These instructions apply to every agent operating on files under `design/`.
 
 ## Language

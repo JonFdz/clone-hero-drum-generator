@@ -8,7 +8,9 @@ Generated files:
 - `design/chdg-ui.pen`
 - `design/current-ui/README.md`
 - `design/decisions/current-ux-audit.md`
+- `design/decisions/information-architecture-v1.md`
 - `design/decisions/decision-log.md`
+- `design/decisions/workspace-preservation-plan.md`
 - `design/exports/README.md`
 - `design/prompts/01-verify-workspace.md`
 - `design/prompts/02-sync-design-tokens.md`

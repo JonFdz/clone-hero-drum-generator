@@ -1,6 +1,15 @@
 # Prompt 07 — Explore Information Architecture
 
-> Deferred: use this prompt only in the follow-up redesign issue, after issue #89 is complete.
+> **Superseded (2026-07-18):** Revised issue #89 and the current
+> `chdg-design-v1` OpenSpec authorize this exploration after Approval
+> Checkpoint 1. Create exactly two complete alternatives—Workflow-first and
+> Project workspace. A hybrid may be recommended after comparison but is not a
+> third alternative. The original three-direction prompt below is retained for
+> historical provenance and must not be followed for the current issue.
+>
+> **Selection:** Approval Checkpoint 2 selected the bounded hybrid
+> responsibility model, with Workflow-first orientation and compact project
+> context/page-local navigation responsibilities.
 
 ```text
 Read design/AGENTS.md, design/DESIGN.md, design/decisions/current-ux-audit.md, and all baseline screenshots.

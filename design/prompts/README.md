@@ -1,5 +1,13 @@
 # Pencil Prompt Sequence
 
+> **Superseded planning note (2026-07-18):** Revised issue #89 and the current
+> OpenSpec authorize Prompt 07 after Approval Checkpoint 1. They require exactly
+> two alternatives, not three. The older wording below is retained as historical
+> context.
+>
+> Approval Checkpoint 2 selected the bounded hybrid responsibility model. Prompt
+> 07 is now historical input, not the active Design V1 direction.
+
 Run the prompts in numeric order.
 
 Prompts 01–06 belong to issue #89.

@@ -1,5 +1,12 @@
 # CHDG Design Workspace
 
+> **Current authority (2026-07-18):** Revised issue #89 and the
+> `chdg-design-v1` OpenSpec supersede older statements in this workspace that
+> stop issue #89 after baseline work or require three IA alternatives. The
+> approved continuation contains exactly two explorations—Workflow-first and
+> Project workspace. Approval Checkpoint 2 selected the bounded hybrid
+> responsibility model for Foundations V1 and the high-fidelity 1440 flow.
+
 This directory is the version-controlled design workspace for the Clone Hero Drum Generator desktop application.
 
 It was introduced by issue **#89 — `design: bootstrap Pencil workspace and audit current desktop UI`**.
@@ -28,6 +35,8 @@ design/
 │   └── README.md
 ├── decisions/
 │   ├── current-ux-audit.md
+│   ├── information-architecture-v1.md
+│   ├── workspace-preservation-plan.md
 │   └── decision-log.md
 ├── exports/
 │   └── README.md
@@ -70,7 +79,7 @@ design/
    design/prompts/01-verify-workspace.md
    ```
 
-7. Do not run prompt 07 during issue #89. It belongs to the follow-up exploration phase.
+7. Prompt 07 may run only after Approval Checkpoint 1 under the supersession note above.
 
 ## Source of truth
 
