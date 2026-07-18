@@ -18,6 +18,7 @@ import {
 	ProjectWorkflowHydrator,
 } from "./features/project-session/public-api";
 import { DesktopGenerateStateService } from "./services/desktop-generate-state.service";
+import { desktopRuntimeStatusLabel } from "./services/desktop-bridge-model";
 
 type NavItem = {
 	label: string;
@@ -56,6 +57,9 @@ export class AppComponent implements OnInit {
 			this.startup.health().appVersion,
 	);
 	readonly health = this.startup.health;
+	readonly runtimeStatusLabel = computed(() =>
+		desktopRuntimeStatusLabel(this.health()),
+	);
 	readonly project = this.session.state;
 
 	async ngOnInit(): Promise<void> {

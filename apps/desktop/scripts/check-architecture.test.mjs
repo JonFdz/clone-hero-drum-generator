@@ -3,10 +3,64 @@ import {
 	PROJECT_SESSION_PUBLIC_KEY,
 	extractImports,
 	findAllViolations,
+	findBrowserHarnessImportViolations,
 	findCrossFeatureViolations,
 	resolveImportKey,
 	featureNameOf,
 } from "./check-architecture.lib.mjs";
+
+describe("browser harness production boundary", () => {
+	const SRC_ROOT = "/fake/src";
+	const sourceEntry = (rel, source) => ({ file: `${SRC_ROOT}/${rel}`, source });
+
+	it("rejects resolved relative imports from production main and nested app files", () => {
+		expect(
+			findBrowserHarnessImportViolations(
+				[
+					sourceEntry(
+						"main.ts",
+						'import { installBrowserBridge } from "./browser-harness/install-browser-bridge";',
+					),
+					sourceEntry(
+						"app/features/home/home.service.ts",
+						'import { fixture } from "../../../browser-harness/fixture-builders";',
+					),
+				],
+				SRC_ROOT,
+			),
+		).toEqual([
+			{
+				file: "main.ts",
+				rule: "browser-harness-production-import",
+				spec: "./browser-harness/install-browser-bridge",
+			},
+			{
+				file: "app/features/home/home.service.ts",
+				rule: "browser-harness-production-import",
+				spec: "../../../browser-harness/fixture-builders",
+			},
+		]);
+	});
+
+	it("ignores comments, ordinary strings, and imports outside the harness tree", () => {
+		expect(
+			findBrowserHarnessImportViolations(
+				[
+					sourceEntry(
+						"app/home.ts",
+						[
+							'// import "../browser-harness/fixture-builders";',
+							'const diagnostic = "browser-harness";',
+							'import { routes } from "./app.routes";',
+							'import { helper } from "browser-harness-helper";',
+						].join("\n"),
+					),
+				],
+				SRC_ROOT,
+			),
+		).toEqual([]);
+	});
+});
 
 // The helpers operate on in-memory entries with absolute paths under a fake
 // app root, so the cross-feature resolution logic can be exercised without

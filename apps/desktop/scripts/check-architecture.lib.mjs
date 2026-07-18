@@ -203,6 +203,33 @@ export function findWindowDialogViolations(entries, appRoot) {
 	return violations;
 }
 
+/**
+ * Keeps browser-only harness modules outside both the production entry point
+ * and every renderer application module. Relative imports are resolved from
+ * the importing file so comments, ordinary strings, and similarly named
+ * packages cannot trigger false positives.
+ */
+export function findBrowserHarnessImportViolations(entries, srcRoot) {
+	const violations = [];
+	for (const entry of entries) {
+		const file = relativeToApp(entry.file, srcRoot);
+		if (file !== "main.ts" && !file?.startsWith("app/")) continue;
+		for (const spec of extractImports(entry.source)) {
+			if (!spec.startsWith(".")) continue;
+			const target = relativeToApp(resolve(dirname(entry.file), spec), srcRoot);
+			if (target !== "browser-harness" && !target?.startsWith("browser-harness/")) {
+				continue;
+			}
+			violations.push({
+				file,
+				rule: "browser-harness-production-import",
+				spec,
+			});
+		}
+	}
+	return violations;
+}
+
 /** Runs all finders and returns a flat list of violations. */
 export function findAllViolations(entries, appRoot, options = {}) {
 	const onPushExceptions = options.onPushExceptions ?? new Set();

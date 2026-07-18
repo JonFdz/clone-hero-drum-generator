@@ -18,16 +18,23 @@ import type {
 } from "@chdg/project/browser";
 import { unavailableDesktopHealth } from "./desktop-bridge-model";
 
+export const RUNTIME_MODE = {
+	DESKTOP: "desktop",
+	BROWSER_HARNESS: "browser-harness",
+} as const;
+
+export type RuntimeMode = (typeof RUNTIME_MODE)[keyof typeof RUNTIME_MODE];
+
 export type DesktopAppInfo = {
 	name: string;
 	version: string;
-	mode: "desktop";
+	mode: RuntimeMode;
 };
 
 export type DesktopHealthStatus = {
 	ok: boolean;
 	appVersion: string;
-	mode: "desktop";
+	mode: RuntimeMode;
 	checks: {
 		bridge: boolean;
 	};
