@@ -3,7 +3,7 @@
 **Status:** SELECTED — bounded hybrid approved at Approval Checkpoint 2  
 **Issue:** #89  
 **Updated:** 2026-07-18  
-**Scope:** Low-fidelity architecture only; not Foundations V1 or final visual design
+**Scope:** Selected architecture record; Foundations and high-fidelity artifacts are documented separately
 
 ## Selected direction
 
@@ -13,8 +13,8 @@ third alternative. It assigns one responsibility to each navigation layer and
 keeps existing routes and capabilities.
 
 The maintainer approved this responsibility model at Checkpoint 2. Foundations
-V1 and the high-fidelity 1440 × 900 core workflow must implement it without
-introducing a second persistent project-section sidebar.
+V1 and the high-fidelity 1440 × 900 core workflow implement it without a second
+persistent project-section sidebar and were approved at Checkpoint 3.
 
 ## Problem statement
 
@@ -259,5 +259,6 @@ structure, or preview audio behavior.
 Approval Checkpoint 2 selected the bounded hybrid on 2026-07-18. Workflow-first
 orientation is the primary visual influence; Project workspace contributes
 stable project context and revisitation responsibilities without its full
-dual-navigation density. Final 1024 × 768 adaptation and implementation handoff
-remain blocked until Approval Checkpoint 3.
+dual-navigation density. Foundations V1, reusable V1 components, and the eight
+1440 × 900 frames now apply this selection and are pending Approval Checkpoint
+3. Final 1024 × 768 adaptation and implementation handoff remain blocked.

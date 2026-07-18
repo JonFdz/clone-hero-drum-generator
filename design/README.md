@@ -13,15 +13,15 @@ It was introduced by issue **#89 — `design: bootstrap Pencil workspace and aud
 
 ## Purpose
 
-The first phase is intentionally conservative:
+The workspace now preserves four clearly separated layers:
 
-1. Establish a valid Pencil workspace inside the repository.
-2. Represent the existing visual tokens and reusable UI foundations.
-3. Recreate the current Angular/Electron application shell.
-4. Capture the current workflow in screenshots.
-5. Audit usability before proposing a redesign.
+1. CURRENT browser evidence, foundations, and shell.
+2. EXPLORATION material for the two approved IA alternatives.
+3. SELECTED Foundations V1 and reusable components approved at Checkpoint 3.
+4. The approved high-fidelity 1440 × 900 core workflow.
 
-This phase must not modify production UI code or application behavior.
+Issue #89 remains design-only and must not modify production UI code or
+application behavior.
 
 ## Directory structure
 
@@ -35,6 +35,9 @@ design/
 │   └── README.md
 ├── decisions/
 │   ├── current-ux-audit.md
+│   ├── foundations-v1.md
+│   ├── component-system-v1.md
+│   ├── design-v1-1440.md
 │   ├── information-architecture-v1.md
 │   ├── workspace-preservation-plan.md
 │   └── decision-log.md
@@ -88,6 +91,22 @@ design/
 - `DESIGN.md` is the human-readable design contract.
 - Screenshots under `current-ui/` are evidence, not editable source files.
 - Files under `exports/` are generated previews and must not be treated as design source.
+
+## Selected V1 sections and frames
+
+- `06 / SELECTED / CHDG Foundations V1`
+- `07 / SELECTED / Reusable Components V1`
+- `V1 / Home / Empty / 1440`
+- `V1 / Project Details / Loaded / 1440`
+- `V1 / Source Review / Ready / 1440`
+- `V1 / Source Review / Attention / 1440`
+- `V1 / Generate / Ready / 1440`
+- `V1 / Generate / Running / 1440`
+- `V1 / Generate / Failed / 1440`
+- `V1 / Preview / Ready / 1440`
+
+These V1 frames and the semantic system were approved at Approval Checkpoint 3.
+The CURRENT sections remain the fidelity reference for existing behavior.
 
 ## Working rules
 
