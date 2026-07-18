@@ -117,7 +117,9 @@ For every relevant URL:
 - The architecture gate resolves module imports and rejects imports into `browser-harness/` from production `src/main.ts` or any file under `src/app/`.
 - Harness chrome is attached by browser startup code and is absent from production `AppComponent` markup.
 
-The repository does not disable Angular caching globally. In the supported macOS agent environment, Angular 19.2.26 aborts with exit code 134 immediately after `Building...` when its local persistent cache opens. The affected Angular package scripts set `CI=1`, which makes Angular's default `local` cache policy skip persistent caching for only those `ng build`/`ng serve` child processes. Electron compilation and other repository commands are unaffected. Build isolation still comes from distinct output paths, not cache behavior.
+The repository does not disable Angular caching globally. In the supported macOS agent environment, Angular 19.2.26 aborts with exit code 134 immediately after `Building...` when its local persistent cache opens. A repository-owned Node wrapper runs the affected Angular commands and sets `CI=1` only in the Angular CLI child-process environment. It preserves existing environment variables, resolves Angular CLI from the repository installation, and does not require a global `ng` installation.
+
+The wrapper invokes the current Node executable with an argument array, inherited standard streams, and `shell: false`. This avoids POSIX-only package-script environment assignment and is designed for Windows, macOS, and Linux without Bash, Zsh, PowerShell, or `cmd.exe` mediation. **Validated on macOS; Windows and Linux execution not performed in this PR.** Electron compilation and other repository commands are unaffected. Build isolation still comes from distinct output paths, not cache behavior.
 
 ## Troubleshooting
 

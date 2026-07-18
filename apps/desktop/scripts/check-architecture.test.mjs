@@ -5,28 +5,9 @@ import {
 	findAllViolations,
 	findBrowserHarnessImportViolations,
 	findCrossFeatureViolations,
-	findProductionEntryViolations,
 	resolveImportKey,
 	featureNameOf,
 } from "./check-architecture.lib.mjs";
-
-describe("production renderer entry isolation", () => {
-	it("rejects browser-harness imports from production main", () => {
-		expect(
-			findProductionEntryViolations(
-				'import { installBrowserBridge } from "./browser-harness/install-browser-bridge";',
-			),
-		).toEqual([{ file: "../main.ts", rule: "browser-harness-production-import" }]);
-	});
-
-	it("allows the normal Angular production bootstrap", () => {
-		expect(
-			findProductionEntryViolations(
-				'import { bootstrapApplication } from "@angular/platform-browser";',
-			),
-		).toEqual([]);
-	});
-});
 
 describe("browser harness production boundary", () => {
 	const SRC_ROOT = "/fake/src";

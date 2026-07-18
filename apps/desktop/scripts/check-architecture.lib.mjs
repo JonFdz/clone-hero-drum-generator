@@ -203,15 +203,6 @@ export function findWindowDialogViolations(entries, appRoot) {
 	return violations;
 }
 
-/** Keeps the production Angular entry point unaware of browser harness code. */
-export function findProductionEntryViolations(source) {
-	return extractImports(source).some((specifier) =>
-		specifier.includes("browser-harness"),
-	)
-		? [{ file: "../main.ts", rule: "browser-harness-production-import" }]
-		: [];
-}
-
 /**
  * Keeps browser-only harness modules outside both the production entry point
  * and every renderer application module. Relative imports are resolved from

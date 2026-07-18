@@ -35,6 +35,7 @@ describe("browser harness build boundary", () => {
 		};
 		const pkg = readJson("package.json") as { scripts: Record<string, string> };
 		const build = angular.projects.desktop.architect.build;
+		const angularWrapper = "node scripts/run-angular-cli.mjs";
 
 		expect(
 			build.configurations["browser-harness"].browser,
@@ -60,15 +61,22 @@ describe("browser harness build boundary", () => {
 		expect(pkg.scripts["dev:browser"]).toContain("--host 127.0.0.1");
 		expect(pkg.scripts["dev:browser"]).toContain("--port 4200");
 		expect(pkg.scripts["build:browser"]).toBe(
-			"CI=1 ng build --configuration browser-harness",
+			`${angularWrapper} build --configuration browser-harness`,
 		);
 		expect(pkg.scripts["build:renderer"]).toBe(
-			"CI=1 ng build --configuration production",
+			`${angularWrapper} build --configuration production`,
 		);
 		expect(pkg.scripts["typecheck"]).toContain(
-			"CI=1 ng build --configuration development",
+			`${angularWrapper} build --configuration development`,
 		);
-		expect(pkg.scripts["dev:browser"]).toMatch(/^CI=1 ng serve /);
+		expect(pkg.scripts["dev:browser"]).toMatch(
+			new RegExp(`^${angularWrapper.replaceAll(".", "\\.")} serve `),
+		);
+		for (const script of Object.values(pkg.scripts)) {
+			expect(script).not.toMatch(
+				/(?:^|&&|\|\||;)\s*[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+/,
+			);
+		}
 	});
 
 	it("keeps the production entry isolated from browser-harness imports", () => {
