@@ -7,6 +7,11 @@
 >
 > Approval Checkpoint 2 selected the bounded hybrid responsibility model. Prompt
 > 07 is now historical input, not the active Design V1 direction.
+>
+> Approval Checkpoint 3 approved Foundations V1, reusable components, and the
+> complete 1440 flow. The final 1024 adaptation and handoff were completed under
+> the revised issue #89 and OpenSpec, not by extending the historical prompt
+> sequence.
 
 Run the prompts in numeric order.
 

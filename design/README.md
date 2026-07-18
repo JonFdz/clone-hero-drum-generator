@@ -5,7 +5,9 @@
 > stop issue #89 after baseline work or require three IA alternatives. The
 > approved continuation contains exactly two explorations—Workflow-first and
 > Project workspace. Approval Checkpoint 2 selected the bounded hybrid
-> responsibility model for Foundations V1 and the high-fidelity 1440 flow.
+> responsibility model. Approval Checkpoint 3 approved Foundations V1, the
+> reusable component system, and the high-fidelity 1440 flow. The final package
+> now includes the complete 1024 desktop adaptation and implementation handoff.
 
 This directory is the version-controlled design workspace for the Clone Hero Drum Generator desktop application.
 
@@ -18,7 +20,8 @@ The workspace now preserves four clearly separated layers:
 1. CURRENT browser evidence, foundations, and shell.
 2. EXPLORATION material for the two approved IA alternatives.
 3. SELECTED Foundations V1 and reusable components approved at Checkpoint 3.
-4. The approved high-fidelity 1440 × 900 core workflow.
+4. The approved high-fidelity 1440 × 900 workflow and final 1024 × 768 desktop
+   adaptations.
 
 Issue #89 remains design-only and must not modify production UI code or
 application behavior.
@@ -37,12 +40,22 @@ design/
 │   ├── current-ux-audit.md
 │   ├── foundations-v1.md
 │   ├── component-system-v1.md
+│   ├── design-v1-1024.md
 │   ├── design-v1-1440.md
+│   ├── design-v1-rationale.md
 │   ├── information-architecture-v1.md
 │   ├── workspace-preservation-plan.md
 │   └── decision-log.md
 ├── exports/
 │   └── README.md
+├── handoff/
+│   ├── README.md
+│   ├── component-inventory.md
+│   ├── follow-up-issues.md
+│   ├── implementation-sequence.md
+│   ├── screen-scenario-map.md
+│   ├── state-matrix.md
+│   └── validation-report.md
 ├── prompts/
 │   ├── README.md
 │   ├── 01-verify-workspace.md
@@ -104,9 +117,41 @@ design/
 - `V1 / Generate / Running / 1440`
 - `V1 / Generate / Failed / 1440`
 - `V1 / Preview / Ready / 1440`
+- `V1 / Home / Empty / 1024`
+- `V1 / Project Details / Loaded / 1024`
+- `V1 / Source Review / Ready / 1024`
+- `V1 / Source Review / Attention / 1024`
+- `V1 / Generate / Ready / 1024`
+- `V1 / Generate / Running / 1024`
+- `V1 / Generate / Failed / 1024`
+- `V1 / Preview / Ready / 1024`
 
 These V1 frames and the semantic system were approved at Approval Checkpoint 3.
-The CURRENT sections remain the fidelity reference for existing behavior.
+The 1024 frames structurally adapt that approved flow without changing its
+information architecture. The CURRENT sections remain the fidelity reference
+for existing behavior.
+
+## Status ownership
+
+- Project identity, readiness, and save state: project context header.
+- Workflow state: workflow-step variants.
+- Page validation: page status summary and validation messages.
+- Unknown mapping attention: affected Source Review task and advisory callout.
+- Generation failure: Generate recovery panel and failed workflow step.
+
+Approved deviation: no generic standalone status-pill component. Owner-specific
+components satisfy the requirement without duplicating status.
+
+## Implementation handoff
+
+Implementation agents should begin with `design/handoff/README.md`, then review
+the state matrix, screen/scenario map, component inventory, and implementation
+sequence. They must verify current behavior through the browser harness rather
+than treating V1 proposals as implemented behavior.
+
+The unresolved behavior list remains: Retry scope, downstream invalidation,
+Open output safety during generation, exact save-state transitions, and the
+primary audio-backed Preview experience.
 
 ## Working rules
 
