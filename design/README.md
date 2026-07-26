@@ -167,13 +167,25 @@ Issue #98 Phase A adds two non-destructive Pencil sections:
 12 / SIMPLIFIED V1 / D2 / COMPONENTS AND STATES
 ```
 
-The flow section contains 43 full `1440 × 900` frames: 27 route-state frames
-and 16 contextual-surface frames. Review:
+The flow section contains the structurally complete inventory of 43 full
+`1440 × 900` frames: 27 route-state frames and 16 contextual-surface frames.
+The first visual direction was rejected during maintainer review, so those 43
+frames must not yet be treated as the approved high-fidelity direction.
+
+A separate, non-destructive remediation section now contains four production
+anchors:
+
+```text
+13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW
+```
+
+Review:
 
 - `design/handoff/simplified-v1-d2-1440-frame-inventory.md`
 - `design/handoff/simplified-v1-d2-1440-route-state-map.md`
 - `design/handoff/simplified-v1-d2-1440-validation.md`
 - `design/decisions/simplified-v1-d2-1440-visual-decisions.md`
+- `design/handoff/visual-direction-review/simplified-v1-d2-four-anchor-comparison.md`
 
 Review remediation adds explicit unavailable-action reasons, Back/Cancel and
 progress-navigation treatment, material mapping attention/override rows,
@@ -185,11 +197,14 @@ its source node is not a reusable Pencil component.
 
 Checkpoint status:
 
-- **1440 × 900 checkpoint complete.**
+- **The structural 1440 × 900 inventory is complete.**
+- **The first visual direction was rejected.**
+- **Four-anchor visual remediation is complete and awaiting maintainer visual review.**
+- **Propagation to the remaining 39 frames has not started.**
 - **1024 × 768 final adaptation not started.**
 - **Issue #98 remains incomplete.**
-- **The PR must remain draft.**
-- **Maintainer approval is required before Phase B.**
+- **PR #116 must remain draft.**
+- **Maintainer approval of the four anchors is required before propagation or Phase B.**
 
 ## Working rules
 

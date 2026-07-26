@@ -1,8 +1,20 @@
 # Simplified V1 D2 1440 Visual Decisions
 
-Phase A turns the approved D1 information architecture into a complete
-production-scale `1440 × 900` flow. These decisions refine visual hierarchy and
-interaction presentation without changing product or backend contracts.
+Phase A established a structurally complete `1440 × 900` inventory. Maintainer
+review rejected its first visual direction. The separate four-anchor
+remediation now demonstrates the proposed replacement direction without
+changing product or backend contracts or propagating it to the remaining 39
+frames.
+
+## Current decision status
+
+- **Structural 1440 inventory:** complete.
+- **First visual checkpoint/direction:** rejected.
+- **Four-anchor remediation:** complete; awaiting maintainer visual review.
+- **Remaining 39 frames:** propagation not started.
+- **1024 × 768:** adaptation not started.
+- **Issue #98:** incomplete.
+- **PR #116:** draft.
 
 ## Decisions
 
@@ -19,6 +31,21 @@ interaction presentation without changing product or backend contracts.
 | Lifecycle variants | Use clearly labeled linked state cards when one canonical frame must make progress and failure reviewable; never imply concurrent outcomes. |
 | Action hierarchy | Keep one dominant action per context and move rare lifecycle actions into overflow. |
 | Visual language | Reuse approved `v1.*` tokens, semantic states, typography, spacing, and Highway direction. |
+
+## Four-anchor visual direction
+
+Section `13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW` (`tkFJf`) contains
+exactly four new `1440 × 900` anchors:
+
+| Anchor | Pencil ID | Reusable direction |
+|---|---|---|
+| Projects populated | `DQOkV` | Strong library hierarchy, project/cover identity, status-rich rows, focused search, and one dominant Create Project action. |
+| Settings blocking error | `qOC3b` | One unmistakable blocking surface, explicit impact and recovery, local-only safety language, and one Recheck action. |
+| Create Project Details filled/valid | `FSmVJ` | Production-density file and identity fields, explicit portable-folder preview, and one dominant Next action. |
+| Editor Preview ready | `JMKSM` | Compact project header, detailed waveform, dominant five-lane perspective Highway, transport, section navigation, and subordinate diagnostics. |
+
+These are **Design proposals** pending maintainer visual approval. They are not
+evidence that the remaining 39 structural frames have been visually remediated.
 
 ## Component strategy
 
@@ -86,15 +113,34 @@ contracts.
 
 ## Evidence taxonomy
 
-D2 Markdown records use: **OpenSpec-approved**, **Design proposal**,
-**Backend-dependent state**, **Unresolved**, and **Mockup reference**.
-Runtime-specific diagnostics and filesystem results are never presented as
-implemented behavior.
+D2 Markdown records distinguish:
 
-The live Pencil frames still contain legacy compound metadata strings. The
-exact limitation and deferred safe-normalization requirement are recorded in
-`../handoff/simplified-v1-d2-1440-validation.md`; this decision record does not
-claim that live frame metadata has already been normalized.
+- **Original approved mockup** — one of the ten repository PNG references;
+- **Maintainer-provided visual benchmark** — external visual-direction evidence,
+  never behavioral authority;
+- **OpenSpec-approved behavior** — product requirements and acceptance;
+- **Design proposal** — visual or interaction treatment awaiting approval;
+- **Backend-dependent state** — evidence supplied by later implementation;
+- **Unresolved** — intentionally deferred decisions.
+
+Runtime-specific diagnostics and filesystem results are never presented as
+implemented behavior. No original approved high-fidelity repository mockup
+exists for Settings; its behavior comes from OpenSpec/D1, while the
+maintainer-provided screenshot is visual benchmark only.
+
+When evidence fields conflict, use this authority order:
+
+1. **OpenSpec-approved behavior**;
+2. **D1-approved IA**;
+3. the current Pencil `context` classification;
+4. the current Markdown taxonomy;
+5. legacy Pencil `metadata`, which is historical only and ignored on conflict.
+
+The stable anchors retain legacy metadata because Pencil MCP cannot replace
+that field safely in place. The current `context` values classify the whole
+visual treatment as a **Design proposal** awaiting maintainer review. Exact
+limitations and per-anchor evidence are recorded in
+`../handoff/simplified-v1-d2-1440-validation.md`.
 
 ## Out of scope
 
@@ -106,8 +152,11 @@ claim that live frame metadata has already been normalized.
 
 ## Checkpoint
 
-- **1440 × 900 checkpoint complete.**
+- **Structural 1440 × 900 inventory complete.**
+- **First visual checkpoint/direction rejected.**
+- **Four-anchor visual remediation complete and awaiting maintainer visual review.**
+- **Propagation to the remaining 39 frames not started.**
 - **1024 × 768 final adaptation not started.**
 - **Issue #98 remains incomplete.**
-- **The PR must remain draft.**
-- **Maintainer approval is required before Phase B.**
+- **PR #116 remains draft.**
+- **Maintainer approval is required before propagation or Phase B.**

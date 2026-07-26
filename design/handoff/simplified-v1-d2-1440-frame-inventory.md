@@ -1,17 +1,37 @@
 # D2 Simplified V1 1440 Frame Inventory
 
-The complete production-scale `1440 × 900` checkpoint is available in
+The structurally complete production-scale `1440 × 900` inventory is available in
 `11 / SIMPLIFIED V1 / D2 / 1440 FLOW` (`dPSDd`). It contains 27 route-state
 frames and 16 contextual-surface frames. The `1024 × 768` final adaptation has
-not started.
+not started. Maintainer review rejected the first visual direction; the
+inventory remains preserved as structural/state evidence.
 
 ## Checkpoint status
 
-- **1440 × 900 checkpoint complete.**
+- **Structural 1440 × 900 inventory complete.**
+- **First visual direction rejected.**
+- **Four-anchor visual remediation complete and awaiting maintainer visual review.**
+- **Propagation to the remaining 39 frames not started.**
 - **1024 × 768 final adaptation not started.**
 - **Issue #98 remains incomplete.**
-- **The PR must remain draft.**
-- **Maintainer approval is required before Phase B.**
+- **PR #116 remains draft.**
+- **Maintainer approval is required before propagation or Phase B.**
+
+## Visual-direction review anchors
+
+Section `13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW` (`tkFJf`) contains
+exactly four additional full-size anchors. They do not replace the 43
+structural frames:
+
+| Pencil ID | Frame | Previous structural frame |
+|---|---|---|
+| `DQOkV` | `D2 Visual Anchor / 1440 / Projects / Populated` | `pfAoW` |
+| `qOC3b` | `D2 Visual Anchor / 1440 / Settings / Blocking Error` | `DNQBe` |
+| `FSmVJ` | `D2 Visual Anchor / 1440 / Create Project / Details Filled and Valid` | `dkxQL` |
+| `JMKSM` | `D2 Visual Anchor / 1440 / Editor Preview / Ready` | `Tr58P` |
+
+All four anchors are exactly `1440 × 900`. Propagation to the other 39
+structural frames has not started.
 
 ## Route and state frames
 

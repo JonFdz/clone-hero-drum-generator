@@ -1,28 +1,34 @@
 # D2 Simplified V1 1440 Validation
 
-The saved Pencil workspace contains the complete Phase A checkpoint and
-reopens successfully. The `1024 × 768` adaptation is intentionally outside this
-checkpoint.
+The saved Pencil workspace contains a structurally complete 43-frame Phase A
+inventory plus a separate four-anchor visual remediation. The first visual
+direction was rejected; the four anchors reopen successfully and now await
+maintainer visual review.
 
 ## Status
 
-- **1440 × 900 checkpoint complete.**
+- **Structural 1440 × 900 inventory complete.**
+- **First visual checkpoint/direction rejected.**
+- **Four-anchor visual remediation complete and awaiting maintainer visual review.**
+- **Propagation to the remaining 39 frames not started.**
 - **1024 × 768 final adaptation not started.**
 - **Issue #98 remains incomplete.**
-- **The PR must remain draft.**
-- **Maintainer approval is required before Phase B.**
+- **PR #116 remains draft.**
+- **Maintainer approval is required before propagation or Phase B.**
 
 ## Pencil persistence
 
 | Evidence | Result |
 |---|---|
 | Active file | `design/chdg-ui.pen` in the issue #98 worktree |
-| Initial SHA-256 | `c9a0ba34347134e503a276fb283b115545c4e874893dab6cfd4f621e463b7d8c` |
-| Final SHA-256 | `7f5a77a22b0a76055c71edfdf59b485c5b6724ac3f369f9bdd03ea4b166d2a73` |
+| Original Phase A initial SHA-256 | `c9a0ba34347134e503a276fb283b115545c4e874893dab6cfd4f621e463b7d8c` |
+| Four-anchor remediation starting SHA-256 | `7f5a77a22b0a76055c71edfdf59b485c5b6724ac3f369f9bdd03ea4b166d2a73` |
+| Four-anchor remediation final SHA-256 | `1640747129decbc2511cdcffe2d1a6be179ed07b3ebf1b6566736904ababcb87` |
 | Explicit save | Performed |
-| Save/reopen | Succeeded |
+| Final save/reopen | Succeeded for `JMKSM` in the worktree file |
 | Historical top-level count | 27 before D2 |
-| Final top-level count | 29 |
+| Phase A top-level count | 29 after sections 11 and 12 |
+| Visual-remediation section | `tkFJf` — `13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW` |
 | Historical reusable count | 57 before D2 |
 | Final reusable count | 63 |
 
@@ -34,23 +40,50 @@ checkpoint.
 | Contextual frame count | 16 |
 | Total D2 production frames | 43 |
 | Production dimensions | Every D2 production frame read back as `1440 × 900` |
+| Visual-remediation anchors | Four; each read back as `1440 × 900` |
+| Anchor IDs | `DQOkV`, `qOC3b`, `FSmVJ`, `JMKSM` |
 | D2 flow layout inspection | `problemsOnly`, depth 6: no layout problems |
 | D2 component layout inspection | `problemsOnly`, depth 6: no layout problems |
+| Visual-remediation layout inspection | Each anchor inspected; final Editor check at depth 6 reported no layout problems |
+| Comparison board | Benchmark remains connected and uncropped; all four anchors remain children of `tkFJf` |
+| Component references | Projects/Settings/Details reference `zKiov`; Editor references `mQo0l` |
+| Anchor identity | Stable IDs preserved; no anchor was recreated, duplicated, detached, or replaced |
 | Historical D1 sections | `08`, `09`, and `10` remain present |
 | Historical/reusable material | Preserved; no historical section removed |
 | Permanent sidebar | None |
 | Editor dominant region | Waveform and bounded copied/refined Highway derivation |
 | Milestone 2 updated source | Not created as a route or screen |
 
-### Evidence-metadata caveat
+## Pencil metadata limitation
 
-The Markdown checkpoint records use the normalized evidence taxonomy
-(`OpenSpec-approved`, `Design proposal`, `Backend-dependent state`,
-`Unresolved`, and `Mockup reference`).
-The saved Pencil frames still retain legacy compound metadata strings such as
-`product-approved + interaction proposal`. This is non-user-visible provenance
-debt: it does not change the rendered flow, but the live frame metadata must be
-normalized in a later safe Pencil pass rather than treated as authoritative.
+Maintainer decision: preserve the current four stable anchor IDs. Do not
+replace, duplicate, recreate, or detach anchors only to clean up legacy
+metadata.
+
+Pencil MCP persists the current `context` field but does not safely replace an
+existing root-frame `metadata` object in place. Therefore:
+
+1. **OpenSpec-approved behavior** is authoritative;
+2. **D1-approved IA** is authoritative next;
+3. the current Pencil `context` classification is authoritative for each
+   anchor's evidence classification;
+4. the current Markdown taxonomy is the handoff authority;
+5. legacy Pencil `metadata` is historical only and ignored when it conflicts.
+
+The whole visual treatment of every new anchor remains a **Design proposal**
+awaiting maintainer visual review. Behavioral or backend classifications in
+`context` describe authority within the represented state; they do not approve
+the visual treatment.
+
+| Stable ID | Authoritative Pencil `context` | Conflicting legacy `metadata` | Why legacy value is ignored | Benchmark | Review status |
+|---|---|---|---|---|---|
+| `DQOkV` | `Design proposal — visual treatment awaiting maintainer review` | `interaction proposal` | Old terminology does not use the current taxonomy or state whole-treatment review status. | Maintainer-provided visual benchmark plus indirect `01-home-recent.png` shell evidence | Awaiting maintainer visual review |
+| `qOC3b` | `Design proposal + Backend-dependent state — visual treatment awaiting maintainer review` | `backend-dependent` | It classifies runtime evidence but omits that the complete visual treatment is proposed. | Maintainer-provided visual benchmark; no original approved high-fidelity Settings mockup | Awaiting maintainer visual review |
+| `FSmVJ` | `Design proposal + OpenSpec-approved behavior — visual treatment awaiting maintainer review` | `product-approved` | Approved behavior does not imply approval of the new visual composition. | Maintainer-provided visual benchmark and original approved `02-create-project-details.png` | Awaiting maintainer visual review |
+| `JMKSM` | `Design proposal + OpenSpec-approved behavior + Backend-dependent state — visual treatment awaiting maintainer review` | `product-approved + interaction proposal` | Compound legacy wording can overclaim visual approval and does not use the current taxonomy. | Maintainer-provided visual benchmark and original approved `05-editor-preview.png` | Awaiting maintainer visual review |
+
+Complete legacy-metadata replacement is deferred Pencil tooling debt, not a
+checkpoint blocker. This decision did not change rendered visual content.
 
 ## Visual inspection
 
@@ -67,6 +100,30 @@ non-concurrent. `nqc2V` presents finalization failure as the current state and
 keeps write failure in a distinct linked card. `aBu3s` and `q3LHDn` similarly
 separate their linked progress and failure evidence. Export success removes
 managed `album.jpg` only for the represented cover-removal case.
+
+That inspection proved structural/state coverage, not an accepted visual
+direction. Maintainer review rejected the first direction. The four replacement
+anchors were then inspected individually at production scale:
+
+| Anchor | Result |
+|---|---|
+| `DQOkV` Projects populated | Stronger library/project identity, hierarchy, statuses, and action focus; no reported depth-6 layout problems. |
+| `qOC3b` Settings blocking error | Stronger blocking hierarchy, explicit impact/recovery, and one dominant Recheck action; no reported depth-6 layout problems. |
+| `FSmVJ` Details filled/valid | Production-density form and portable-folder preview; a location/Charter overlap was corrected; no reported depth-6 layout problems. |
+| `JMKSM` Editor Preview ready | Full-size detailed waveform and dominant perspective Highway visually inspected after reopen; no reported depth-6 layout problems. |
+
+The final remediation also moved all three project-row accent bars and
+`EXPERT PRO DRUMS` labels fully inside their rows while preserving chart mode,
+note count, and duration evidence. Editor Play is now neutral/secondary, so
+Export remains the sole purple primary action. Section `tkFJf` passed a final
+depth-6 `problemsOnly` inspection with no layout problems.
+
+The benchmark image is stored at
+`design/references/maintainer-visual-feedback/2026-07-26-d2-visual-direction-benchmark.png`
+with SHA-256
+`4a9c83503807fbdc567fc12c91b145e89ef1b608fb6886edd6768df5845feef3`.
+It is a **Maintainer-provided visual benchmark**, not behavioral authority.
+OpenSpec/D1 remain authoritative for behavior.
 
 ## Accessibility observations
 
@@ -129,6 +186,6 @@ blockers, not passing gate evidence and not verified repository failures.
 
 ## Maintainer checkpoint
 
-Review the 1440 flow and either approve Phase B or request focused D2 changes.
-Do not mark the PR ready, merge, or begin `1024 × 768` adaptation before that
-decision.
+Review the four anchors first. If approved, propagation to the remaining 39
+structural frames may be planned. Do not mark PR #116 ready, merge, propagate
+the direction, or begin `1024 × 768` adaptation before that decision.

@@ -20,14 +20,39 @@ regenerated, cropped, recolored, or promoted above the accepted OpenSpec.
 
 ## Evidence rule
 
-- Product behavior and acceptance: **OpenSpec-approved**.
-- Visual composition only: **Mockup reference**.
+- Repository PNG composition: **Original approved mockup**.
+- External maintainer screenshot: **Maintainer-provided visual benchmark**.
+- Product behavior and acceptance: **OpenSpec-approved behavior**.
 - Placement/adaptation not fixed by OpenSpec: **Design proposal**.
 - Step labels, recommendation signals, tolerances, and filesystem errors:
   **Backend-dependent state**.
 - Decisions intentionally left open: **Unresolved**.
 
 Generated mockup text never overrides the approved product contract.
+
+## Four-anchor remediation traceability
+
+The first D2 visual direction was rejected. Section
+`13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW` (`tkFJf`) preserves the
+original 43-frame inventory and adds four replacement-direction anchors:
+
+| Anchor | Original approved mockup | Previous D2 frame | New anchor |
+|---|---|---|---|
+| Projects populated | `01-home-recent.png` indirectly supports the application/library shell; it is not a dedicated Projects screen | `pfAoW` | `DQOkV` |
+| Settings blocking error | None | `DNQBe` | `qOC3b` |
+| Create Project Details filled/valid | `02-create-project-details.png` | `dkxQL` | `FSmVJ` |
+| Editor Preview ready | `05-editor-preview.png` | `Tr58P` | `JMKSM` |
+
+Settings has no original approved high-fidelity repository mockup. Its
+behavioral authority is **OpenSpec-approved behavior** plus D1. The external
+maintainer screenshot is a **Maintainer-provided visual benchmark** only.
+
+The benchmark is
+`design/references/maintainer-visual-feedback/2026-07-26-d2-visual-direction-benchmark.png`
+with SHA-256
+`4a9c83503807fbdc567fc12c91b145e89ef1b608fb6886edd6768df5845feef3`.
+It is embedded uncropped in section 13 for review. The approved mockup
+`manifest.json` was not changed.
 
 ## D2 Phase A traceability
 

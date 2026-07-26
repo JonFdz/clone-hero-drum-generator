@@ -120,3 +120,21 @@ and restoration are a **Design proposal**: application navigation → task
 Back/Cancel → content → dominant action; Editor header → transport →
 waveform/Highway → diagnostics → contextual invoker; contextual surfaces trap
 and restore focus. Exact shortcuts remain **Unresolved**.
+
+## Four-anchor reuse and additions
+
+The visual-direction remediation adds no new reusable Pencil component and does
+not replace sections 09 or 12. It exercises the existing D2 component strategy
+in four full-size anchors:
+
+| Anchor | Reuse / refinement |
+|---|---|
+| `DQOkV` Projects | Connected `zKiov` application header; richer project rows, cover identity, status language, and library metrics are local visual refinements. |
+| `qOC3b` Settings | Connected `zKiov` application header; blocking readiness, impact, and recovery composition are local visual refinements. |
+| `FSmVJ` Details | Connected `zKiov` application header; production-density file/metadata fields and derived-name preview reuse approved field/action language. |
+| `JMKSM` Editor | Connected `mQo0l` active-project header; detailed waveform and perspective Highway are bounded local refinements because the historical Highway is not reusable. |
+
+The local refinements are **Design proposals** awaiting maintainer visual
+review. Progress evidence, dependency/path results, and filesystem diagnostics
+remain **Backend-dependent states**. No component work was propagated to the
+remaining 39 structural frames, and no `1024 × 768` adaptation was started.
