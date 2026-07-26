@@ -55,3 +55,31 @@ Pencil frame names and component links.
 Scenario names are contracts for fixture planning. Implementation may introduce
 typed scenario builders but must not silently rename the public query values
 without updating OpenSpec and this inventory.
+
+## D2 Phase A realization
+
+The planning entries above are realized at `1440 × 900` in
+`11 / SIMPLIFIED V1 / D2 / 1440 FLOW` (`dPSDd`).
+
+| Planning ID | D2 frames |
+|---|---|
+| H1 | `Nkbx7`, `H7jwM` |
+| P1 | `pfAoW`, `Ag1BG`, `RlLTH` |
+| S1 | `HG6qw`, `DNQBe` |
+| C1 | `bGYAe`, `dkxQL`, `c1Ce08` |
+| C2 | `SIeWF`, `nOz1i`, `MGHSv`, `be9aO` |
+| C3 | `xRanW`, `xztYr`, `d2hS1p`, `nqc2V` |
+| E1 | `Tr58P`, `Z8wVb`, `c5RIW`, `oQsuh`, `mNiYd` |
+| E2 | `g7Aea`, `oTfZU`, `C9itDx`, `OcLvH` |
+| X1 | `OfDEn`, `tSPfb`, `aBu3s` |
+| X2 | `WwIRH`, `AKsIx`, `pGCpE`, `YpPDv` |
+| X3–X5 | `x2crFY`, `Ne3Cz`, `z7dh9`, `R04bl`, `Bh4Dg`, `iiKS3` |
+| X6 | `opxt4`, `q3LHDn` |
+| X7 | `tpYNy` |
+
+See `simplified-v1-d2-1440-frame-inventory.md` for exact frame names and
+`simplified-v1-d2-1440-route-state-map.md` for route and ownership evidence.
+
+The Milestone 2 entries remain deferred. The `1024 × 768` final adaptation has
+not started, issue #98 remains incomplete, and maintainer approval is required
+before Phase B.

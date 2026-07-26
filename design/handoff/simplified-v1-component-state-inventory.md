@@ -81,4 +81,42 @@ Mapping changes never overwrite individual note corrections. Export changes
 only CHDG-managed files and never leaves a partial managed update.
 
 Export success distinguishes updated, unchanged, and removed managed files and
-separately confirms preservation of unmanaged files.
+separately confirms preservation of unmanaged files. The D2 removal example is
+optional managed `album.jpg` after the project cover was removed and ownership
+was proven.
+
+## D2 Phase A reusable realization
+
+`12 / SIMPLIFIED V1 / D2 / COMPONENTS AND STATES` (`z5uYl`) adds six
+production-scale reusable components without replacing the D1 skeletons:
+
+| Component | Pencil ID |
+|---|---|
+| Application Header / 1440 | `zKiov` |
+| Active Project Header / 1440 | `mQo0l` |
+| Mapping Row / Default | `z8PsO` |
+| Progress Step / Active | `EWkJp` |
+| Contextual Surface / Right | `UKZeo` |
+| Compact Warning / Attention | `NXTj4` |
+
+`EWkJp` is connected to the running creation frame and `UKZeo` is connected to
+the Project Details contextual frame. The historical Highway (`Xab8q`) is not
+reusable, so Editor frames use a bounded copied/refined visual derivation. D2
+also reuses the approved `v1.*` tokens and D1 ownership model.
+
+The D2 instances demonstrate:
+
+- active Home/Projects/Settings selection and neutral creation navigation;
+- active Preview or Mappings project tabs;
+- Export versus Update Song;
+- mapping default/override/attention states;
+- pending/current/completed/failed progress;
+- explicitly non-concurrent linked progress/failure review variants;
+- contextual Project Details, Edit Note, Export, and Save a Copy;
+- compact warning, validation, success, failure, and confirmation treatments.
+
+A representative focus-visible treatment is present in `dkxQL`. Focus order
+and restoration are a **Design proposal**: application navigation → task
+Back/Cancel → content → dominant action; Editor header → transport →
+waveform/Highway → diagnostics → contextual invoker; contextual surfaces trap
+and restore focus. Exact shortcuts remain **Unresolved**.

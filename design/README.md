@@ -158,6 +158,39 @@ claim that every listed state has a full-size frame at both breakpoints. D2 may
 add the remaining production-scale state frames while preserving D1 ownership
 and navigation.
 
+## D2 Phase A checkpoint
+
+Issue #98 Phase A adds two non-destructive Pencil sections:
+
+```text
+11 / SIMPLIFIED V1 / D2 / 1440 FLOW
+12 / SIMPLIFIED V1 / D2 / COMPONENTS AND STATES
+```
+
+The flow section contains 43 full `1440 × 900` frames: 27 route-state frames
+and 16 contextual-surface frames. Review:
+
+- `design/handoff/simplified-v1-d2-1440-frame-inventory.md`
+- `design/handoff/simplified-v1-d2-1440-route-state-map.md`
+- `design/handoff/simplified-v1-d2-1440-validation.md`
+- `design/decisions/simplified-v1-d2-1440-visual-decisions.md`
+
+Review remediation adds explicit unavailable-action reasons, Back/Cancel and
+progress-navigation treatment, material mapping attention/override rows,
+transactionally coherent lifecycle failures, export destination/conflict/result
+detail, authoritative header save failure, connected progress/contextual
+component instances, and a representative visible keyboard-focus treatment.
+The historical Highway is a bounded copied/refined visual derivation because
+its source node is not a reusable Pencil component.
+
+Checkpoint status:
+
+- **1440 × 900 checkpoint complete.**
+- **1024 × 768 final adaptation not started.**
+- **Issue #98 remains incomplete.**
+- **The PR must remain draft.**
+- **Maintainer approval is required before Phase B.**
+
 ## Working rules
 
 - All repository artifacts are English-first.
