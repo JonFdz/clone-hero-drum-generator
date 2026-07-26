@@ -1,105 +1,143 @@
-# Design Workspace Agent Instructions
+# Simplified V1 Design Agent Instructions
 
-> **Supersession note (2026-07-18):** The revised GitHub issue #89 and
-> `openspec/changes/chdg-design-v1/` supersede the baseline-only stopping rule
-> below. After Approval Checkpoint 1, issue #89 continues with exactly two
-> bounded IA alternatives: Workflow-first and Project workspace. Historical
-> baseline instructions remain here for provenance. Production-code and
-> design-only safety boundaries remain unchanged.
->
-> Approval Checkpoint 2 selected the bounded hybrid responsibility model:
-> Workflow-first owns orientation and progression; compact project context and
-> page-local navigation own revisitation and long-page organization.
+These instructions apply to every agent modifying files under `design/`.
 
-These instructions apply to every agent operating on files under `design/`.
+## Authority and scope
 
-## Language
+Read in this order:
 
-All repository artifacts must be written in English, including:
+1. `openspec/changes/chdg-simplified-v1/`
+2. `docs/product/CHDG_V1_PRODUCT_DECISIONS.md`
+3. `docs/product/PRD.md`
+4. `design/decisions/simplified-v1-design-brief.md`
+5. `design/references/simplified-v1-mockups/README.md`
+6. existing `design/` history and foundations.
 
-- prompts;
-- design notes;
-- decision records;
-- layer and frame names;
-- component names;
-- screenshots and export filenames;
-- commit messages;
-- issue and pull-request text.
+The Simplified V1 OpenSpec supersedes the prior workflow IA. Preserve the old
+Pencil material as historical evidence.
 
-Conversation with the user may be in Spanish, but repository content must remain English-first.
-
-## Current issue scope
-
-Issue #89 is a design-baseline phase.
-
-Agents may read the full repository to understand the application, but they may write only inside `design/`.
-
-Do not modify:
+Agents operating under D1, D2, or D3 may write only inside `design/` and the
+explicit issue-owned design documentation paths. They must not modify:
 
 - `apps/`;
 - `packages/`;
 - tests;
-- build configuration;
-- Electron behavior;
-- Angular behavior;
-- persistence or IPC contracts;
-- chart generation behavior.
+- dependencies or lockfiles;
+- Electron;
+- Angular;
+- persistence;
+- IPC;
+- generation behavior.
 
-## Product and stack constraints
+## Product boundary
 
-The production application uses Angular and Electron.
+The approved visible flow is:
 
-Do not:
+```text
+Home → Create Project → Editor → Export
+```
 
-- replace Angular;
-- introduce React, Next.js, Tailwind, shadcn, or a parallel frontend;
-- invent new product functionality;
-- remove existing workflow capabilities;
-- infer behavior solely from visual appearance;
-- copy generated HTML directly into the production application.
+Do not add back:
 
-## Baseline-first workflow
+- a permanent sidebar;
+- a permanent four-step workflow strip;
+- Source Review;
+- Generate;
+- Validation;
+- a separate metadata destination;
+- a full chart-authoring grid.
 
-During issue #89:
+Permanent Editor navigation contains only:
 
-1. Inspect the current code.
-2. Sync current tokens into Pencil.
-3. Build current UI foundations.
-4. Recreate the current app shell faithfully.
-5. Capture screenshots.
-6. Audit usability.
-7. Stop before redesign exploration or production implementation.
+```text
+Preview
+Mappings
+```
 
-Do not improve the design while recreating the baseline. Any proposed improvement belongs in the audit or a follow-up design frame.
+Project Details, Edit Note, Export, Save a Copy, and exceptional lifecycle
+actions are contextual panels/dialogs/menus.
 
-## Evidence discipline
+## Required design behavior
 
-Label findings as one of:
+- Artist, Song Name, and Project Name are mandatory.
+- The derived name is `Artist - Song Name - Project Name`.
+- Track recommendation is automatic; manual selection remains available.
+- Mappings preserve musical identity separately from Clone Hero target.
+- Individual note correction can change piece/target/tom-cymbal/open-closed
+  hi-hat/accent/ghost, delete, restore, Undo, and Redo.
+- No note add, move, tick, length, copy/paste, batch edit, tempo edit, or
+  Expert+ kick.
+- Import and export use real backend steps without fake percentages.
+- The project is self-contained after import.
+- Preview works before first export.
+- Autosave is normal; manual Save is not a primary workflow action.
+- Save a Copy is exceptional.
+- Export ends with `Done`, returning to the Editor.
 
-- **Code-confirmed** — directly supported by repository code.
-- **Screenshot-confirmed** — directly visible in a captured application screenshot.
-- **User-confirmed** — explicitly confirmed by the user.
-- **Hypothesis** — requires validation.
+## Evidence labels
 
-Never present a hypothesis as confirmed behavior.
+Every material statement must be marked or traceable as:
 
-## Pencil rules
+- **User-confirmed**
+- **Code-confirmed**
+- **OpenSpec-approved**
+- **Design proposal**
+- **Unresolved**
 
-- Use Pencil MCP tools for `.pen` changes.
-- Prefer variables over hardcoded visual values.
-- Prefer reusable components over duplicated structures.
-- Keep frame and layer names descriptive and stable.
-- Save the document frequently.
-- Inspect layout and screenshots after significant changes.
-- Do not hand-edit generated node IDs after Pencil has created content.
+Never present a mockup detail as current behavior.
 
-## Completion bar
+## Mockup use
 
-A task is not complete until:
+The files in `design/references/simplified-v1-mockups/` are the exact approved
+references. Do not regenerate, crop, recolor, upscale, replace, or overwrite
+them. You may place them into a dedicated reference section in Pencil.
 
-- the `.pen` file opens successfully;
-- required frames and variables are present;
-- the document is saved;
-- visual output has been inspected;
-- relevant Markdown records are updated;
-- no production code has changed.
+Mockups communicate direction, not exact implementation contracts. Correct:
+
+- text legibility;
+- control semantics;
+- responsive composition;
+- state completeness;
+- focus order;
+- real data constraints;
+- component reuse;
+- route ownership.
+
+## Pencil requirements
+
+- Use Pencil MCP.
+- Never hand-edit `.pen` node IDs.
+- Reuse variables and components.
+- Use explicit 1440 × 900 and 1024 × 768 frames.
+- Validate layout after each group.
+- Inspect every required frame visually.
+- Preserve CURRENT and prior Design V1 content.
+- Record final hash and frame inventory.
+- Do not claim PNG export unless performed successfully.
+
+## Accessibility
+
+- shared visible focus-visible treatment;
+- no color-only status;
+- labeled icons;
+- keyboard-reachable actions;
+- modal/drawer focus containment and restoration;
+- meaningful disabled explanations;
+- minimum usable hit targets;
+- readable wrapping at 1024;
+- no essential hover-only information.
+
+## Checkpoints
+
+D1 checkpoint:
+- IA, route ownership, contextual surfaces, component responsibilities,
+  responsive strategy, and state inventory.
+
+D2 checkpoint:
+- approved 1440 main flow, then approved 1024 adaptations and state coverage.
+
+D3 checkpoint:
+- complete handoff, route/scenario matrix, component inventory, interaction
+  notes, keyboard behavior, unresolved list, and implementation sequence.
+
+Stop at each issue-defined checkpoint. Do not self-approve.

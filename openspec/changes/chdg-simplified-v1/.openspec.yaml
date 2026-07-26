@@ -1,0 +1,14 @@
+schema: spec-driven
+name: chdg-simplified-v1
+status: proposed
+created: 2026-07-26
+owners:
+  specification: Jon/ChatGPT
+  implementation: issue-assigned agent
+  approval: Jon
+artifacts:
+  proposal: proposal.md
+  design: design.md
+  specifications:
+    - specs/chdg-simplified-v1/spec.md
+  tasks: tasks.md

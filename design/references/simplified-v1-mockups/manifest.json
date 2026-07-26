@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-07-26",
+  "statement": "Files copied byte-for-byte from the final maintainer-approved mockups; no image regeneration.",
+  "files": [
+    {
+      "file": "01-home-recent.png",
+      "sourceFilename": "interfaz_moderna_de_generador_de_batidas.png",
+      "description": "Home with dominant Create Project, Open Project, and recent projects.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1245128,
+      "sha256": "16f114afb5c906c8f28deaef48972ce51d05fe43e47c2f79c8a0c1a028b2673d",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "02-create-project-details.png",
+      "sourceFilename": "pantalla_de_creación_de_proyecto.png",
+      "description": "Create Project details: source, audio, cover, and metadata.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1312105,
+      "sha256": "5c14e14da7ce4218c253937e759ac9b26275e486ab1f1c7d32cb1a05df12b2e2",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "03-create-project-track-mapping.png",
+      "sourceFilename": "interfaz_de_usuario_creativa_moderna.png",
+      "description": "Track recommendation and compact mapping review.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1273727,
+      "sha256": "cd48791c80b836e239121226cfcbea4c32dd5d9fe066ea5c0de9c2351d634caa",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "04-creating-project-progress.png",
+      "sourceFilename": "generador_de_ritmos_en_progreso.png",
+      "description": "Real-step project creation progress direction.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1402211,
+      "sha256": "c5b66635013bfa86297d49c43104ba4144a5dda733c77ce25d71632299d473b9",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "05-editor-preview.png",
+      "sourceFilename": "editor_de_ritmos_con_interfaz_oscura.png",
+      "description": "Editor Preview with waveform and approved Highway visual direction.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1514692,
+      "sha256": "e8a1184a2be39afa214156ceed022c934effcdb2351df2b1c61129e90b3c1169",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "06-edit-note-dialog.png",
+      "sourceFilename": "editor_de_notas_en_clone_hero.png",
+      "description": "Contextual note correction dialog direction.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1171440,
+      "sha256": "cafd59f056257030a9d2bfe7f1f72a4c5060630943413843c017af2b5e375c56",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "07-editor-mappings.png",
+      "sourceFilename": "interfaz_oscura_para_mapeo_de_percusión.png",
+      "description": "Full Editor Mappings tab.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1105473,
+      "sha256": "b5207cdd0cfb628882f43a6b5ea8c9ad62e2f0f607f6f74ed980883575e65066",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "08-project-details-panel.png",
+      "sourceFilename": "editor_de_partituras_de_batería_digital.png",
+      "description": "Contextual Project Details/metadata surface.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1356496,
+      "sha256": "2bd4436d8e4e7ae044bed436dfab81bae5c7d8cf1bcafc862e4201898bc03cb8",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "09-export-success.png",
+      "sourceFilename": "fenómeno_de_éxito_en_la_app.png",
+      "description": "Simple export/update success with Done.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1212577,
+      "sha256": "e30a2f74b1189d3f1916f610a07091c6d373bfdeecf3e13b69b5141356a251a0",
+      "scope": "simplified-v1"
+    },
+    {
+      "file": "10-import-updated-source-milestone-2.png",
+      "sourceFilename": "interfaz_moderna_de_edición_musical.png",
+      "description": "Deferred Milestone 2 updated-source flow reference.",
+      "approvedByMaintainer": true,
+      "regeneratedForWave0": false,
+      "width": 1448,
+      "height": 1086,
+      "sizeBytes": 1142030,
+      "sha256": "cd5d80deffe49b2585c0195d0883f93ccb185c62a5d134ef4acdb20510f65fe5",
+      "scope": "milestone-2"
+    }
+  ]
+}

@@ -2,127 +2,176 @@
 
 ## Product goal
 
-Clone Hero Drum Generator (CHDG) converts deterministic drum transcription data into Clone Hero-compatible drum charts.
+Clone Hero Drum Generator converts deterministic symbolic drum transcriptions into reviewable, correctable Expert Pro Drums song packages for Clone Hero.
 
-Current direction:
+## Current V1 direction
 
-1. MIDI input first.
-2. GPIF-based `.gp` input next.
-3. Expert Pro Drums output first.
-4. `notes.chart` output first.
-5. Desktop-first local processing.
-6. Moonscraper is used for review/validation, not as a runtime dependency.
-7. The internal drum model should stay rich enough to support future Pro/Elite-like exports.
+1. Desktop-first and local-only.
+2. GP/GPIF and MIDI are deterministic import sources.
+3. Original audio is an import source.
+4. Creation produces a self-contained CHDG project folder.
+5. After import, the CHDG project is the source of truth.
+6. Clone Hero output is derived and repeatable without external originals.
+7. Visible flow:
 
-## Current priority
+   ```text
+   Home → Create Project → Editor → Export
+   ```
 
-Build a reliable local generation pipeline before building the full desktop UI.
+8. Inspection, normalization, validation, and generation are backend responsibilities, not permanent user destinations.
+9. The V1 editor changes or deletes existing imported notes only.
+10. Structural musical changes belong in Guitar Pro or another symbolic-source editor.
 
-The CLI remains the implementation and validation surface used by agents.
+## Portable project
 
-Example command style:
-
-```bash
-pnpm chdg inspect-midi --drums-only /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid
-pnpm chdg normalize-drums /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid --track 53
-pnpm chdg generate /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid --track 53 --out /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo
+```text
+Artist - Song Name - Project Name/
+├── project.chdg
+├── assets/
+│   ├── source.<original-extension>
+│   ├── song.ogg
+│   └── album.jpg              # optional
+└── recovery/
+    └── previous.chdg
 ```
 
-Do not add a pnpm `--` separator before the CHDG command unless a local script genuinely requires it.
+The full folder is portable. `project.chdg` by itself is not.
 
-## SDD / Gentle-AI workflow
+Do not reintroduce permanent external source/audio path dependencies.
 
-CHDG uses Gentle-AI / Pi SDD with OpenSpec and Engram.
+## Mandatory identity
 
-### Source of truth
+- Artist
+- Song Name
+- Project Name
 
-- Engram is the persistent project memory and source of truth.
-- OpenSpec artifacts are reviewable transfer artifacts used by Jon/ChatGPT and the local agent.
-- When OpenSpec artifacts are provided, read them first, then transfer accepted decisions, constraints, tasks and validation rules into Engram before implementation.
-- Do not rely only on chat context for project decisions.
+Derived display/folder name:
 
-### Phase ownership
+```text
+Artist - Song Name - Project Name
+```
 
-- Jon/ChatGPT owns proposal, spec, design, verify and PR review.
-- Pi/gentle-ai agent owns implementation/apply, focused self-checks, commits, push and PR creation.
-- Final review is external and done by Jon/ChatGPT.
+The internal project file is always `project.chdg`. Identity changes rename project/output folders transactionally after preflight.
+
+## Mapping
+
+Keep these distinct:
+
+```text
+source event → musical piece → Clone Hero target
+```
+
+Example: a Ride may remain a Ride while targeting Green Cymbal.
+
+Priority:
+
+```text
+individual note correction
+> source-specific project target override
+> default target for the effective musical piece
+```
+
+Unknown recognition may use a separate source-interpretation override.
+
+## V1 note-editing boundary
+
+Allowed:
+
+- change musical piece;
+- change Clone Hero target/lane;
+- change tom/cymbal;
+- change open/closed hi-hat semantics;
+- change accent;
+- change ghost;
+- delete and restore;
+- session Undo/Redo.
+
+Not allowed:
+
+- add;
+- move or retime;
+- edit tick;
+- edit duration/length;
+- copy/paste or batch edits;
+- tempo/time-signature editing;
+- special Expert+ / 2x-kick authoring.
+
+Every V1 exported drum note uses chart length `0`.
+
+## Export safety
+
+Export identity, target, fingerprints, and managed-file hashes live in `project.chdg`. Do not add an output marker file.
+
+The exporter must:
+
+- update only CHDG-managed files;
+- preserve backgrounds, videos, and unknown files;
+- detect externally modified managed files;
+- stage all required outputs;
+- commit atomically;
+- never leave a partial managed update;
+- request confirmation for ambiguous existing destinations.
+
+## SDD and ownership
+
+CHDG uses OpenSpec and Engram.
+
+- Engram is persistent implementation memory.
+- OpenSpec is the reviewable transfer artifact.
+- Transfer accepted decisions and requirements to Engram before implementation.
+- Jon/ChatGPT owns product/spec/design checkpoints, issue planning, verification, and external PR review.
+- Local agents own apply/implementation, focused tests, commits, push, and PR creation.
 - Never merge without Jon's explicit approval.
 
-### Git rules
+## Git and worktrees
 
-- Work on the requested branch only.
-- Commit and push after implementation.
-- Create or update a PR linked to the issue.
-- Do not merge.
-- Do not squash/rebase/merge into `main` unless Jon explicitly requests it.
+- One issue, branch, worktree, and PR per planned unit.
+- Use the real issue number in branch names.
+- Never commit directly to `main`.
+- Read `docs/roadmaps/simplified-v1-worktree-plan.md`.
+- Respect exclusive hotspot ownership.
+- Stop and request a shared prerequisite change rather than creating a divergent private contract.
 
-## Architecture rules
+## Architecture
 
-- Keep executable apps in `apps/*`.
-- Keep reusable libraries in `packages/*`.
-- `apps/cli` should orchestrate packages, not contain domain logic.
-- Future desktop app should live under `apps/desktop`.
-- Desktop renderer should not contain generation logic.
-- Electron main/local backend should call reusable packages.
-- `packages/core` owns shared domain types, timing, and pipeline orchestration.
-- `packages/midi` owns MIDI parsing, inspection and normalization.
-- `packages/guitarpro` will own future GPIF parsing, inspection and normalization.
-- `packages/mappings` owns configurable mappings and JSON mapping files.
-- `packages/chart` owns Clone Hero chart/song writers.
-- `packages/audio` will own future audio packaging / ffmpeg integration.
-- `packages/validation` owns consistency and quality checks.
-- Do not hardcode drum mappings inside CLI commands.
-- Do not bypass `DrumHit[]` when adding future inputs.
+- Apps live under `apps/*`; reusable logic under `packages/*`.
+- Angular renderer contains no parsing, mapping, generation, persistence, or export domain logic.
+- Electron adapts OS/IPC; packages own reusable behavior.
+- `packages/core`: domain and timing primitives.
+- `packages/midi`: MIDI inspection/normalization.
+- `packages/guitarpro`: GP/GPIF inspection/normalization.
+- `packages/mappings`: mapping defaults/primitives.
+- `packages/chart`: Clone Hero serialization.
+- `packages/audio`: audio preparation.
+- `packages/project`: self-contained project, import orchestration, effective chart, persistence contracts, export orchestration.
+- `packages/validation`: consistency and quality validation.
+- Preserve rich `DrumHit[]` as the imported base.
 
-## Package manager
+## UI constraints
 
-Use pnpm only. Do not create `package-lock.json` or use `npm install`.
+- Angular + Electron remain.
+- No React, Next.js, Tailwind, shadcn, or parallel UI.
+- No permanent sidebar.
+- Permanent project tabs: Preview and Mappings.
+- Project Details is contextual.
+- Export is an Editor action/state, not a Generate page.
+- Settings is application-level.
 
-## Commands
+## Quality gates
+
+Use pnpm only:
 
 ```bash
 pnpm build
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm dev
-pnpm chdg --help
 ```
 
-## Safety and copyright
+Do not use npm or create `package-lock.json`.
 
-- Do not commit copyrighted songs, commercial MIDI files, Guitar Pro files, or audio.
-- `samples/` is gitignored except for documentation/placeholders.
-- Generated output belongs in `output/`, which is gitignored except for `.gitkeep`.
-- Use synthetic fixtures for tests.
-- Local demo files may exist on Jon's machine but should not be committed unless licensing is explicitly safe.
+## Safety
 
-## Current local demo context
-
-Preferred local demo candidate:
-
-```txt
-Song: Eat My Dust
-Artist: Dead Pony
-MIDI path: /Users/jonfdz/Projects/clone-hero-drum-generator/samples/demo.mid
-Output path: /Users/jonfdz/Projects/clone-hero-drum-generator/output/demo
-MIDI drum track: 53
-Tempo: 147 BPM
-Time signature: 4/4
-Drum hits: 1039
-Unknown notes: none
-```
-
-Expected normalized summary for track 53:
-
-```txt
-kick: 347
-snare: 215
-hihat_open: 123
-hihat_closed: 99
-crash: 232
-tom_mid: 14
-tom_floor: 9
-```
-
-The previous Stairway to Heaven demo is not the preferred main validation sample because drums enter very late.
+- Do not commit copyrighted songs, commercial MIDI/GP files, or audio.
+- Use synthetic fixtures.
+- No cloud upload or audio inference.

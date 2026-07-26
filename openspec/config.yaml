@@ -1,0 +1,31 @@
+schema: spec-driven
+
+context: |
+  CHDG is an English-first TypeScript pnpm monorepo with reusable packages,
+  Electron main/preload adapters, and an Angular desktop renderer.
+  The product converts deterministic GPIF/Guitar Pro or MIDI drum sources into
+  Clone Hero Expert Pro Drums output. It is local-only and does not infer charts
+  from audio.
+
+  Engram is persistent implementation memory. OpenSpec artifacts are reviewable
+  transfer artifacts owned by Jon/ChatGPT. Agents must transfer approved
+  decisions and constraints to Engram before apply work.
+
+rules:
+  proposal:
+    - State user value, product boundary, affected areas, non-goals, risks, and approval checkpoints.
+    - Do not authorize production changes before maintainer approval.
+  design:
+    - Separate domain, persistence, import, preview, export, Electron IPC, Angular, and Pencil responsibilities.
+    - List exact canonical routes and owned repository paths.
+    - Preserve reusable logic in packages; Electron and Angular are adapters.
+    - Identify parallel worktrees, dependency gates, and exclusive hotspots.
+  specs:
+    - Use normative SHALL/MUST language.
+    - Include GIVEN/WHEN/THEN scenarios for success, failure, recovery, portability, and destructive boundaries.
+    - Do not treat mockup details as behavior unless requirements confirm them.
+  tasks:
+    - Use checkboxes.
+    - Keep product, backend, design, frontend, integration, and Milestone 2 tasks separate.
+    - Include validation, documentation, commit, push, PR, and external review.
+    - Never mark an unperformed task complete.

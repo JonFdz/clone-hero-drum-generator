@@ -1,173 +1,164 @@
 # CHDG Design Workspace
 
-> **Current authority (2026-07-18):** Revised issue #89 and the
-> `chdg-design-v1` OpenSpec supersede older statements in this workspace that
-> stop issue #89 after baseline work or require three IA alternatives. The
-> approved continuation contains exactly two explorations—Workflow-first and
-> Project workspace. Approval Checkpoint 2 selected the bounded hybrid
-> responsibility model. Approval Checkpoint 3 approved Foundations V1, the
-> reusable component system, and the high-fidelity 1440 flow. The final package
-> now includes the complete 1024 desktop adaptation and implementation handoff.
+> **Current authority (Simplified V1):** `openspec/changes/chdg-simplified-v1/`,
+> `docs/product/CHDG_V1_PRODUCT_DECISIONS.md`, and the Simplified V1 design
+> records supersede the workflow information architecture approved in issue #89.
+> The prior Design V1 remains historical evidence and a reusable source for
+> foundations, semantic states, accessibility treatment, and the Highway visual
+> direction. Do not delete or silently rewrite it.
 
-This directory is the version-controlled design workspace for the Clone Hero Drum Generator desktop application.
+This directory is the version-controlled design workspace for the Clone Hero
+Drum Generator desktop application.
 
-It was introduced by issue **#89 — `design: bootstrap Pencil workspace and audit current desktop UI`**.
-
-## Purpose
-
-The workspace now preserves four clearly separated layers:
-
-1. CURRENT browser evidence, foundations, and shell.
-2. EXPLORATION material for the two approved IA alternatives.
-3. SELECTED Foundations V1 and reusable components approved at Checkpoint 3.
-4. The approved high-fidelity 1440 × 900 workflow and final 1024 × 768 desktop
-   adaptations.
-
-Issue #89 remains design-only and must not modify production UI code or
-application behavior.
-
-## Directory structure
+## Current product flow
 
 ```text
-design/
-├── AGENTS.md
-├── DESIGN.md
-├── README.md
-├── chdg-ui.pen
-├── current-ui/
-│   └── README.md
-├── decisions/
-│   ├── current-ux-audit.md
-│   ├── foundations-v1.md
-│   ├── component-system-v1.md
-│   ├── design-v1-1024.md
-│   ├── design-v1-1440.md
-│   ├── design-v1-rationale.md
-│   ├── information-architecture-v1.md
-│   ├── workspace-preservation-plan.md
-│   └── decision-log.md
-├── exports/
-│   └── README.md
-├── handoff/
-│   ├── README.md
-│   ├── component-inventory.md
-│   ├── follow-up-issues.md
-│   ├── implementation-sequence.md
-│   ├── screen-scenario-map.md
-│   ├── state-matrix.md
-│   └── validation-report.md
-├── prompts/
-│   ├── README.md
-│   ├── 01-verify-workspace.md
-│   ├── 02-sync-design-tokens.md
-│   ├── 03-build-foundations.md
-│   ├── 04-recreate-current-app-shell.md
-│   ├── 05-audit-current-ux.md
-│   ├── 06-compare-with-screenshots.md
-│   └── 07-explore-information-architecture.md
-└── references/
-    ├── design-token-map.md
-    ├── repo-ui-map.md
-    ├── screenshot-checklist.md
-    └── validation-checklist.md
+Home
+  → Create Project
+      → Project Details
+      → Track & Mapping
+      → Creating Project
+  → Editor
+      → Preview
+      → Mappings
+      → contextual Project Details
+      → contextual Export
 ```
 
-## First session
+There is no permanent application sidebar and no user-facing Source Review,
+Generate, or Validation stage.
 
-1. Check out the issue branch:
+## Design authority
 
-   ```bash
-   git fetch origin
-   git switch design/89-pencil-bootstrap
-   ```
+- `design/chdg-ui.pen` is the editable Pencil workspace.
+- `design/decisions/simplified-v1-design-brief.md` is the approved Simplified V1
+  design contract.
+- `design/references/simplified-v1-mockups/` contains the final exploratory
+  mockups explicitly approved by the maintainer.
+- The mockups are references, not implementation-ready specifications.
+- `openspec/changes/chdg-simplified-v1/` owns product requirements and
+  implementation acceptance scenarios.
+- Production behavior remains authoritative for current behavior until each
+  Simplified V1 implementation issue is merged.
 
-2. Copy this `design/` directory into the repository root.
+## Historical material
 
-3. Open the repository root in VS Code.
+The existing CURRENT, EXPLORATION, SELECTED, V1, and DEFERRED Pencil material
+from issue #89 must remain distinguishable.
 
-4. Open `design/chdg-ui.pen` and wait for Pencil to activate.
+The following prior concepts are superseded for the new product V1:
 
-5. Save the file once with `Ctrl+S`.
+```text
+global rail/sidebar
+Project Details → Source Review → Generate → Preview workflow strip
+Source Review as a standalone route
+Generate as a standalone route
+Validation as a standalone route
+manual Save as a normal primary action
+external GP/MIDI and original audio as permanent project dependencies
+Preview depending on exported notes.chart/song.ogg
+```
 
-6. Run the prompts in numeric order, starting with:
+The following prior work remains reusable:
 
-   ```text
-   design/prompts/01-verify-workspace.md
-   ```
+- semantic color and state ownership;
+- typography and density;
+- visible keyboard focus;
+- no color-only statuses;
+- buttons, fields, grouped panels, callouts, progress, errors, disclosures;
+- responsive 1440 × 900 and 1024 × 768 discipline;
+- waveform and Highway visual direction;
+- contextual technical diagnostics.
 
-7. Prompt 07 may run only after Approval Checkpoint 1 under the supersession note above.
+## Canonical Simplified V1 routes
 
-## Source of truth
+```text
+/home
+/projects
+/projects/new/details
+/projects/new/mapping
+/projects/new/creating
+/projects/:projectId/editor/preview
+/projects/:projectId/editor/mappings
+/settings
+```
 
-- The Angular/Electron application remains the source of truth for current behavior.
-- `chdg-ui.pen` is the source of truth for approved visual design work.
-- `DESIGN.md` is the human-readable design contract.
-- Screenshots under `current-ui/` are evidence, not editable source files.
-- Files under `exports/` are generated previews and must not be treated as design source.
+The following are contextual surfaces and **not routes**:
 
-## Selected V1 sections and frames
+```text
+Project Details panel/dialog
+Edit Note panel/dialog
+Export confirmation
+Export progress
+Export result
+Save a Copy
+```
 
-- `06 / SELECTED / CHDG Foundations V1`
-- `07 / SELECTED / Reusable Components V1`
-- `V1 / Home / Empty / 1440`
-- `V1 / Project Details / Loaded / 1440`
-- `V1 / Source Review / Ready / 1440`
-- `V1 / Source Review / Attention / 1440`
-- `V1 / Generate / Ready / 1440`
-- `V1 / Generate / Running / 1440`
-- `V1 / Generate / Failed / 1440`
-- `V1 / Preview / Ready / 1440`
-- `V1 / Home / Empty / 1024`
-- `V1 / Project Details / Loaded / 1024`
-- `V1 / Source Review / Ready / 1024`
-- `V1 / Source Review / Attention / 1024`
-- `V1 / Generate / Ready / 1024`
-- `V1 / Generate / Running / 1024`
-- `V1 / Generate / Failed / 1024`
-- `V1 / Preview / Ready / 1024`
+Do not invent additional permanent routes without updating the OpenSpec route
+contract first.
 
-These V1 frames and the semantic system were approved at Approval Checkpoint 3.
-The 1024 frames structurally adapt that approved flow without changing its
-information architecture. The CURRENT sections remain the fidelity reference
-for existing behavior.
+## Approved mockup references
 
-## Status ownership
+Read:
 
-- Project identity, readiness, and save state: project context header.
-- Workflow state: workflow-step variants.
-- Page validation: page status summary and validation messages.
-- Unknown mapping attention: affected Source Review task and advisory callout.
-- Generation failure: Generate recovery panel and failed workflow step.
+```text
+design/references/simplified-v1-mockups/README.md
+```
 
-Approved deviation: no generic standalone status-pill component. Owner-specific
-components satisfy the requirement without duplicating status.
+The PNGs were copied byte-for-byte from the final approved generated images.
+They must not be regenerated during Wave 0. Pencil work should use them as
+visual references while correcting text, responsive behavior, state coverage,
+and implementation feasibility.
 
-## Implementation handoff
+## Simplified V1 Pencil work
 
-Implementation agents should begin with `design/handoff/README.md`, then review
-the state matrix, screen/scenario map, component inventory, and implementation
-sequence. They must verify current behavior through the browser harness rather
-than treating V1 proposals as implemented behavior.
+Create new top-level sections without deleting old ones. Recommended naming:
 
-The unresolved behavior list remains: Retry scope, downstream invalidation,
-Open output safety during generation, exact save-state transitions, and the
-primary audio-backed Preview experience.
+```text
+08 / SUPERSEDED / Design V1 Workflow
+09 / REFERENCE / Simplified V1 Approved Mockups
+10 / SELECTED / Simplified V1 Foundations Delta
+11 / SELECTED / Simplified V1 Components
+12 / V1 / Simplified Flow / 1440
+13 / V1 / Simplified Flow / 1024
+14 / V1 / Simplified States
+15 / HANDOFF / Simplified V1
+```
+
+The exact numeric prefix may be adjusted to avoid collision with existing
+sections, but the human-readable names must remain stable and explicit.
+
+## Required main frames
+
+At both 1440 × 900 and 1024 × 768:
+
+```text
+Simplified V1 / Home / Recent Projects
+Simplified V1 / Create Project / Details
+Simplified V1 / Create Project / Track & Mapping
+Simplified V1 / Create Project / Creating
+Simplified V1 / Editor / Preview
+Simplified V1 / Editor / Preview / Note Selected
+Simplified V1 / Editor / Mappings
+Simplified V1 / Editor / Project Details
+Simplified V1 / Export / Progress
+Simplified V1 / Export / Success
+Simplified V1 / Export / Failure
+```
+
+Additional state frames are defined by the OpenSpec and the screen inventory.
 
 ## Working rules
 
-- All repository content is English-first.
-- Save `.pen` files frequently; Pencil does not currently guarantee automatic saving.
-- Commit design changes in small, reviewable increments.
-- Keep code-based findings distinct from visually confirmed findings.
-- Do not edit the `.pen` JSON manually unless Pencil cannot open the file and a format repair is required.
-- Do not generate React, Next.js, Tailwind, or shadcn output for this application.
-- Do not implement design changes in `apps/` or `packages/` during issue #89.
-
-## Recommended first commit
-
-After Pencil opens the file and the initial workspace is verified:
-
-```bash
-git add design/
-git commit -m "design: bootstrap Pencil workspace"
-```
+- All repository artifacts are English-first.
+- Use Pencil MCP for `.pen` edits.
+- Save explicitly and record the on-disk hash at checkpoints.
+- Preserve approved mockup references and historical Pencil content.
+- Do not copy generated HTML or CSS from an image.
+- Do not introduce React, Next.js, Tailwind, shadcn, or another frontend.
+- Design work must not modify `apps/`, `packages/`, dependencies, or behavior.
+- Every design proposal must be classified as visual, IA, interaction,
+  product/domain, or unresolved.
+- The design must remain viable at 1024 × 768 through structural adaptation,
+  not globally smaller typography.
+- The Highway must retain the majority of usable Editor space.
