@@ -2,11 +2,12 @@ import {
 	DRUM_PIECE,
 	type DrumPiece,
 	type GpifHitSourceIdentity,
-	type GpifDrumHitSource,
 	type HitSourceIdentity,
 	type ImportedDrumHit,
-	type MidiDrumHitSource,
 	type MidiHitSourceIdentity,
+	type PersistedDrumHitSource,
+	type PersistedGpifDrumHitSource,
+	type PersistedMidiDrumHitSource,
 } from "@chdg/core";
 import {
 	CLONE_HERO_LANE,
@@ -69,12 +70,6 @@ const ALL_DRUM_PIECES = new Set<string>(Object.values(DRUM_PIECE));
 const MUSICAL_DRUM_PIECES = new Set<string>(
 	Object.values(DRUM_PIECE).filter((piece) => piece !== DRUM_PIECE.UNKNOWN),
 );
-const CYMBAL_PIECES = new Set<DrumPiece>([
-	DRUM_PIECE.HIHAT_CLOSED,
-	DRUM_PIECE.HIHAT_OPEN,
-	DRUM_PIECE.CRASH,
-	DRUM_PIECE.RIDE,
-]);
 const VALID_LANES = new Set<string>(Object.values(CLONE_HERO_LANE));
 const VALID_MAPPING_STATUSES = new Set<string>(
 	Object.values(SOURCE_MAPPING_STATUS),
@@ -654,7 +649,7 @@ function validateImportedHit(input: unknown): ImportedDrumHit {
 function validateHitSource(
 	input: unknown,
 	identity: HitSourceIdentity,
-): MidiDrumHitSource | GpifDrumHitSource {
+): PersistedDrumHitSource {
 	const value = record(
 		input,
 		"INVALID_SOURCE_PROVENANCE",
@@ -666,7 +661,7 @@ function validateHitSource(
 			["midiNote", "trackIndex", "trackName", "channel"],
 			"INVALID_SOURCE_PROVENANCE",
 		);
-		const source: MidiDrumHitSource = {
+		const source: PersistedMidiDrumHitSource = {
 			midiNote: integerInRange(
 				value["midiNote"],
 				0,
@@ -726,7 +721,7 @@ function validateHitSource(
 			"GPIF provenance must use kind 'gpif'.",
 		);
 	}
-	const source: GpifDrumHitSource = {
+	const source: PersistedGpifDrumHitSource = {
 		kind: "gpif",
 		trackIndex: nonNegativeInteger(
 			value["trackIndex"],
@@ -986,10 +981,20 @@ function validateCorrections(
 		const accent = optionalBoolean(value, "accent", "INVALID_CORRECTION");
 		const ghost = optionalBoolean(value, "ghost", "INVALID_CORRECTION");
 		const deleted = optionalBoolean(value, "deleted", "INVALID_CORRECTION");
-		if (accent === true && ghost === true) {
+		const effectivePieceForDynamics =
+			piece ??
+			knownEffectiveMappingPiece(
+				hit.sourceMappingKey,
+				sourceMappings,
+				mappings,
+			);
+		const effectiveAccent =
+			accent ?? effectivePieceForDynamics === DRUM_PIECE.HIHAT_OPEN;
+		const effectiveGhost = ghost ?? false;
+		if (effectiveAccent && effectiveGhost) {
 			throw new ProjectFileValidationError(
 				"ACCENT_GHOST_CONFLICT",
-				"A correction cannot enable accent and ghost simultaneously.",
+				"A correction cannot produce accent and ghost simultaneously.",
 			);
 		}
 		if (deleted === false) {
@@ -1325,6 +1330,26 @@ function effectiveMappingPiece(
 	return piece;
 }
 
+function knownEffectiveMappingPiece(
+	key: string,
+	sourceMappings: Readonly<Record<string, SourceMappingDefinition>>,
+	mappings: ProjectMappings,
+): Exclude<DrumPiece, "unknown"> | undefined {
+	const override = Object.hasOwn(mappings.interpretationOverrides, key)
+		? mappings.interpretationOverrides[key]
+		: undefined;
+	if (override?.kind === "piece") return override.piece;
+	if (override?.kind === "ignore") return undefined;
+	const mapping = sourceMappings[key];
+	if (
+		mapping?.status !== SOURCE_MAPPING_STATUS.MAPPED ||
+		mapping.detectedPiece === DRUM_PIECE.UNKNOWN
+	) {
+		return undefined;
+	}
+	return mapping.detectedPiece;
+}
+
 function validateTarget(input: unknown): CloneHeroTarget {
 	const value = record(
 		input,
@@ -1361,12 +1386,6 @@ function validatePieceTarget(
 		throw new ProjectFileValidationError(
 			"INVALID_PIECE_TARGET_COMBINATION",
 			"Only a kick may target the kick lane.",
-		);
-	}
-	if (CYMBAL_PIECES.has(piece) !== target.cymbal) {
-		throw new ProjectFileValidationError(
-			"INVALID_PIECE_TARGET_COMBINATION",
-			`Musical piece '${piece}' is inconsistent with target cymbal semantics.`,
 		);
 	}
 }

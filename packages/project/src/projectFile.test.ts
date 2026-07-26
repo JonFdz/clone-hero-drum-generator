@@ -9,6 +9,14 @@ import {
 } from "./projectFile.js";
 import type { ChdgProjectFile } from "./projectFileTypes.js";
 
+type MutableFixture<T> = T extends readonly (infer Item)[]
+	? MutableFixture<Item>[]
+	: T extends object
+		? { -readonly [Key in keyof T]: MutableFixture<T[Key]> }
+		: T;
+
+type MutableProjectFixture = MutableFixture<ChdgProjectFile>;
+
 const HASH_A = "a".repeat(64);
 const HASH_B = "b".repeat(64);
 const CREATED_AT = "2026-07-26T10:00:00.000Z";
@@ -410,7 +418,7 @@ describe("mapping and correction validation", () => {
 		expectInvalid(validateProjectFile(project), "INVALID_CLONE_HERO_TARGET");
 	});
 
-	it("rejects tom-as-cymbal and hi-hat-as-tom combinations", () => {
+	it("keeps musical piece independent from valid cymbal semantics", () => {
 		const tom = minimalProject();
 		tom.sourceDocument.hits[0]!.detectedPiece = "tom_high";
 		tom.import.sourceMappings["midi:36"]!.detectedPiece = "tom_high";
@@ -418,7 +426,16 @@ describe("mapping and correction validation", () => {
 			lane: "yellow",
 			cymbal: true,
 		};
-		expectInvalid(validateProjectFile(tom), "INVALID_PIECE_TARGET_COMBINATION");
+		const tomResult = validateProjectFile(tom);
+		expect(tomResult.ok).toBe(true);
+		if (tomResult.ok) {
+			expect(tomResult.project.sourceDocument.hits[0]!.detectedPiece).toBe(
+				"tom_high",
+			);
+			expect(
+				tomResult.project.import.sourceMappings["midi:36"]!.defaultTarget,
+			).toEqual({ lane: "yellow", cymbal: true });
+		}
 
 		const hihat = minimalProject();
 		hihat.sourceDocument.hits[0]!.detectedPiece = "hihat_closed";
@@ -427,8 +444,113 @@ describe("mapping and correction validation", () => {
 			lane: "yellow",
 			cymbal: false,
 		};
+		const hihatResult = validateProjectFile(hihat);
+		expect(hihatResult.ok).toBe(true);
+		if (hihatResult.ok) {
+			expect(hihatResult.project.sourceDocument.hits[0]!.detectedPiece).toBe(
+				"hihat_closed",
+			);
+			expect(
+				hihatResult.project.import.sourceMappings["midi:36"]!.defaultTarget,
+			).toEqual({ lane: "yellow", cymbal: false });
+		}
+	});
+
+	it.each([
+		{ lane: "green", cymbal: false },
+		{ lane: "green", cymbal: true },
+		{ lane: "blue", cymbal: false },
+	] as const)("keeps Ride identity with valid target $lane/$cymbal", (target) => {
+		const project = minimalProject();
+		project.sourceDocument.hits[0]!.detectedPiece = "ride";
+		project.import.sourceMappings["midi:36"]!.detectedPiece = "ride";
+		project.import.sourceMappings["midi:36"]!.defaultTarget = target;
+
+		const result = validateProjectFile(project);
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.sourceDocument.hits[0]!.detectedPiece).toBe("ride");
+			expect(
+				result.project.import.sourceMappings["midi:36"]!.defaultTarget,
+			).toEqual(target);
+		}
+	});
+
+	it("allows a source target override to change cymbal semantics without changing piece", () => {
+		const project = completeProject();
+		const hit = project.sourceDocument.hits[0]!;
+		project.mappings.targetOverrides[hit.sourceMappingKey] = {
+			lane: "yellow",
+			cymbal: false,
+		};
+
+		const result = validateProjectFile(project);
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.sourceDocument.hits[0]!.detectedPiece).toBe("ride");
+			expect(result.project.mappings.targetOverrides[hit.sourceMappingKey]).toEqual({
+				lane: "yellow",
+				cymbal: false,
+			});
+		}
+	});
+
+	it("keeps kick-lane safety independent from cymbal semantics", () => {
+		const musicalKickOffKick = minimalProject();
+		musicalKickOffKick.import.sourceMappings["midi:36"]!.defaultTarget = {
+			lane: "yellow",
+			cymbal: false,
+		};
 		expectInvalid(
-			validateProjectFile(hihat),
+			validateProjectFile(musicalKickOffKick),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+
+		const nonKickOnKick = minimalProject();
+		nonKickOnKick.sourceDocument.hits[0]!.detectedPiece = "ride";
+		nonKickOnKick.import.sourceMappings["midi:36"]!.detectedPiece = "ride";
+		expectInvalid(
+			validateProjectFile(nonKickOnKick),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+	});
+
+	it("enforces kick-lane safety for mapping overrides and sparse corrections", () => {
+		const mappingOverride = completeProject();
+		mappingOverride.mappings.targetOverrides["gpif:ride"] = {
+			lane: "kick",
+			cymbal: false,
+		};
+		expectInvalid(
+			validateProjectFile(mappingOverride),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+
+		const targetCorrection = completeProject();
+		const snare = targetCorrection.sourceDocument.hits[1]!;
+		targetCorrection.corrections = {
+			[snare.id]: {
+				hitId: snare.id,
+				target: { lane: "kick", cymbal: false },
+				updatedAt: CREATED_AT,
+			},
+		};
+		expectInvalid(
+			validateProjectFile(targetCorrection),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+
+		const pieceCorrection = minimalProject();
+		const kick = pieceCorrection.sourceDocument.hits[0]!;
+		pieceCorrection.corrections[kick.id] = {
+			hitId: kick.id,
+			piece: "ride",
+			updatedAt: CREATED_AT,
+		};
+		expectInvalid(
+			validateProjectFile(pieceCorrection),
 			"INVALID_PIECE_TARGET_COMBINATION",
 		);
 	});
@@ -445,6 +567,107 @@ describe("mapping and correction validation", () => {
 		expectInvalid(validateProjectFile(project), "ACCENT_GHOST_CONFLICT");
 	});
 
+	it.each([
+		"detected",
+		"interpretation-override",
+		"piece-correction",
+	] as const)(
+		"rejects ghost-only correction when effective open hi-hat comes from %s",
+		(source) => {
+			const project = minimalProject();
+			const hit = project.sourceDocument.hits[0]!;
+			if (source === "detected") {
+				hit.detectedPiece = "hihat_open";
+				project.import.sourceMappings["midi:36"]!.detectedPiece =
+					"hihat_open";
+				project.import.sourceMappings["midi:36"]!.defaultTarget = {
+					lane: "yellow",
+					cymbal: true,
+				};
+			} else if (source === "interpretation-override") {
+				project.mappings.interpretationOverrides["midi:36"] = {
+					kind: "piece",
+					piece: "hihat_open",
+				};
+			}
+			project.corrections[hit.id] = {
+				hitId: hit.id,
+				...(source === "piece-correction" ? { piece: "hihat_open" as const } : {}),
+				ghost: true,
+				updatedAt: CREATED_AT,
+			};
+
+			expectInvalid(validateProjectFile(project), "ACCENT_GHOST_CONFLICT");
+		},
+	);
+
+	it("accepts open hi-hat ghost when accent is explicitly disabled", () => {
+		const project = minimalProject();
+		const hit = project.sourceDocument.hits[0]!;
+		hit.detectedPiece = "hihat_open";
+		project.import.sourceMappings["midi:36"]!.detectedPiece = "hihat_open";
+		project.import.sourceMappings["midi:36"]!.defaultTarget = {
+			lane: "yellow",
+			cymbal: true,
+		};
+		project.corrections[hit.id] = {
+			hitId: hit.id,
+			accent: false,
+			ghost: true,
+			updatedAt: CREATED_AT,
+		};
+
+		expect(validateProjectFile(project).ok).toBe(true);
+	});
+
+	it("accepts the inherited accent default for open hi-hat without a correction", () => {
+		const project = minimalProject();
+		project.sourceDocument.hits[0]!.detectedPiece = "hihat_open";
+		project.import.sourceMappings["midi:36"]!.detectedPiece = "hihat_open";
+		project.import.sourceMappings["midi:36"]!.defaultTarget = {
+			lane: "yellow",
+			cymbal: true,
+		};
+
+		expect(validateProjectFile(project).ok).toBe(true);
+	});
+
+	it("accepts ghost-only correction for a normal piece", () => {
+		const project = completeProject();
+		const hit = project.sourceDocument.hits[1]!;
+		project.corrections = {
+			[hit.id]: {
+				hitId: hit.id,
+				ghost: true,
+				updatedAt: CREATED_AT,
+			},
+		};
+
+		expect(validateProjectFile(project).ok).toBe(true);
+	});
+
+	it.each(["unknown", "ignored"] as const)(
+		"does not invent an accent default for %s mapping with ghost-only correction",
+		(status) => {
+			const project = minimalProject();
+			const mapping = project.import.sourceMappings["midi:36"]!;
+			const hit = project.sourceDocument.hits[0]!;
+			mapping.status = status;
+			delete mapping.defaultTarget;
+			if (status === "unknown") {
+				mapping.detectedPiece = "unknown";
+				hit.detectedPiece = "unknown";
+			}
+			project.corrections[hit.id] = {
+				hitId: hit.id,
+				ghost: true,
+				updatedAt: CREATED_AT,
+			};
+
+			expect(validateProjectFile(project).ok).toBe(true);
+		},
+	);
+
 	it("rejects persisted deleted false because restore removes the overlay", () => {
 		const project = minimalProject();
 		const hitId = project.sourceDocument.hits[0]!.id;
@@ -457,22 +680,7 @@ describe("mapping and correction validation", () => {
 		expectInvalid(validateProjectFile(project), "INVALID_CORRECTION");
 	});
 
-	it("validates the effective piece/target when a correction changes only piece", () => {
-		const project = minimalProject();
-		const hitId = project.sourceDocument.hits[0]!.id;
-		project.corrections[hitId] = {
-			hitId,
-			piece: "ride",
-			updatedAt: CREATED_AT,
-		};
-
-		expectInvalid(
-			validateProjectFile(project),
-			"INVALID_PIECE_TARGET_COMBINATION",
-		);
-	});
-
-	it("inherits a compatible mapped target when a correction changes only piece", () => {
+	it("piece-only correction does not rewrite the inherited target", () => {
 		const project = completeProject();
 		const hit = project.sourceDocument.hits[1]!;
 		project.import.sourceMappings[hit.sourceMappingKey]!.defaultTarget = {
@@ -487,10 +695,22 @@ describe("mapping and correction validation", () => {
 			},
 		};
 
-		expect(validateProjectFile(project).ok).toBe(true);
+		const result = validateProjectFile(project);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.corrections[hit.id]).toEqual({
+				hitId: hit.id,
+				piece: "tom_mid",
+				updatedAt: CREATED_AT,
+			});
+			expect(
+				result.project.import.sourceMappings[hit.sourceMappingKey]!
+					.defaultTarget,
+			).toEqual({ lane: "blue", cymbal: false });
+		}
 	});
 
-	it("inherits the effective piece when a correction changes only target", () => {
+	it("target-only correction does not change the musical piece", () => {
 		const project = completeProject();
 		const hit = project.sourceDocument.hits[1]!;
 		project.corrections = {
@@ -501,10 +721,16 @@ describe("mapping and correction validation", () => {
 			},
 		};
 
-		expectInvalid(
-			validateProjectFile(project),
-			"INVALID_PIECE_TARGET_COMBINATION",
-		);
+		const result = validateProjectFile(project);
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.sourceDocument.hits[1]!.detectedPiece).toBe("snare");
+			expect(result.project.corrections[hit.id]).toEqual({
+				hitId: hit.id,
+				target: { lane: "yellow", cymbal: true },
+				updatedAt: CREATED_AT,
+			});
+		}
 	});
 
 	it("lets an individual piece correction resolve an otherwise unknown hit", () => {
@@ -731,7 +957,7 @@ describe("hostile record keys and canonical collection order", () => {
 	});
 });
 
-function minimalProject(): ChdgProjectFile {
+function minimalProject(): MutableProjectFixture {
 	const sourceIdentity = {
 		kind: "midi" as const,
 		trackIndex: 0,
@@ -819,7 +1045,7 @@ function minimalProject(): ChdgProjectFile {
 	};
 }
 
-function completeProject(): ChdgProjectFile {
+function completeProject(): MutableProjectFixture {
 	const project = minimalProject();
 	project.project.album = "Album";
 	project.project.year = "2026";

@@ -139,9 +139,9 @@ export interface ChdgAssetsSection {
 
 export interface ChdgSourceDocument {
 	readonly resolution: number;
-	tempos: readonly TempoEvent[];
-	readonly timeSignatures: readonly TimeSignatureEvent[];
-	readonly sections: readonly SongSection[];
+	readonly tempos: readonly Readonly<TempoEvent>[];
+	readonly timeSignatures: readonly Readonly<TimeSignatureEvent>[];
+	readonly sections: readonly Readonly<SongSection>[];
 	readonly hits: readonly ImportedDrumHit[];
 }
 

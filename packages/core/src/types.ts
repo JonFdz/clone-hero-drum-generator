@@ -72,6 +72,34 @@ export type HitSourceIdentity =
 	| MidiHitSourceIdentity
 	| GpifHitSourceIdentity;
 
+/** Readonly provenance snapshot persisted with the immutable imported hit. */
+export interface PersistedMidiDrumHitSource {
+	readonly midiNote: number;
+	readonly trackIndex: number;
+	readonly trackName: string;
+	readonly channel: number;
+}
+
+/** Readonly provenance snapshot persisted with the immutable imported hit. */
+export interface PersistedGpifDrumHitSource {
+	readonly kind: typeof SOURCE_DOCUMENT_KIND.GPIF;
+	readonly trackIndex: number;
+	readonly trackName?: string;
+	readonly articulationKey?: string;
+	readonly rawArticulation?: string;
+	readonly noteName?: string;
+	readonly inputMidiNumbers?: readonly number[];
+	readonly outputMidiNumber?: number;
+	readonly resolvedVia?: string;
+	readonly measureIndex?: number;
+	readonly beatIndex?: number;
+	readonly noteIndex?: number;
+}
+
+export type PersistedDrumHitSource =
+	| PersistedMidiDrumHitSource
+	| PersistedGpifDrumHitSource;
+
 export interface ImportedDrumHit {
 	readonly id: string;
 	readonly tick: number;
@@ -80,5 +108,5 @@ export interface ImportedDrumHit {
 	readonly durationTicks: number;
 	readonly sourceMappingKey: string;
 	readonly sourceIdentity: HitSourceIdentity;
-	readonly source: MidiDrumHitSource | GpifDrumHitSource;
+	readonly source: PersistedDrumHitSource;
 }
