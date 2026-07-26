@@ -1,12 +1,12 @@
 <section class="empty-state">
 			<div class="empty-icon" aria-hidden="true">▤</div>
 			<h2>{{ hasProjects ? 'No matching projects' : 'No recent projects yet' }}</h2>
-			<p>{{ hasProjects ? 'Try a different search, source filter, or sort mode.' : 'Create a new .chdg project or open an existing one to build your local library.' }}</p>
+			<p>{{ hasProjects ? 'Try a different search, source filter, or sort mode.' : 'Open an existing .chdg project to build your local library.' }}</p>
 			<div class="empty-actions">
 				@if (hasProjects) {
 					<button class="button ghost" type="button" (click)="resetFilters.emit()">Clear Search / Reset Filters</button>
 				} @else {
-					<button class="button primary" type="button" (click)="newProject.emit()">New Project</button>
+					<button class="button primary" type="button" disabled [title]="newProjectUnavailableMessage">New Project</button>
 					<button class="button secondary" type="button" (click)="openProject.emit()">Open Project</button>
 				}
 			</div>

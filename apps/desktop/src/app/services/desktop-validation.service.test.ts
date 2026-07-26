@@ -43,10 +43,26 @@ describe("desktop validation model", () => {
 			expect.arrayContaining([
 				expect.objectContaining({ id: "source.missing", blocking: true }),
 				expect.objectContaining({ id: "audio.missing", blocking: true }),
-				expect.objectContaining({ id: "output.missing", blocking: true }),
+				expect.objectContaining({
+					id: "output.missing",
+					severity: "info",
+					blocking: false,
+				}),
 				expect.objectContaining({ id: "tracks.missing", blocking: true }),
 			]),
 		);
+		expect(summary.items).not.toContainEqual(
+			expect.objectContaining({
+				fixAction: expect.objectContaining({
+					route: expect.stringMatching(
+						/^\/(?:projects\/details|source-review|generate)$/,
+					),
+				}),
+			}),
+		);
+		expect(
+			summary.items.map((item) => `${item.title} ${item.message}`).join(" "),
+		).not.toMatch(/choose|before generating/i);
 	});
 
 	it("blocks unsupported source and invalid offset", () => {
@@ -73,6 +89,26 @@ describe("desktop validation model", () => {
 		);
 	});
 
+	it("treats an unrecorded optional export target as informational", () => {
+		const summary = buildDesktopValidationSummary(
+			generateState({
+				sourcePath: "song.mid",
+				audioPath: "song.ogg",
+				selectedTracks: [3],
+				metadata: { artist: "Artist", charter: "Charter" },
+			}),
+			projectState(),
+		);
+		const output = summary.items.find((item) => item.id === "output.missing");
+
+		expect(output).toMatchObject({
+			severity: "info",
+			blocking: false,
+			title: "Export target not recorded",
+		});
+		expect(summary.canGenerate).toBe(true);
+	});
+
 	it("blocks saved missing paths from loaded projects", () => {
 		const summary = buildDesktopValidationSummary(
 			generateState({
@@ -93,6 +129,21 @@ describe("desktop validation model", () => {
 						path: "song.wav",
 						message: "Missing audioPath: song.wav",
 					},
+					{
+						kind: "outputDir",
+						path: "/tmp/out",
+						message: "Missing outputDir: /tmp/out",
+					},
+					{
+						kind: "outputChartPath",
+						path: "/tmp/out/notes.chart",
+						message: "Missing managed chart: /tmp/out/notes.chart",
+					},
+					{
+						kind: "outputAudioPath",
+						path: "/tmp/out/song.ogg",
+						message: "Missing managed audio: /tmp/out/song.ogg",
+					},
 				],
 			}),
 		);
@@ -102,6 +153,21 @@ describe("desktop validation model", () => {
 			expect.arrayContaining([
 				expect.objectContaining({ id: "source.path-missing", blocking: true }),
 				expect.objectContaining({ id: "audio.path-missing", blocking: true }),
+				expect.objectContaining({
+					id: "output.path-missing",
+					title: "Recorded export target unavailable",
+					blocking: true,
+				}),
+				expect.objectContaining({
+					id: "output.chart-missing",
+					title: "Managed preview chart unavailable",
+					blocking: true,
+				}),
+				expect.objectContaining({
+					id: "output.audio-missing",
+					title: "Managed preview audio unavailable",
+					blocking: true,
+				}),
 			]),
 		);
 	});
@@ -150,6 +216,39 @@ describe("desktop validation model", () => {
 				}),
 			]),
 		);
+		expect(
+			summary.items.find(
+				(item) => item.id === "generation.needs-regenerate",
+			),
+		).toEqual(
+			expect.objectContaining({
+				title: "Persisted export status is outdated",
+				message: "Managed regeneration is unavailable in this migration.",
+				fixAction: undefined,
+			}),
+		);
+	});
+
+	it("does not offer generation actions for persisted export states", () => {
+		for (const outputStatus of [
+			"failed",
+			"not-generated",
+		] satisfies DesktopProjectState["outputStatus"][]) {
+			const summary = buildDesktopValidationSummary(
+				generateState(),
+				projectState({ outputStatus }),
+			);
+			const item = summary.items.find((candidate) =>
+				candidate.id.startsWith("generation."),
+			);
+
+			expect(item).toBeDefined();
+			if (!item) throw new Error(`Missing generation item for ${outputStatus}`);
+
+			expect(item.id).toBe(`generation.${outputStatus}`);
+			expect(item.message).toContain("unavailable in this migration");
+			expect(item.fixAction).toBeUndefined();
+		}
 	});
 
 	it("treats a finite chart offset as valid without warning", () => {

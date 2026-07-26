@@ -1,4 +1,5 @@
 import "@angular/compiler";
+import { readFileSync } from "node:fs";
 import { Injector, runInInjectionContext, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -110,7 +111,6 @@ describe("SourceReviewPageComponent", () => {
 						setMappingOverrides: vi.fn(),
 						setMetadata: vi.fn(),
 						buildNormalizeInput: vi.fn(),
-						buildProjectStatePayload: vi.fn(),
 					},
 				},
 			],
@@ -306,17 +306,22 @@ describe("SourceReviewPageComponent", () => {
 		expect(mappingChanged).toHaveBeenCalledTimes(1);
 	});
 
-	it("continueToGenerate navigates only when ready", async () => {
-		await component.continueToGenerate();
-		expect(navigateByUrl).not.toHaveBeenCalled();
-		withSourceAndPreview();
-		await component.continueToGenerate();
-		expect(navigateByUrl).toHaveBeenCalledWith("/generate");
-	});
-
 	it("goBack navigates to project details", () => {
 		component.goBack();
 		expect(navigateByUrl).toHaveBeenCalledWith("/projects/details");
+	});
+
+	it("describes Source Review as runtime-only without setup or generation guidance", () => {
+		const template = readFileSync(
+			new URL("./source-review-page.component.html", import.meta.url),
+			"utf8",
+		);
+		expect(template).toContain("runtime-only");
+		expect(template).toContain("Source selection and replacement are");
+		expect(template).not.toContain("before generation");
+		expect(template).not.toContain("Choose a local");
+		expect(template).not.toContain("continueToGenerate");
+		expect(template).not.toContain("/generate");
 	});
 
 	it("the migrated components are standalone imports and the page does not import DesktopBridgeService", () => {

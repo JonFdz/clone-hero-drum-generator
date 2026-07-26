@@ -1,13 +1,14 @@
 import type {
-	ChdgProjectAnalysisCache,
-	ChdgProjectFile,
-	ChdgSourceFingerprint,
 	DesktopSettings,
 	JsonEnvelope,
 	NormalizationPreview,
 	RecentProject,
 	SourceInspectionResult,
 } from "@chdg/project/browser";
+import type {
+	SourceReviewFingerprint,
+	SourceReviewRuntimeCache,
+} from "../app/services/desktop-project-runtime";
 import type {
 	DesktopAppInfo,
 	DesktopHealthStatus,
@@ -23,7 +24,7 @@ export const HARNESS_TIMESTAMPS = {
 } as const;
 
 export const HARNESS_PATHS = {
-	PROJECT: "C:\\CHDG-Harness\\Projects\\Demo Project.chdg.json",
+	PROJECT: "C:\\CHDG-Harness\\Projects\\Synthetic Artist - Harness Demo - Demo Project\\project.chdg",
 	SOURCE: "C:\\CHDG-Harness\\Sources\\demo.mid",
 	AUDIO: "C:\\CHDG-Harness\\Sources\\demo.wav",
 	OUTPUT: "C:\\CHDG-Harness\\Output\\Demo Song",
@@ -31,6 +32,9 @@ export const HARNESS_PATHS = {
 	SONG_INI: "C:\\CHDG-Harness\\Output\\Demo Song\\song.ini",
 	SONG_OGG: "C:\\CHDG-Harness\\Output\\Demo Song\\song.ogg",
 } as const;
+
+export const HARNESS_AUDIO_PREVIEW_SRC =
+	"data:audio/wav;base64,UklGRkQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSAAAADoAxj86AMY/OgDGPzoAxj86AMY/OgDGPzoAxj86AMY/A==";
 
 export function successEnvelope<T>(data: T): JsonEnvelope<T> {
 	return { ok: true, data, issues: [] };
@@ -76,13 +80,13 @@ export function buildRecentProjects(): RecentProject[] {
 	return [
 		{
 			path: HARNESS_PATHS.PROJECT,
-			name: "Demo Project",
+			name: "Synthetic Artist - Harness Demo - Demo Project",
 			lastOpenedAt: "2026-01-15T12:00:00.000Z",
 		},
 	];
 }
 
-export function buildSourceFingerprint(): ChdgSourceFingerprint {
+export function buildSourceFingerprint(): SourceReviewFingerprint {
 	return { path: HARNESS_PATHS.SOURCE, sizeBytes: 4096, mtimeMs: 1768478400000 };
 }
 
@@ -160,7 +164,7 @@ export function buildNormalization(attention = false): NormalizationPreview {
 	};
 }
 
-export function buildAnalysis(attention = false): ChdgProjectAnalysisCache {
+export function buildAnalysis(attention = false): SourceReviewRuntimeCache {
 	return {
 		schemaVersion: 2,
 		sourceFingerprint: buildSourceFingerprint(),
@@ -177,7 +181,14 @@ export function buildProjectPayload(
 	overrides: Partial<ProjectStatePayload> = {},
 ): ProjectStatePayload {
 	return {
-		projectName: "Demo Project",
+		project: {
+			projectId: "project-harness-demo",
+			artist: "Synthetic Artist",
+			songName: "Harness Demo",
+			projectName: "Demo Project",
+			displayName: "Synthetic Artist - Harness Demo - Demo Project",
+		},
+		projectName: "Synthetic Artist - Harness Demo - Demo Project",
 		projectFilePath: HARNESS_PATHS.PROJECT,
 		sourcePath: HARNESS_PATHS.SOURCE,
 		audioPath: HARNESS_PATHS.AUDIO,
@@ -194,38 +205,7 @@ export function buildProjectPayload(
 		},
 		offsetMs: 0,
 		generationStatus: "not-generated",
-		mappingOverrides: {},
-		analysis: buildAnalysis(),
 		...overrides,
-	};
-}
-
-export function buildProjectFile(payload: ProjectStatePayload): ChdgProjectFile {
-	return {
-		schemaVersion: 1,
-		appVersion: "0.1.0-harness",
-		project: {
-			name: payload.projectName,
-			createdAt: "2026-01-15T12:00:00.000Z",
-			updatedAt: "2026-01-15T12:00:00.000Z",
-		},
-		paths: {
-			sourcePath: payload.sourcePath,
-			audioPath: payload.audioPath,
-			outputDir: payload.outputDir,
-		},
-		cover: payload.cover,
-		source: { sourceKind: payload.sourceKind },
-		selection: { selectedTracks: payload.selectedTracks },
-		metadata: payload.metadata,
-		generation: {
-			offsetMs: payload.offsetMs,
-			status: payload.generationStatus,
-			lastGeneratedAt: payload.lastGeneratedAt,
-			outputFiles: payload.outputFiles,
-		},
-		mappingOverrides: payload.mappingOverrides,
-		analysis: payload.analysis,
 	};
 }
 

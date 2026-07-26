@@ -27,29 +27,157 @@ function recent(index: number): RecentProject {
 }
 
 describe("home dashboard next action", () => {
-  it("uses New Project when no project is active", () => {
-    expect(deriveHomeNextAction(input({ projectName: "Untitled", hasProject: false })).id).toBe("new_project");
+  it("uses Open Project when creation is unavailable and no project is active", () => {
+    expect(deriveHomeNextAction(input({ projectName: "Untitled", hasProject: false }))).toMatchObject({
+      id: "open_project",
+      label: "Open Project",
+      route: "/projects",
+    });
   });
 
-  it("uses Continue Setup when required paths are missing", () => {
-    expect(deriveHomeNextAction(input({ missingPathWarnings: [{ kind: "sourcePath", message: "Missing source" }], audioPath: "demo.ogg", outputDir: "/tmp/out" })).id).toBe("continue_setup");
+  it("offers only Open Project when referenced paths are missing", () => {
+    expect(deriveHomeNextAction(input({ missingPathWarnings: [{ kind: "sourcePath", message: "Missing source" }], audioPath: "demo.ogg", outputDir: "/tmp/out" }))).toMatchObject({
+      id: "open_project",
+      route: "/projects",
+    });
   });
 
-  it("uses Source Review for a safe not-generated setup", () => {
-    expect(deriveHomeNextAction(input({ sourcePath: "demo.mid", audioPath: "demo.ogg", outputDir: "/tmp/out" })).id).toBe("source_review");
+  it("offers Mappings for an opened project with a source", () => {
+    expect(deriveHomeNextAction(input({ sourcePath: "demo.mid", audioPath: "demo.ogg", outputDir: "/tmp/out" }))).toMatchObject({
+      id: "mappings",
+      route: "/mapping",
+    });
   });
 
-  it("selects Generate, Preview, and Review Generate from output status", () => {
+  it("does not require an optional export target or cover to inspect mappings", () => {
+    const action = deriveHomeNextAction(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: undefined,
+      missingPathWarnings: [
+        { kind: "outputDir", message: "No export target" },
+        { kind: "coverImagePath", message: "No optional cover" },
+      ],
+    }));
+
+    expect(action).toMatchObject({ id: "mappings", route: "/mapping" });
+  });
+
+  it("does not advertise Preview when current export output is unavailable", () => {
+    const withoutTarget = deriveHomeNextAction(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputStatus: "generated",
+    }));
+    const missingRecordedTarget = deriveHomeNextAction(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: "/missing/export",
+      outputStatus: "generated",
+      missingPathWarnings: [
+        { kind: "outputDir", path: "/missing/export", message: "Missing outputDir" },
+      ],
+    }));
+
+    for (const action of [withoutTarget, missingRecordedTarget]) {
+      expect(action).toMatchObject({ id: "open_project", route: "/projects" });
+      expect(action.description).toContain("persisted export status is current");
+      expect(action.route).not.toBe("/preview");
+    }
+  });
+
+  it("blocks Preview when the target exists but required managed files are missing", () => {
+    const dashboard = deriveHomeDashboardModel(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: "/existing/export",
+      outputStatus: "generated",
+      missingPathWarnings: [
+        {
+          kind: "outputChartPath",
+          path: "/existing/export/notes.chart",
+          message: "Missing managed chart",
+        },
+        {
+          kind: "outputAudioPath",
+          path: "/existing/export/song.ogg",
+          message: "Missing managed audio",
+        },
+      ],
+    }));
+
+    expect(dashboard.nextAction).toMatchObject({
+      id: "open_project",
+      route: "/projects",
+    });
+    expect(dashboard.outputStatus.label).toBe("Generated output unavailable");
+    expect(
+      dashboard.workflow.find((step) => step.label === "Preview")?.status,
+    ).toBe("blocked");
+  });
+
+  it("blocks the Preview workflow step when current output is missing", () => {
+    const workflow = deriveWorkflowStepStatuses(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: "/missing/export",
+      outputStatus: "generated",
+      missingPathWarnings: [
+        { kind: "outputDir", path: "/missing/export", message: "Missing outputDir" },
+      ],
+    }));
+
+    expect(workflow.find((step) => step.label === "Export status")?.status).toBe("unknown");
+    expect(workflow.find((step) => step.label === "Preview")?.status).toBe("blocked");
+  });
+
+  it("keeps Preview available for current output with an existing target", () => {
+    const dashboard = deriveHomeDashboardModel(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: "/existing/export",
+      outputStatus: "generated",
+    }));
+
+    expect(dashboard.outputStatus.label).toBe("Generated");
+    expect(dashboard.nextAction).toMatchObject({
+      id: "preview",
+      route: "/preview",
+    });
+    expect(
+      dashboard.workflow.find((step) => step.label === "Preview")?.status,
+    ).toBe("available");
+  });
+
+  it("never offers Generate or retry actions from export status", () => {
     const ready = { sourcePath: "demo.mid", audioPath: "demo.ogg", outputDir: "/tmp/out" };
-    expect(deriveHomeNextAction(input({ ...ready, outputStatus: "needs-regenerate" })).id).toBe("generate");
+    expect(deriveHomeNextAction(input({ ...ready, outputStatus: "needs-regenerate" })).id).toBe("mappings");
     expect(deriveHomeNextAction(input({ ...ready, outputStatus: "generated" })).id).toBe("preview");
-    expect(deriveHomeNextAction(input({ ...ready, outputStatus: "failed" })).id).toBe("review_generate");
+    expect(deriveHomeNextAction(input({ ...ready, outputStatus: "failed" })).id).toBe("mappings");
+  });
+
+  it("never offers unavailable setup or generation routes", () => {
+    const variants = [
+      input({ hasProject: false }),
+      input({ missingPathWarnings: [{ kind: "audioPath", message: "Missing" }] }),
+      input({ sourcePath: "demo.mid", outputStatus: "not-generated" }),
+      input({ sourcePath: "demo.mid", outputStatus: "needs-regenerate" }),
+      input({ sourcePath: "demo.mid", outputStatus: "failed" }),
+      input({ sourcePath: "demo.mid", outputStatus: "generated" }),
+    ];
+    for (const variant of variants) {
+      const action = deriveHomeNextAction(variant);
+      expect(action.route).not.toBe("/generate");
+      expect(action.route).not.toBe("/projects/details");
+      expect(action.secondaryRoute).not.toBe("/generate");
+      expect(action.label).not.toMatch(/Setup|Generate|Retry/);
+    }
   });
 });
 
 describe("home dashboard helpers", () => {
   it("keeps the canonical workflow steps in order", () => {
-    expect(deriveWorkflowStepStatuses(input()).map((step) => step.label)).toEqual(["Import source", "Source Review", "Generate", "Preview"]);
+    expect(deriveWorkflowStepStatuses(input()).map((step) => step.label)).toEqual(["Project source", "Mappings", "Export status", "Preview"]);
   });
 
   it("limits compact recent projects to three", () => {
@@ -67,5 +195,23 @@ describe("home dashboard helpers", () => {
     expect(formatHomeOutputStatus("needs-regenerate").label).toBe("Needs regenerate");
     expect(formatHomeOutputStatus("generated").label).toBe("Generated");
     expect(formatHomeOutputStatus("failed").label).toBe("Failed");
+  });
+
+  it("does not claim generated output is available when its target is missing", () => {
+    const model = deriveHomeDashboardModel(input({
+      sourcePath: "assets/source.mid",
+      audioPath: "assets/song.ogg",
+      outputDir: "/missing/export",
+      outputStatus: "generated",
+      missingPathWarnings: [
+        { kind: "outputDir", path: "/missing/export", message: "Missing outputDir" },
+      ],
+    }));
+
+    expect(model.outputStatus).toMatchObject({
+      label: "Generated output unavailable",
+      tone: "warning",
+    });
+    expect(model.outputStatus.detail).not.toContain("output is available");
   });
 });

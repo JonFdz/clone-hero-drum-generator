@@ -1,4 +1,5 @@
-import type { ChdgOutputStatus, RecentProject } from "@chdg/project/browser";
+import type { RecentProject } from "@chdg/project/browser";
+import type { DesktopOutputStatus } from "../../services/desktop-project-runtime";
 
 export type ProjectsSourceFilter = "all" | "midi" | "guitar-pro" | "unknown";
 export type ProjectsSourceType = Exclude<ProjectsSourceFilter, "all">;
@@ -36,7 +37,7 @@ export type ProjectsLibraryModelInput = {
 	sourceFilter: ProjectsSourceFilter;
 	sortMode: ProjectsSortMode;
 	currentProjectFilePath?: string;
-	currentOutputStatus: ChdgOutputStatus;
+	currentOutputStatus: DesktopOutputStatus;
 	now?: Date;
 };
 
@@ -177,7 +178,7 @@ export function isCurrentProject(
 	return !!currentProjectFilePath && project.path === currentProjectFilePath;
 }
 
-export function formatProjectOutputStatus(status: ChdgOutputStatus): {
+export function formatProjectOutputStatus(status: DesktopOutputStatus): {
 	label: string;
 	tone: ProjectsTone;
 } {

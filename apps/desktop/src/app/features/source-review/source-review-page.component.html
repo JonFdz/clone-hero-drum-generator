@@ -2,8 +2,8 @@
 	<div class="source-review-title">
 		<h1>Source Review</h1>
 		<p>
-			Review selected drum tracks, normalized preview, and mapping before
-			generation.
+			Inspect runtime-only track, normalization, and mapping information.
+			This dormant view does not update the canonical project.
 		</p>
 	</div>
 	<span
@@ -18,12 +18,13 @@
 
 @if (!state().sourcePath) {
 	<section class="card message warning">
-		<h2>No source selected</h2>
+		<h2>Runtime source unavailable</h2>
 		<p>
-			Choose a local .mid, .midi, or .gp source in Project Details first.
+			No runtime source is available. Source selection and replacement are
+			unavailable in this migration.
 		</p>
-		<a class="button primary" routerLink="/projects/details"
-			>Back to Project Details</a
+		<a class="button primary" routerLink="/projects"
+			>Open Projects</a
 		>
 	</section>
 } @else {
@@ -131,9 +132,7 @@
 	/>
 
 	<chdg-source-review-action-area
-		[canContinue]="canContinue()"
 		(back)="goBack()"
-		(continueToGenerate)="continueToGenerate()"
 	/>
 }
 

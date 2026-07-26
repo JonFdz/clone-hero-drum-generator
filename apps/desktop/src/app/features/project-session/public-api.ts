@@ -8,7 +8,10 @@
 // because it is the canonical open/create -> generation-workflow hydration
 // path used by the shell and pages until #76 moves generation into a feature.
 export { ProjectSessionStore } from "./project-session.store";
-export { ProjectPersistenceService } from "./project-persistence.service";
+export {
+	PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
+	ProjectPersistenceService,
+} from "./project-persistence.service";
 export {
 	ProjectWorkflowHydrator,
 	toGenerateWorkflowState,
@@ -22,7 +25,6 @@ export type {
 	OpenFromPickerOutcome,
 	SaveProjectOutcome,
 	SaveAsOutcome,
-	PersistenceCancelled,
 	ProjectPersistenceError,
 	initialProjectSessionState,
 } from "./project-session.model";

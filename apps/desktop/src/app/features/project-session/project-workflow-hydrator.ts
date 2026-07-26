@@ -37,10 +37,9 @@ export function toGenerateWorkflowState(
 		selectedTracks: payload.selectedTracks,
 		metadata: payload.metadata,
 		offsetMs: payload.offsetMs,
+		sourceTiming: payload.sourceTiming,
 		lastGeneratedAt: payload.lastGeneratedAt,
 		outputFiles: payload.outputFiles,
-		mappingOverrides: payload.mappingOverrides,
-		analysis: payload.analysis,
 	};
 }
 

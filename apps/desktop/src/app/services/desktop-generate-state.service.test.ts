@@ -1,8 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join , resolve} from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import type { DesktopGenerateState } from "./desktop-generate-state.service";
+import { describe, expect, it, vi } from "vitest";
+import {
+	DesktopGenerateStateService,
+	type DesktopGenerateState,
+} from "./desktop-generate-state.service";
 import {
 	chooseDefaultTracks,
 	detectDesktopSourceKind,
@@ -108,9 +111,10 @@ describe("desktop generate state source regressions", () => {
 		);
 	});
 
-	it("preserves outputFiles and lastGeneratedAt in project payload rebuild", () => {
-		expect(source).toContain("lastGeneratedAt: state.lastGeneratedAt");
-		expect(source).toContain(": state.outputFiles");
+	it("preserves outputFiles and lastGeneratedAt in runtime hydration without rebuilding a project payload", () => {
+		expect(source).toContain("lastGeneratedAt: payload.lastGeneratedAt");
+		expect(source).toContain("outputFiles: payload.outputFiles");
+		expect(source).not.toContain("buildProjectStatePayload");
 	});
 
 	it("setMappingOverrides marks preview stale without clearing normalization preview", () => {
@@ -118,6 +122,36 @@ describe("desktop generate state source regressions", () => {
 		expect(source).not.toContain(
 			"setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {\n\t\tthis.patch({\n\t\t\tmappingOverrides: { ...mappingOverrides },\n\t\t\tnormalizationPreview: undefined,",
 		);
+	});
+
+	it("keeps Source Review track and mapping changes out of canonical session state", () => {
+		const canonicalSession = {
+			dirty: false,
+			outputStatus: "generated",
+		};
+		const markDirty = vi.fn(() => {
+			canonicalSession.dirty = true;
+		});
+		const markNeedsRegenerate = vi.fn(() => {
+			canonicalSession.dirty = true;
+			canonicalSession.outputStatus = "needs-regenerate";
+		});
+		const service = new DesktopGenerateStateService({
+			markDirty,
+			markNeedsRegenerate,
+		} as never);
+
+		service.setSelectedTracks([7, 3]);
+		service.setMappingOverrides({});
+
+		expect(service.state().selectedTracks).toEqual([3, 7]);
+		expect(service.state().normalizationPreviewStale).toBe(true);
+		expect(canonicalSession).toEqual({
+			dirty: false,
+			outputStatus: "generated",
+		});
+		expect(markDirty).not.toHaveBeenCalled();
+		expect(markNeedsRegenerate).not.toHaveBeenCalled();
 	});
 
 	it("marks generation failures before replacing the generating state", () => {

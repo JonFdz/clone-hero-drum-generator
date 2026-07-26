@@ -4,9 +4,8 @@ import {
 	isOffsetDirty,
 	isOffsetInputValid,
 	nudgeOffsetMs,
-	offsetApplyStatusMessage,
 	resetOffsetToSaved,
-	resolveOffsetApplyFlow,
+	runtimeOffsetStatusMessage,
 } from "./offset-preview-state";
 
 describe("offset-preview-state", () => {
@@ -53,34 +52,9 @@ describe("offset-preview-state", () => {
 		).toBe(false);
 	});
 
-	it("keeps saved/project offset unchanged when chart write fails", () => {
-		expect(
-			resolveOffsetApplyFlow({
-				hasOutputDir: true,
-				hasChart: true,
-				chartUpdateOk: false,
-			}),
-		).toEqual({
-			canPersistOffset: false,
-			chartUpdated: false,
-			chartMissing: false,
-			outputMissing: false,
-			failed: true,
-		});
-	});
-
-	it("returns truthful apply status messages", () => {
-		expect(offsetApplyStatusMessage("project-and-chart")).toBe(
-			"Chart offset saved to project and notes.chart.",
-		);
-		expect(offsetApplyStatusMessage("project-only-chart-missing")).toBe(
-			"Chart offset saved to project. Regenerate to write notes.chart.",
-		);
-		expect(offsetApplyStatusMessage("project-only-output-missing")).toBe(
-			"Chart offset saved to project. Select an output folder and generate to write notes.chart.",
-		);
-		expect(offsetApplyStatusMessage("project-only")).toBe(
-			"Chart offset saved to project.",
+	it("states that runtime application does not write the managed chart", () => {
+		expect(runtimeOffsetStatusMessage()).toBe(
+			"Preview offset applied for this runtime session only. notes.chart was not modified.",
 		);
 	});
 });

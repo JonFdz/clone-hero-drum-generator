@@ -14,26 +14,33 @@
 
 				<section class="card mock-actions-card" aria-label="Quick actions">
 					<h2>Quick Actions</h2>
+					<p class="message warning" role="status">{{ creationImportUnavailableMessage }}</p>
 					<div class="mock-action-list">
-						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+						<button class="mock-action-button" type="button" disabled [title]="creationImportUnavailableMessage">
 							<span class="mock-action-icon">▣</span>
-							<span>New Project</span>
+							<span>New Project (Unavailable)</span>
 						</button>
 						<button class="mock-action-button" type="button" (click)="openProject()">
 							<span class="mock-action-icon">▰</span>
 							<span>Open Project</span>
 						</button>
-						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+						<button class="mock-action-button" type="button" disabled [title]="creationImportUnavailableMessage">
 							<span class="mock-action-icon">♪</span>
-							<span>Import MIDI</span>
+							<span>Import MIDI (Unavailable)</span>
 						</button>
-						<button class="mock-action-button" type="button" (click)="navigateTo('/projects/details')">
+						<button class="mock-action-button" type="button" disabled [title]="creationImportUnavailableMessage">
 							<span class="mock-action-icon gp-icon">GP</span>
-							<span>Import Guitar Pro</span>
+							<span>Import Guitar Pro (Unavailable)</span>
 						</button>
-						<button class="mock-action-button" type="button" (click)="openOutputFolder()">
+						<button
+							class="mock-action-button"
+							type="button"
+							[disabled]="!canOpenOutputFolder()"
+							[title]="outputFolderActionTitle()"
+							(click)="openOutputFolder()"
+						>
 							<span class="mock-action-icon">▭</span>
-							<span>Open Output Folder</span>
+							<span>{{ canOpenOutputFolder() ? 'Open Output Folder' : 'Output Folder Unavailable' }}</span>
 						</button>
 					</div>
 				</section>

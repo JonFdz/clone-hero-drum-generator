@@ -6,18 +6,22 @@ import type {
 	NormalizationPreview,
 	NormalizeSelectionInput,
 	SourceInspectionResult,
-	ChdgProjectAnalysisCache,
-	ChdgSourceFingerprint,
 	DesktopSettings,
 	MappingOverrideProfile,
 	RecentProject,
 } from "@chdg/project/browser";
+import type {
+	DesktopSourceTiming,
+	SourceReviewFingerprint,
+	SourceReviewRuntimeCache,
+} from "./services/desktop-project-runtime";
 import type {
 	DesktopAppInfo,
 	DesktopHealthStatus,
 	OpenOutputFolderResult,
 	PickedPath,
 	FfmpegDiagnostic,
+	ProjectMissingPathKind,
 	ProjectStatePayload,
 	SaveProjectResult,
 	AudioPreviewSource,
@@ -41,7 +45,7 @@ declare global {
 			) => Promise<JsonEnvelope<NormalizationPreview>>;
 			getSourceFingerprint: (
 				sourcePath: string,
-			) => Promise<JsonEnvelope<ChdgSourceFingerprint>>;
+			) => Promise<JsonEnvelope<SourceReviewFingerprint>>;
 			generatePackage: (
 				input: GeneratePackageInput & { overwriteKnownFiles?: boolean },
 			) => Promise<JsonEnvelope<GeneratePackageResult>>;
@@ -66,7 +70,9 @@ declare global {
 			openProject: (
 				filePath: string,
 			) => Promise<
-				JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>
+				JsonEnvelope<
+					ProjectStatePayload & { missingPaths: ProjectMissingPathKind[] }
+				>
 			>;
 			readRecentProjects: () => Promise<JsonEnvelope<RecentProject[]>>;
 			removeRecentProject: (projectPath: string) => Promise<JsonEnvelope<void>>;
@@ -89,13 +95,12 @@ declare global {
 			) => Promise<JsonEnvelope<MappingOverrideProfile[]>>;
 			testFfmpeg: (input: string) => Promise<JsonEnvelope<FfmpegDiagnostic>>;
 			getAudioPreviewSource: (input: {
-				outputDir?: string;
 				generatedSongOggPath?: string;
 			}) => Promise<JsonEnvelope<AudioPreviewSource>>;
 			getChartPreviewData: (input: {
-				outputDir?: string;
 				chartPath?: string;
-				analysis?: ChdgProjectAnalysisCache;
+				sourceTiming?: DesktopSourceTiming;
+				analysis?: SourceReviewRuntimeCache;
 			}) => Promise<JsonEnvelope<ChartPreviewData>>;
 			applyChartOffset: (input: {
 				outputDir: string;

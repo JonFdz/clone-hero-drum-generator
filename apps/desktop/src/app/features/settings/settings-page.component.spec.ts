@@ -1,4 +1,5 @@
 import "@angular/compiler";
+import { readFileSync } from "node:fs";
 import { Injector, runInInjectionContext, signal } from "@angular/core";
 import type { DesktopSettings } from "@chdg/project/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,5 +54,18 @@ describe("SettingsPageComponent", () => {
     component.updateSettings({ ffmpegPath: "/missing" });
     await component.testFfmpeg();
     expect(component.ffmpegResult()).toEqual({ available: false, message: "FFmpeg missing" });
+  });
+
+  it("describes legacy defaults and backend status truthfully", () => {
+    const template = readFileSync(
+      new URL("./settings-page.component.html", import.meta.url),
+      "utf8",
+    );
+    expect(template).toContain("Canonical project creation is unavailable");
+    expect(template).toContain("Managed export is unavailable");
+    expect(template).toContain("See application status");
+    expect(template).toContain("Active canonical project file extension");
+    expect(template).not.toContain("<span class=\"pill\">Connected</span>");
+    expect(template).not.toContain("Future project file extension");
   });
 });

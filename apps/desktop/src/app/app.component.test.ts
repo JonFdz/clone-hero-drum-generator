@@ -70,4 +70,17 @@ describe("AppComponent source", () => {
 		expect(src).not.toContain("toGeneratePayload");
 		expect(src).not.toMatch(/this\.generateState\.loadProjectState/);
 	});
+
+	it("surfaces canonical persistence as unavailable instead of invoking legacy save paths", () => {
+		const source = componentSource();
+		const template = readFileSync(
+			join(__appRoot, "app.component.html"),
+			"utf8",
+		);
+		expect(source).toContain("PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE");
+		expect(source).not.toContain("this.persistence.saveProject(payload)");
+		expect(source).not.toContain("this.persistence.saveProjectAs(payload)");
+		expect(template).toContain("[disabled]=\"true\"");
+		expect(template).toContain("persistenceUnavailableMessage");
+	});
 });

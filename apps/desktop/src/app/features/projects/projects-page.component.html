@@ -1,5 +1,5 @@
 <div class="projects-library-page">
-			<chdg-projects-library-header [projectCount]="model().totalCount" (openProject)="openProject()" (newProject)="newProject()" />
+			<chdg-projects-library-header [projectCount]="model().totalCount" [newProjectUnavailableMessage]="persistenceUnavailableMessage" (openProject)="openProject()" />
 
 			<chdg-projects-toolbar
 				[query]="query()"
@@ -19,7 +19,7 @@
 						<chdg-projects-project-grid [projects]="model().projects" (selectProject)="selectRecent($event)" (editProject)="editRecent($event)" (requestRemove)="askRemove($event)" />
 						<p class="local-note">All projects are stored locally on this device.</p>
 					} @else {
-						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" (openProject)="openProject()" (newProject)="newProject()" (resetFilters)="resetFilters()" />
+						<chdg-projects-empty-state [hasProjects]="model().totalCount > 0" [newProjectUnavailableMessage]="persistenceUnavailableMessage" (openProject)="openProject()" (resetFilters)="resetFilters()" />
 					}
 				</main>
 

@@ -1,4 +1,5 @@
 import "@angular/compiler";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PreviewOffsetPanelComponent } from "./preview-offset-panel.component";
 
@@ -60,5 +61,16 @@ describe("PreviewOffsetPanelComponent", () => {
 		expect(applyCount).toBe(1);
 		expect(resetCount).toBe(1);
 		expect(resetZeroCount).toBe(1);
+	});
+
+	it("labels offset changes as preview-session only", () => {
+		const template = readFileSync(
+			new URL("./preview-offset-panel.component.html", import.meta.url),
+			"utf8",
+		);
+		expect(template).toContain("Apply to Preview Session");
+		expect(template).toContain("Preview-session baseline");
+		expect(template).toContain("canonical project and notes.chart are not changed");
+		expect(template).not.toContain("Saved offset");
 	});
 });

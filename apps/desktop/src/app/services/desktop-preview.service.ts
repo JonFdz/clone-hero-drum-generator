@@ -4,7 +4,6 @@ import {
 	type ChartPreviewData,
 } from "./desktop-bridge.service";
 import { DesktopGenerateStateService } from "./desktop-generate-state.service";
-import { DesktopProjectStateService } from "./desktop-project-state.service";
 import {
 	HIGHWAY_HIT_LINE_PERCENT,
 	deriveHighwayLimitations,
@@ -21,9 +20,8 @@ import {
 	isOffsetDirty,
 	isOffsetInputValid,
 	nudgeOffsetMs,
-	offsetApplyStatusMessage,
 	resetOffsetToSaved,
-	resolveOffsetApplyFlow,
+	runtimeOffsetStatusMessage,
 } from "./offset-preview-state";
 import {
 	resolvePreviewAnalysisCache,
@@ -48,9 +46,7 @@ export class DesktopPreviewService {
 	>("idle");
 	readonly waveformError = signal<string | null>(null);
 
-	readonly savedOffsetMs = computed(
-		() => this.generateState.state().offsetMs ?? 0,
-	);
+	readonly savedOffsetMs = signal(0);
 	readonly offsetDirty = computed(() =>
 		isOffsetDirty(this.previewOffsetMs(), this.savedOffsetMs()),
 	);
@@ -87,8 +83,8 @@ export class DesktopPreviewService {
 		return 0;
 	});
 	readonly previewStatus = computed(() => {
-		if (this.error() || !this.chartData()) return "Preview unavailable";
-		if (!this.audioSrc()) return "Chart ready · audio unavailable";
+		if (this.error() || !this.chartData() || !this.audioSrc())
+			return "Preview unavailable";
 		if (this.waveformStatus() === "loading") return "Loading waveform";
 		if (this.waveformStatus() === "error")
 			return "Preview ready · waveform unavailable";
@@ -118,22 +114,24 @@ export class DesktopPreviewService {
 	constructor(
 		private readonly bridge: DesktopBridgeService,
 		private readonly generateState: DesktopGenerateStateService,
-		private readonly projectState: DesktopProjectStateService,
 	) {}
 
 	async load(): Promise<void> {
 		this.error.set(null);
-		this.previewOffsetMs.set(this.savedOffsetMs());
-		this.offsetInputMs.set(String(this.savedOffsetMs()));
+		const initialOffsetMs = this.generateState.state().offsetMs ?? 0;
+		this.savedOffsetMs.set(initialOffsetMs);
+		this.previewOffsetMs.set(initialOffsetMs);
+		this.offsetInputMs.set(String(initialOffsetMs));
 		this.offsetStatus.set(null);
 		this.offsetInputValid.set(true);
 		const state = this.generateState.state();
 		if (
 			state.status === "idle" ||
-			(!state.outputFiles?.chart && !state.outputFiles?.songOgg)
+			!state.outputFiles?.chart ||
+			!state.outputFiles.songOgg
 		) {
 			this.setUnavailable(
-				"Generate this project to preview notes.chart and song.ogg.",
+				"Existing managed preview output is unavailable. The canonical export manifest must include both notes.chart and song.ogg.",
 			);
 			return;
 		}
@@ -156,8 +154,8 @@ export class DesktopPreviewService {
 		}
 
 		const chart = await this.bridge.getChartPreviewData({
-			outputDir: state.outputDir,
-			chartPath: state.outputFiles?.chart,
+			chartPath: state.outputFiles.chart,
+			sourceTiming: state.sourceTiming,
 			analysis,
 		});
 		if (!chart.ok) {
@@ -167,11 +165,12 @@ export class DesktopPreviewService {
 		this.chartData.set(chart.data);
 
 		const audio = await this.bridge.getAudioPreviewSource({
-			outputDir: state.outputDir,
-			generatedSongOggPath: state.outputFiles?.songOgg,
+			generatedSongOggPath: state.outputFiles.songOgg,
 		});
 		if (!audio.ok) {
-			this.setAudioUnavailable(audio.error.message);
+			this.setUnavailable(
+				`Generated song.ogg unavailable: ${audio.error.message}`,
+			);
 			return;
 		}
 		this.audioSrc.set(audio.data.src);
@@ -181,18 +180,7 @@ export class DesktopPreviewService {
 	}
 
 	handleAudioRuntimeError(message: string): void {
-		this.error.set(null);
-		this.setAudioUnavailable(message);
-	}
-
-	private setAudioUnavailable(message: string): void {
-		this.audioSrc.set(null);
-		this.sourceKind.set(null);
-		this.waveformOverview.set(null);
-		this.waveformStatus.set("empty");
-		this.waveformError.set(`Audio and waveform unavailable: ${message}`);
-		this.currentTime.set(0);
-		this.duration.set(0);
+		this.setUnavailable(`Preview audio failed at runtime: ${message}`);
 	}
 
 	private setUnavailable(message: string): void {
@@ -202,6 +190,8 @@ export class DesktopPreviewService {
 		this.waveformOverview.set(null);
 		this.waveformStatus.set("empty");
 		this.waveformError.set(null);
+		this.currentTime.set(0);
+		this.duration.set(0);
 		this.error.set(message);
 	}
 
@@ -211,9 +201,6 @@ export class DesktopPreviewService {
 		this.offsetInputMs.set(String(next));
 		this.offsetInputValid.set(true);
 		this.offsetStatus.set(null);
-		if (this.offsetDirty()) {
-			this.projectState.markDirty();
-		}
 	}
 
 	setPreviewOffsetInput(value: string): void {
@@ -227,9 +214,6 @@ export class DesktopPreviewService {
 		this.offsetInputValid.set(true);
 		this.previewOffsetMs.set(parsed);
 		this.offsetStatus.set(null);
-		if (this.offsetDirty()) {
-			this.projectState.markDirty();
-		}
 	}
 
 	resetPreviewOffset(): void {
@@ -252,73 +236,8 @@ export class DesktopPreviewService {
 			return;
 		}
 
-		let chartUpdated = false;
-		let chartMissing = false;
-		let outputMissing = false;
-
-		const stateBeforeApply = this.generateState.state();
-		if (stateBeforeApply.outputDir && stateBeforeApply.outputFiles?.chart) {
-			const chartUpdate = await this.bridge.applyChartOffset({
-				outputDir: stateBeforeApply.outputDir,
-				chartPath: stateBeforeApply.outputFiles.chart,
-				offsetMs,
-			});
-			const chartUpdateError = chartUpdate.ok
-				? undefined
-				: chartUpdate.error.message;
-			const flow = resolveOffsetApplyFlow({
-				hasOutputDir: true,
-				hasChart: true,
-				chartUpdateOk: chartUpdate.ok,
-			});
-			if (!flow.canPersistOffset) {
-				this.offsetStatus.set(
-					`Failed to update notes.chart Offset: ${chartUpdateError ?? "unknown error"}`,
-				);
-				this.projectState.markFailed();
-				return;
-			}
-			chartUpdated = flow.chartUpdated;
-		} else {
-			const flow = resolveOffsetApplyFlow({
-				hasOutputDir: !!stateBeforeApply.outputDir,
-				hasChart: !!stateBeforeApply.outputFiles?.chart,
-			});
-			chartMissing = flow.chartMissing;
-			outputMissing = flow.outputMissing;
-		}
-
-		this.generateState.setOffsetMsInput(String(offsetMs));
-		if (chartUpdated) {
-			this.projectState.markGenerated();
-		} else if (chartMissing || outputMissing) {
-			this.projectState.markNeedsRegenerate();
-		}
-
-		const project = this.projectState.state();
-		const payload = this.generateState.buildProjectStatePayload(
-			project.projectName,
-			project.projectFilePath,
-		);
-		const savedPath = await this.projectState.saveProject(payload);
-		if (!savedPath) {
-			this.offsetStatus.set("Offset applied in state but project save failed.");
-			return;
-		}
-
-		if (chartUpdated) {
-			this.offsetStatus.set(offsetApplyStatusMessage("project-and-chart"));
-		} else if (chartMissing) {
-			this.offsetStatus.set(
-				offsetApplyStatusMessage("project-only-chart-missing"),
-			);
-		} else if (outputMissing) {
-			this.offsetStatus.set(
-				offsetApplyStatusMessage("project-only-output-missing"),
-			);
-		} else {
-			this.offsetStatus.set(offsetApplyStatusMessage("project-only"));
-		}
+		this.savedOffsetMs.set(offsetMs);
+		this.offsetStatus.set(runtimeOffsetStatusMessage());
 		this.previewOffsetMs.set(offsetMs);
 		this.offsetInputMs.set(String(offsetMs));
 		this.offsetInputValid.set(true);

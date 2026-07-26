@@ -21,6 +21,10 @@ export class HomeWarningsPanelComponent {
 				return "Audio file";
 			case "outputDir":
 				return "Output folder";
+			case "outputChartPath":
+				return "Managed chart";
+			case "outputAudioPath":
+				return "Managed audio";
 			case "coverImagePath":
 				return "Cover image";
 			default:

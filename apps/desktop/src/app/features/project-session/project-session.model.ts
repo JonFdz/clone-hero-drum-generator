@@ -1,12 +1,16 @@
-import type { ChdgOutputStatus } from "@chdg/project/browser";
-import type { ProjectStatePayload } from "../../services/desktop-bridge.service";
+import type {
+	ProjectMissingPathKind,
+	ProjectStatePayload,
+} from "../../services/desktop-bridge.service";
+import type { DesktopOutputStatus } from "../../services/desktop-project-runtime";
+import type { DesktopProjectIdentity } from "../../services/desktop-project-runtime";
 
 /**
  * A missing project path warning produced when opening a project whose on-disk
  * referenced files (source, audio, output, cover) are absent.
  */
 export type MissingPathWarning = {
-	kind: "sourcePath" | "audioPath" | "outputDir" | "coverImagePath";
+	kind: ProjectMissingPathKind;
 	path?: string;
 	message: string;
 };
@@ -20,10 +24,11 @@ export type MissingPathWarning = {
  * feature/core services.
  */
 export type ProjectSessionState = {
+	project?: DesktopProjectIdentity;
 	projectFilePath?: string;
 	projectName: string;
 	dirty: boolean;
-	outputStatus: ChdgOutputStatus;
+	outputStatus: DesktopOutputStatus;
 	missingPaths: MissingPathWarning[];
 };
 
@@ -31,9 +36,6 @@ export type ProjectPersistenceError = {
 	code: string;
 	message: string;
 };
-
-/** A picker operation was cancelled by the user (not an error). */
-export type PersistenceCancelled = { ok: false; cancelled: true };
 
 export type CreateProjectOutcome =
 	| { ok: true; payload: ProjectStatePayload }
@@ -45,7 +47,7 @@ export type OpenProjectOutcome =
 
 export type OpenFromPickerOutcome =
 	| { ok: true; payload: ProjectStatePayload; missingPaths: MissingPathWarning[] }
-	| PersistenceCancelled
+	| { ok: false; cancelled: true }
 	| { ok: false; error: ProjectPersistenceError };
 
 export type SaveProjectOutcome =
@@ -54,7 +56,6 @@ export type SaveProjectOutcome =
 
 export type SaveAsOutcome =
 	| { ok: true; filePath: string; payload: ProjectStatePayload }
-	| PersistenceCancelled
 	| { ok: false; error: ProjectPersistenceError };
 
 export const initialProjectSessionState: ProjectSessionState = {

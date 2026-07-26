@@ -1,8 +1,12 @@
 import type {
-	ChdgSourceFingerprint,
 	NormalizationPreview,
+	ProjectMappingOverrides,
 	SourceInspectionResult,
 } from "@chdg/project/browser";
+import type {
+	SourceReviewFingerprint,
+	SourceReviewRuntimeCache,
+} from "../app/services/desktop-project-runtime";
 import type { ProjectStatePayload } from "../app/services/desktop-bridge.service";
 
 export const GENERATION_SEED = {
@@ -19,8 +23,10 @@ export interface BrowserHarnessScenario {
 	description: string;
 	recommendedRoute: string;
 	project?: ProjectStatePayload;
+	runtimeAnalysis?: SourceReviewRuntimeCache;
+	runtimeMappingOverrides?: ProjectMappingOverrides;
 	generationSeed?: BrowserGenerationSeed;
-	sourceFingerprint?: ChdgSourceFingerprint;
+	sourceFingerprint?: SourceReviewFingerprint;
 	inspection?: SourceInspectionResult;
 	normalization?: NormalizationPreview;
 }
