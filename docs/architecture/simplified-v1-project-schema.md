@@ -21,7 +21,12 @@
 - Missing export target does not block open/edit.
 - External original source/audio paths are not persisted as dependencies.
 
-## Proposed contract
+## Canonical V1 contract
+
+The approved OpenSpec vocabulary is canonical for the serialized V1 format.
+The stable identifier is `project.projectId`, and the immutable imported
+musical source is `sourceDocument`. Provisional `project.id`, top-level
+`projectId`, and persisted `chart` aliases are rejected rather than migrated.
 
 ```ts
 export type ChdgProjectFile = {
@@ -29,12 +34,23 @@ export type ChdgProjectFile = {
   appVersion?: string;
 
   project: {
-    id: string;
+    projectId: string;
     artist: string;
     songName: string;
     projectName: string;
     createdAt: string;
     updatedAt: string;
+    album?: string;
+    year?: string;
+    genre?: string;
+    charter?: string;
+  };
+
+  import: {
+    selectedTrackIds: number[];
+    sourceMappings: Record<string, SourceMappingDefinition>;
+    importedAt: string;
+    importerVersion: string;
   };
 
   assets: {
@@ -56,14 +72,7 @@ export type ChdgProjectFile = {
     };
   };
 
-  import: {
-    selectedTrackIds: number[];
-    sourceMappings: Record<string, SourceMappingDefinition>;
-    importedAt: string;
-    importerVersion: string;
-  };
-
-  chart: {
+  sourceDocument: {
     resolution: number;
     tempos: TempoEvent[];
     timeSignatures: TimeSignatureEvent[];
@@ -74,22 +83,18 @@ export type ChdgProjectFile = {
   mappings: ProjectMappings;
   corrections: Record<string, NoteCorrection>;
 
-  metadata: {
-    album?: string;
-    year?: string;
-    genre?: string;
-    charter?: string;
-  };
-
   editor: {
     offsetMs: number;
   };
 
   export: {
+    status: "never-exported" | "current" | "outdated" | "failed";
     targetDirectory?: string;
     lastSuccessfulAt?: string;
     fingerprints?: {
-      chart?: string;
+      sourceDocument?: string;
+      mappings?: string;
+      corrections?: string;
       metadata?: string;
       audio?: string;
       cover?: string;
@@ -144,7 +149,7 @@ Assets:
 - cover optional;
 - hashes structurally valid.
 
-Chart:
+Source document:
 
 - positive resolution;
 - tempo event at tick 0;

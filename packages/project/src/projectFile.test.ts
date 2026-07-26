@@ -1,441 +1,980 @@
 import { describe, expect, it } from "vitest";
-import { createProjectFile, validateProjectFile } from "./projectFile.js";
+import {
+	canonicalizeProjectFile,
+	createStableHitId,
+	deriveProjectDisplayName,
+	parseProjectFile,
+	serializeProjectFile,
+	validateProjectFile,
+} from "./projectFile.js";
+import type { ChdgProjectFile } from "./projectFileTypes.js";
 
-describe("projectFile", () => {
-	describe("createProjectFile", () => {
-		it("creates a valid project file with defaults", () => {
-			const file = createProjectFile("Demo", "0.1.0");
-			expect(file.schemaVersion).toBe(1);
-			expect(file.project.name).toBe("Demo");
-			expect(file.project.createdAt).toBeTypeOf("string");
-			expect(file.project.updatedAt).toBeTypeOf("string");
-			expect(file.paths).toEqual({});
-			expect(file.selection.selectedTracks).toEqual([]);
-			expect(file.metadata).toEqual({});
-			expect(file.generation.status).toBe("not-generated");
-		});
+const HASH_A = "a".repeat(64);
+const HASH_B = "b".repeat(64);
+const CREATED_AT = "2026-07-26T10:00:00.000Z";
 
-		it("applies overrides", () => {
-			const file = createProjectFile("Demo", "0.1.0", {
-				paths: { sourcePath: "/tmp/demo.mid" },
-			});
-			expect(file.paths.sourcePath).toBe("/tmp/demo.mid");
+describe("CHDG project V1 contract", () => {
+	it("parses a valid minimal self-contained project", () => {
+		const result = validateProjectFile(minimalProject());
+
+		expect(result).toEqual({
+			ok: true,
+			project: minimalProject(),
 		});
 	});
 
-	describe("validateProjectFile", () => {
-		it("accepts a valid project file", () => {
-			const file = createProjectFile("Demo", "0.1.0");
-			const result = validateProjectFile(file);
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.project.name).toBe("Demo");
-			}
-		});
+	it("parses a complete project without conflating Ride identity and target", () => {
+		const project = completeProject();
+		const result = validateProjectFile(project);
 
-		it("preserves valid optional fields", () => {
-			const result = validateProjectFile({
-				schemaVersion: 1,
-				appVersion: "0.1.0",
-				project: {
-					name: "Demo",
-					createdAt: "2026-01-01T00:00:00.000Z",
-					updatedAt: "2026-01-01T00:00:00.000Z",
-				},
-				paths: {
-					sourcePath: "/tmp/demo.mid",
-					audioPath: "/tmp/demo.wav",
-					outputDir: "/tmp/out",
-				},
-				source: {
-					sourceKind: "midi",
-					inspectionSummary: { tracks: 3 },
-				},
-				selection: { selectedTracks: [1, 2] },
-				metadata: {
-					name: "Song",
-					artist: "Artist",
-					album: "Album",
-					year: "2026",
-					genre: "Rock",
-					charter: "CHDG",
-				},
-				cover: { imagePath: "/tmp/cover.png" },
-				generation: {
-					status: "generated",
-					offsetMs: 900,
-					lastGeneratedAt: "2026-01-01T00:00:00.000Z",
-					outputFiles: {
-						chart: "/tmp/out/notes.chart",
-						songIni: "/tmp/out/song.ini",
-						songOgg: "/tmp/out/song.ogg",
-					},
-					lastResultSummary: { ok: true },
-				},
-				mappingOverrides: {
-					"midi:37": {
-						sourceKind: "midi",
-						key: "midi:37",
-						target: { kind: "piece", piece: "snare" },
-					},
-				},
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.sourceDocument.hits[0]?.detectedPiece).toBe("ride");
+			expect(
+				result.project.import.sourceMappings["gpif:ride"]?.defaultTarget,
+			).toEqual({ lane: "green", cymbal: true });
+			expect(result.project.corrections["gpif:0:0:0:0:0:ride"]?.piece).toBe(
+				"tom_floor",
+			);
+			expect(result.project.corrections["gpif:0:0:0:0:0:ride"]?.target).toEqual(
+				{ lane: "blue", cymbal: false },
+			);
+			expect(result.project.sourceDocument.hits[0]?.source).toEqual({
+				kind: "gpif",
+				trackIndex: 0,
+				trackName: "Drums",
+				articulationKey: "ride",
+				rawArticulation: "Ride",
+				noteName: "Ride",
+				inputMidiNumbers: [51],
+				outputMidiNumber: 51,
+				resolvedVia: "articulation",
+				measureIndex: 0,
+				beatIndex: 0,
+				noteIndex: 0,
 			});
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.appVersion).toBe("0.1.0");
-				expect(result.project.paths.sourcePath).toBe("/tmp/demo.mid");
-				expect(result.project.source?.sourceKind).toBe("midi");
-				expect(result.project.cover?.imagePath).toBe("/tmp/cover.png");
-				expect(result.project.metadata.name).toBe("Song");
-				expect(result.project.generation.offsetMs).toBe(900);
-				expect(result.project.generation.outputFiles?.chart).toBe(
-					"/tmp/out/notes.chart",
-				);
-				expect(result.project.mappingOverrides).toBeDefined();
-			}
-		});
+		}
+	});
 
-		it("loads old project without mappingOverrides", () => {
-			const result = validateProjectFile(baseProject({}));
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.mappingOverrides).toBeUndefined();
-			}
-		});
+	it("derives the human project name from mandatory identity", () => {
+		expect(
+			deriveProjectDisplayName({
+				artist: "Paramore",
+				songName: "Decode",
+				projectName: "Studio GP",
+			}),
+		).toBe("Paramore - Decode - Studio GP");
+	});
 
-		it("loads old project without cover", () => {
-			const result = validateProjectFile(baseProject({}));
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.cover).toBeUndefined();
-			}
-		});
+	it("rejects every missing or blank mandatory identity field", () => {
+		for (const field of ["projectId", "artist", "songName", "projectName"] as const) {
+			const project = minimalProject() as unknown as Record<string, unknown>;
+			const identity = {
+				...(project["project"] as Record<string, unknown>),
+				[field]: " ",
+			};
 
-		it("loads old project without analysis", () => {
-			const result = validateProjectFile(baseProject({}));
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.analysis).toBeUndefined();
-			}
-		});
-
-		it("accepts a valid Source Review analysis cache", () => {
-			const result = validateProjectFile(
-				baseProject({
-					analysis: {
-						schemaVersion: 1,
-						sourceFingerprint: {
-							path: "/tmp/demo.mid",
-							sizeBytes: 123,
-							mtimeMs: 456,
-						},
-						mappingFingerprint: "{}",
-						selectedTracks: [3],
-						inspectedAt: "2026-01-01T00:00:00.000Z",
-						normalizedAt: "2026-01-01T00:00:01.000Z",
-						inspection: {
-							sourceKind: "midi",
-							sourcePath: "/tmp/demo.mid",
-							tempos: [],
-							timeSignatures: [],
-							sections: [],
-							tracks: [],
-							issues: [],
-						},
-						normalizationPreview: {
-							sourceKind: "midi",
-							sourcePath: "/tmp/demo.mid",
-							selectedTrack: 3,
-							selectedTracks: [3],
-							hitCount: 0,
-							pieceSummary: {},
-							firstHits: [],
-							mappingCandidates: [],
-							issues: [],
-						},
-					},
-				}),
+			expectInvalid(
+				validateProjectFile({ ...project, project: identity }),
+				"INVALID_PROJECT_IDENTITY",
 			);
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.analysis?.selectedTracks).toEqual([3]);
-				expect(result.project.analysis?.normalizationPreview?.hitCount).toBe(0);
-			}
-		});
+		}
+	});
 
-		it("accepts Source Review analysis cache schema version 2", () => {
-			const result = validateProjectFile(
-				baseProject({
-					analysis: {
-						schemaVersion: 2,
-						sourceFingerprint: { path: "/tmp/demo.gp" },
-						mappingFingerprint: "{}",
-						selectedTracks: [3],
-						inspectedAt: "2026-01-01T00:00:00.000Z",
-						inspection: {
-							sourceKind: "gpif",
-							sourcePath: "/tmp/demo.gp",
-							tempos: [],
-							timeSignatures: [],
-							sections: [],
-							tracks: [{ index: 3, noteCount: 1039, role: "drums", strength: "strong" }],
-							issues: [],
-						},
-					},
-				}),
+	it("uses canonical OpenSpec wire names", () => {
+		const result = parseProjectFile(JSON.stringify(minimalProject()));
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.project.projectId).toBe("project-demo");
+			expect(result.project.sourceDocument.resolution).toBe(960);
+		}
+	});
+
+	it("rejects provisional project.id, top-level projectId, and chart aliases", () => {
+		const canonical = minimalProject() as unknown as Record<string, unknown>;
+		const identity = canonical["project"] as Record<string, unknown>;
+		const { projectId, ...withoutProjectId } = identity;
+		const { sourceDocument, ...withoutSourceDocument } = canonical;
+
+		expectInvalid(
+			validateProjectFile({
+				...canonical,
+				project: { ...withoutProjectId, id: projectId },
+			}),
+			"UNSUPPORTED_PROVISIONAL_FORMAT",
+		);
+		expectInvalid(
+			validateProjectFile({
+				...canonical,
+				projectId,
+			}),
+			"UNSUPPORTED_PROVISIONAL_FORMAT",
+		);
+		expectInvalid(
+			validateProjectFile({
+				...withoutSourceDocument,
+				chart: sourceDocument,
+			}),
+			"UNSUPPORTED_PROVISIONAL_FORMAT",
+		);
+	});
+
+	it("canonicalizes property and record-key order and round-trips deterministically", () => {
+		const project = completeProject();
+		project.corrections = {
+			"gpif:0:0:0:1:0:snare": {
+				hitId: "gpif:0:0:0:1:0:snare",
+				ghost: true,
+				updatedAt: CREATED_AT,
+			},
+			"gpif:0:0:0:0:0:ride": {
+				hitId: "gpif:0:0:0:0:0:ride",
+				accent: true,
+				updatedAt: CREATED_AT,
+			},
+		};
+		const first = canonicalizeProjectFile(project);
+		const parsed = parseProjectFile(first);
+
+		expect(parsed.ok).toBe(true);
+		if (parsed.ok) {
+			const second = serializeProjectFile(parsed.project);
+			expect(second).toBe(first);
+			expect(Object.keys(JSON.parse(first))).toEqual([
+				"schemaVersion",
+				"appVersion",
+				"project",
+				"import",
+				"assets",
+				"sourceDocument",
+				"mappings",
+				"corrections",
+				"editor",
+				"export",
+			]);
+			expect(first.indexOf('"gpif:0:0:0:0:0:ride"')).toBeLessThan(
+				first.indexOf('"gpif:0:0:0:1:0:snare"'),
 			);
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.analysis?.schemaVersion).toBe(2);
-				expect(result.project.analysis?.inspection.tracks[0]?.noteCount).toBe(1039);
-			}
-		});
+			expect(first).toContain('"projectId"');
+			expect(first).toContain('"sourceDocument"');
+			expect(first).not.toContain('"chart":');
+			expect("id" in (JSON.parse(first) as { project: object }).project).toBe(false);
+		}
+	});
 
-		it("drops malformed Source Review analysis without blocking open", () => {
-			const result = validateProjectFile(
-				baseProject({
-					analysis: {
-						schemaVersion: 1,
-						sourceFingerprint: { path: 123 },
-						mappingFingerprint: "{}",
-						selectedTracks: [3],
-						inspectedAt: "2026-01-01T00:00:00.000Z",
-						inspection: {},
-					},
-				}),
-			);
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.project.analysis).toBeUndefined();
-			}
-		});
+	it("rejects malformed JSON", () => {
+		expectInvalid(parseProjectFile("{not-json"), "INVALID_PROJECT_JSON");
+	});
 
-		it("rejects invalid cover image path", () => {
-			const result = validateProjectFile(
-				baseProject({
-					cover: { imagePath: 123 },
-				}),
-			);
-			expectInvalid(result, "INVALID_COVER_IMAGE_PATH");
-		});
+	it("rejects unsupported schema versions", () => {
+		expectInvalid(
+			validateProjectFile({ ...minimalProject(), schemaVersion: 2 }),
+			"UNSUPPORTED_PROJECT_VERSION",
+		);
+	});
 
-		it("rejects non-object input", () => {
-			const result = validateProjectFile("invalid");
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("INVALID_PROJECT_FILE");
-			}
-		});
-
-		it("rejects missing schemaVersion", () => {
-			const result = validateProjectFile({});
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("MISSING_SCHEMA_VERSION");
-			}
-		});
-
-		it("rejects unsupported schema version", () => {
-			const result = validateProjectFile({ schemaVersion: 99 });
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("UNSUPPORTED_PROJECT_VERSION");
-			}
-		});
-
-		it("rejects missing project name", () => {
-			const result = validateProjectFile({
+	it("rejects the old provisional project shape", () => {
+		expectInvalid(
+			validateProjectFile({
 				schemaVersion: 1,
-				project: { name: "", createdAt: "", updatedAt: "" },
+				project: { name: "Demo", createdAt: CREATED_AT, updatedAt: CREATED_AT },
 				paths: {},
 				selection: { selectedTracks: [] },
 				metadata: {},
 				generation: { status: "not-generated" },
-			});
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("INVALID_PROJECT_NAME");
-			}
-		});
-
-		it("rejects invalid selectedTracks", () => {
-			const result = validateProjectFile({
-				schemaVersion: 1,
-				project: { name: "Demo", createdAt: "", updatedAt: "" },
-				paths: {},
-				selection: { selectedTracks: ["bad"] },
-				metadata: {},
-				generation: { status: "not-generated" },
-			});
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("INVALID_SELECTED_TRACKS");
-			}
-		});
-
-		it("rejects invalid generation status", () => {
-			const result = validateProjectFile({
-				schemaVersion: 1,
-				project: { name: "Demo", createdAt: "", updatedAt: "" },
-				paths: {},
-				selection: { selectedTracks: [] },
-				metadata: {},
-				generation: { status: "unknown" },
-			});
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.code).toBe("INVALID_GENERATION_STATUS");
-			}
-		});
-
-		it("rejects object sourcePath", () => {
-			const result = validateProjectFile(
-				baseProject({
-					paths: { sourcePath: { bad: true } },
-				}),
-			);
-			expectInvalid(result, "INVALID_PROJECT_PATH");
-		});
-
-		it("rejects numeric audioPath", () => {
-			const result = validateProjectFile(
-				baseProject({
-					paths: { audioPath: 123 },
-				}),
-			);
-			expectInvalid(result, "INVALID_PROJECT_PATH");
-		});
-
-		it("rejects array outputDir", () => {
-			const result = validateProjectFile(
-				baseProject({
-					paths: { outputDir: [] },
-				}),
-			);
-			expectInvalid(result, "INVALID_PROJECT_PATH");
-		});
-
-		it("rejects numeric metadata.name", () => {
-			const result = validateProjectFile(
-				baseProject({
-					metadata: { name: 123 },
-				}),
-			);
-			expectInvalid(result, "INVALID_METADATA_FIELD");
-		});
-
-		it("rejects object metadata.artist", () => {
-			const result = validateProjectFile(
-				baseProject({
-					metadata: { artist: { bad: true } },
-				}),
-			);
-			expectInvalid(result, "INVALID_METADATA_FIELD");
-		});
-
-		it("rejects invalid source.sourceKind", () => {
-			const result = validateProjectFile(
-				baseProject({
-					source: { sourceKind: "bad" },
-				}),
-			);
-			expectInvalid(result, "INVALID_SOURCE_KIND");
-		});
-
-		it("rejects string generation.offsetMs", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: { status: "not-generated", offsetMs: "900" },
-				}),
-			);
-			expectInvalid(result, "INVALID_GENERATION_OFFSET");
-		});
-
-		it("rejects NaN generation.offsetMs", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: { status: "not-generated", offsetMs: Number.NaN },
-				}),
-			);
-			expectInvalid(result, "INVALID_GENERATION_OFFSET");
-		});
-
-		it("rejects Infinity generation.offsetMs", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: {
-						status: "not-generated",
-						offsetMs: Number.POSITIVE_INFINITY,
-					},
-				}),
-			);
-			expectInvalid(result, "INVALID_GENERATION_OFFSET");
-		});
-
-		it("rejects object generation.lastGeneratedAt", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: {
-						status: "generated",
-						lastGeneratedAt: { bad: true },
-					},
-				}),
-			);
-			expectInvalid(result, "INVALID_GENERATION_TIMESTAMP");
-		});
-
-		it("rejects numeric generation.outputFiles.chart", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: {
-						status: "generated",
-						outputFiles: { chart: 123 },
-					},
-				}),
-			);
-			expectInvalid(result, "INVALID_OUTPUT_FILE");
-		});
-
-		it("rejects object generation.outputFiles.songIni", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: {
-						status: "generated",
-						outputFiles: { songIni: { bad: true } },
-					},
-				}),
-			);
-			expectInvalid(result, "INVALID_OUTPUT_FILE");
-		});
-
-		it("rejects array generation.outputFiles.songOgg", () => {
-			const result = validateProjectFile(
-				baseProject({
-					generation: {
-						status: "generated",
-						outputFiles: { songOgg: [] },
-					},
-				}),
-			);
-			expectInvalid(result, "INVALID_OUTPUT_FILE");
-		});
+			}),
+			"UNSUPPORTED_PROVISIONAL_FORMAT",
+		);
 	});
 });
 
-function baseProject(overrides: Record<string, unknown>) {
+describe("internal asset paths", () => {
+	it("accepts required relative POSIX asset paths", () => {
+		const result = validateProjectFile(minimalProject());
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.assets.source.relativePath).toBe("assets/source.mid");
+			expect(result.project.assets.audio.relativePath).toBe("assets/song.ogg");
+		}
+	});
+
+	it.each([
+		"/tmp/source.mid",
+		"C:\\music\\source.mid",
+		"assets/../outside.mid",
+		"../assets/source.mid",
+		"./assets/source.mid",
+		"assets//source.mid",
+	])("rejects unsafe internal path %s", (relativePath) => {
+		const project = minimalProject();
+		project.assets.source.relativePath = relativePath;
+
+		expectInvalid(validateProjectFile(project), "INVALID_ASSET_PATH");
+	});
+
+	it("rejects a source original filename containing a path", () => {
+		const project = minimalProject();
+		project.assets.source.originalFileName = "../source.mid";
+
+		expectInvalid(validateProjectFile(project), "INVALID_ORIGINAL_FILE_NAME");
+	});
+
+	it.each([
+		"assets/source.mid\u0000",
+		"assets/source.\u001fmid",
+		"assets/source.mid/",
+		"assets/folder/source.mid",
+		"assets/source",
+		"assets/song.ogg",
+		"assets/album.jpg",
+	])("rejects unsafe, directory-like, or colliding source path %s", (relativePath) => {
+		const project = minimalProject();
+		project.assets.source.relativePath = relativePath;
+
+		expectInvalid(validateProjectFile(project), "INVALID_ASSET_PATH");
+	});
+
+	it.each(["source.mid\u0000", "source.\u001fmid", ".", "..", "source.mid/"])(
+		"rejects unsafe source filename %s",
+		(originalFileName) => {
+			const project = minimalProject();
+			project.assets.source.originalFileName = originalFileName;
+
+			expectInvalid(validateProjectFile(project), "INVALID_ORIGINAL_FILE_NAME");
+		},
+	);
+
+	it("requires the archived source extension to match the original source", () => {
+		const project = minimalProject();
+		project.assets.source.relativePath = "assets/source.gp";
+
+		expectInvalid(validateProjectFile(project), "INVALID_SOURCE_ASSET");
+	});
+});
+
+describe("stable imported hit identities", () => {
+	it("derives stable MIDI identity independently of output target and project path", () => {
+		const identity = {
+			kind: "midi" as const,
+			trackIndex: 1,
+			channel: 9,
+			tick: 480,
+			midiNote: 38,
+			occurrenceIndex: 0,
+		};
+
+		expect(createStableHitId(identity)).toBe("midi:1:9:480:38:0");
+		expect(createStableHitId({ ...identity })).toBe("midi:1:9:480:38:0");
+	});
+
+	it("derives stable GPIF identity from source event coordinates", () => {
+		expect(
+			createStableHitId({
+				kind: "gpif",
+				trackIndex: 0,
+				measureIndex: 12,
+				voiceIndex: 1,
+				beatIndex: 3,
+				noteIndex: 2,
+				articulationKey: "ride-edge",
+			}),
+		).toBe("gpif:0:12:1:3:2:ride-edge");
+	});
+
+	it("uses occurrence index to distinguish repeated MIDI source events", () => {
+		const base = {
+			kind: "midi" as const,
+			trackIndex: 1,
+			channel: 9,
+			tick: 480,
+			midiNote: 38,
+		};
+
+		expect(
+			createStableHitId({ ...base, occurrenceIndex: 0 }),
+		).not.toBe(createStableHitId({ ...base, occurrenceIndex: 1 }));
+	});
+
+	it("rejects duplicate hit IDs", () => {
+		const duplicateId = completeProject();
+		duplicateId.sourceDocument.hits[1] = {
+			...duplicateId.sourceDocument.hits[1]!,
+			id: duplicateId.sourceDocument.hits[0]!.id,
+		};
+		expectInvalid(validateProjectFile(duplicateId), "DUPLICATE_HIT_ID");
+	});
+
+	it("maps identical source identity to the same ID, making collisions duplicate IDs", () => {
+		const project = completeProject();
+		const identity = project.sourceDocument.hits[0]!.sourceIdentity;
+		const collisionId = createStableHitId(identity);
+		project.sourceDocument.hits[1] = {
+			...project.sourceDocument.hits[1]!,
+			id: collisionId,
+			sourceIdentity: identity,
+			source: project.sourceDocument.hits[0]!.source,
+		};
+
+		expect(collisionId).toBe(project.sourceDocument.hits[0]!.id);
+		expectInvalid(validateProjectFile(project), "DUPLICATE_HIT_ID");
+	});
+
+	it("rejects a hit ID inconsistent with source identity", () => {
+		const project = minimalProject();
+		project.sourceDocument.hits[0]!.id = "midi:0:9:0:36:99";
+
+		expectInvalid(validateProjectFile(project), "INCONSISTENT_HIT_ID");
+	});
+
+	it("rejects rich provenance inconsistent with deterministic identity", () => {
+		const project = minimalProject();
+		project.sourceDocument.hits[0]!.source.trackIndex = 2;
+
+		expectInvalid(
+			validateProjectFile(project),
+			"INCONSISTENT_SOURCE_IDENTITY",
+		);
+	});
+
+	it("rejects source-mapping counts and tracks inconsistent with imported hits", () => {
+		const wrongCount = minimalProject();
+		wrongCount.import.sourceMappings["midi:36"]!.count = 2;
+		expectInvalid(
+			validateProjectFile(wrongCount),
+			"INCONSISTENT_SOURCE_MAPPING",
+		);
+
+		const wrongTrack = minimalProject();
+		wrongTrack.import.selectedTrackIds = [1];
+		expectInvalid(
+			validateProjectFile(wrongTrack),
+			"INCONSISTENT_SOURCE_IDENTITY",
+		);
+	});
+});
+
+describe("mapping and correction validation", () => {
+	it("represents correction precedence without mutating imported hits", () => {
+		const project = completeProject();
+		const imported = project.sourceDocument.hits[0]!;
+		const mapping = project.mappings.targetOverrides[imported.sourceMappingKey];
+		const correction = project.corrections[imported.id];
+
+		expect(imported.detectedPiece).toBe("ride");
+		expect(mapping).toEqual({ lane: "green", cymbal: true });
+		expect(correction).toMatchObject({
+			piece: "tom_floor",
+			target: { lane: "blue", cymbal: false },
+		});
+	});
+
+	it("rejects a hit whose source mapping key is missing", () => {
+		const project = minimalProject();
+		project.sourceDocument.hits[0]!.sourceMappingKey = "midi:missing";
+
+		expectInvalid(validateProjectFile(project), "DANGLING_SOURCE_MAPPING");
+	});
+
+	it("rejects a correction whose key or hitId is dangling", () => {
+		const project = minimalProject();
+		project.corrections["missing"] = {
+			hitId: "missing",
+			deleted: true,
+			updatedAt: CREATED_AT,
+		};
+
+		expectInvalid(validateProjectFile(project), "DANGLING_CORRECTION");
+	});
+
+	it("rejects invalid musical pieces", () => {
+		const project = minimalProject() as unknown as {
+			sourceDocument: { hits: Array<Record<string, unknown>> };
+		};
+		project.sourceDocument.hits[0]!["detectedPiece"] = "cowbell";
+
+		expectInvalid(validateProjectFile(project), "INVALID_DRUM_PIECE");
+	});
+
+	it.each([
+		{ lane: "kick", cymbal: true },
+		{ lane: "red", cymbal: true },
+		{ lane: "yellow", cymbal: "yes" },
+	])("rejects invalid Clone Hero target $lane/$cymbal", (target) => {
+		const project = minimalProject() as unknown as {
+			import: { sourceMappings: Record<string, { defaultTarget: unknown }> };
+		};
+		project.import.sourceMappings["midi:36"]!.defaultTarget = target;
+
+		expectInvalid(validateProjectFile(project), "INVALID_CLONE_HERO_TARGET");
+	});
+
+	it("rejects tom-as-cymbal and hi-hat-as-tom combinations", () => {
+		const tom = minimalProject();
+		tom.sourceDocument.hits[0]!.detectedPiece = "tom_high";
+		tom.import.sourceMappings["midi:36"]!.detectedPiece = "tom_high";
+		tom.import.sourceMappings["midi:36"]!.defaultTarget = {
+			lane: "yellow",
+			cymbal: true,
+		};
+		expectInvalid(validateProjectFile(tom), "INVALID_PIECE_TARGET_COMBINATION");
+
+		const hihat = minimalProject();
+		hihat.sourceDocument.hits[0]!.detectedPiece = "hihat_closed";
+		hihat.import.sourceMappings["midi:36"]!.detectedPiece = "hihat_closed";
+		hihat.import.sourceMappings["midi:36"]!.defaultTarget = {
+			lane: "yellow",
+			cymbal: false,
+		};
+		expectInvalid(
+			validateProjectFile(hihat),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+	});
+
+	it("rejects simultaneous accent and ghost", () => {
+		const project = minimalProject();
+		project.corrections[project.sourceDocument.hits[0]!.id] = {
+			hitId: project.sourceDocument.hits[0]!.id,
+			accent: true,
+			ghost: true,
+			updatedAt: CREATED_AT,
+		};
+
+		expectInvalid(validateProjectFile(project), "ACCENT_GHOST_CONFLICT");
+	});
+
+	it("rejects persisted deleted false because restore removes the overlay", () => {
+		const project = minimalProject();
+		const hitId = project.sourceDocument.hits[0]!.id;
+		project.corrections[hitId] = {
+			hitId,
+			deleted: false,
+			updatedAt: CREATED_AT,
+		};
+
+		expectInvalid(validateProjectFile(project), "INVALID_CORRECTION");
+	});
+
+	it("validates the effective piece/target when a correction changes only piece", () => {
+		const project = minimalProject();
+		const hitId = project.sourceDocument.hits[0]!.id;
+		project.corrections[hitId] = {
+			hitId,
+			piece: "ride",
+			updatedAt: CREATED_AT,
+		};
+
+		expectInvalid(
+			validateProjectFile(project),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+	});
+
+	it("inherits a compatible mapped target when a correction changes only piece", () => {
+		const project = completeProject();
+		const hit = project.sourceDocument.hits[1]!;
+		project.import.sourceMappings[hit.sourceMappingKey]!.defaultTarget = {
+			lane: "blue",
+			cymbal: false,
+		};
+		project.corrections = {
+			[hit.id]: {
+				hitId: hit.id,
+				piece: "tom_mid",
+				updatedAt: CREATED_AT,
+			},
+		};
+
+		expect(validateProjectFile(project).ok).toBe(true);
+	});
+
+	it("inherits the effective piece when a correction changes only target", () => {
+		const project = completeProject();
+		const hit = project.sourceDocument.hits[1]!;
+		project.corrections = {
+			[hit.id]: {
+				hitId: hit.id,
+				target: { lane: "yellow", cymbal: true },
+				updatedAt: CREATED_AT,
+			},
+		};
+
+		expectInvalid(
+			validateProjectFile(project),
+			"INVALID_PIECE_TARGET_COMBINATION",
+		);
+	});
+
+	it("lets an individual piece correction resolve an otherwise unknown hit", () => {
+		const project = minimalProject();
+		const mapping = project.import.sourceMappings["midi:36"]!;
+		mapping.status = "unknown";
+		mapping.detectedPiece = "unknown";
+		delete mapping.defaultTarget;
+		const hit = project.sourceDocument.hits[0]!;
+		hit.detectedPiece = "unknown";
+		project.corrections[hit.id] = {
+			hitId: hit.id,
+			piece: "snare",
+			updatedAt: CREATED_AT,
+		};
+
+		expect(validateProjectFile(project).ok).toBe(true);
+	});
+});
+
+describe("source mapping states", () => {
+	it("rejects mapped unknown pieces and unknown mappings with known pieces", () => {
+		const mappedUnknown = minimalProject();
+		mappedUnknown.import.sourceMappings["midi:36"]!.detectedPiece = "unknown";
+		mappedUnknown.sourceDocument.hits[0]!.detectedPiece = "unknown";
+		expectInvalid(validateProjectFile(mappedUnknown), "INVALID_SOURCE_MAPPING");
+
+		const unknownKnown = minimalProject();
+		const mapping = unknownKnown.import.sourceMappings["midi:36"]!;
+		mapping.status = "unknown";
+		delete mapping.defaultTarget;
+		expectInvalid(validateProjectFile(unknownKnown), "INVALID_SOURCE_MAPPING");
+	});
+
+	it("accepts unresolved unknown and ignored source states", () => {
+		const unknown = minimalProject();
+		const unknownMapping = unknown.import.sourceMappings["midi:36"]!;
+		unknownMapping.status = "unknown";
+		unknownMapping.detectedPiece = "unknown";
+		delete unknownMapping.defaultTarget;
+		unknown.sourceDocument.hits[0]!.detectedPiece = "unknown";
+		expect(validateProjectFile(unknown).ok).toBe(true);
+
+		const ignored = minimalProject();
+		const ignoredMapping = ignored.import.sourceMappings["midi:36"]!;
+		ignoredMapping.status = "ignored";
+		delete ignoredMapping.defaultTarget;
+		expect(validateProjectFile(ignored).ok).toBe(true);
+	});
+
+	it("accepts piece and ignore override transitions but rejects conflicting overrides", () => {
+		const unknownToPiece = minimalProject();
+		const unknownMapping = unknownToPiece.import.sourceMappings["midi:36"]!;
+		unknownMapping.status = "unknown";
+		unknownMapping.detectedPiece = "unknown";
+		delete unknownMapping.defaultTarget;
+		unknownToPiece.sourceDocument.hits[0]!.detectedPiece = "unknown";
+		unknownToPiece.mappings.interpretationOverrides["midi:36"] = {
+			kind: "piece",
+			piece: "snare",
+		};
+		expect(validateProjectFile(unknownToPiece).ok).toBe(true);
+
+		const mappedToIgnored = minimalProject();
+		mappedToIgnored.mappings.interpretationOverrides["midi:36"] = {
+			kind: "ignore",
+		};
+		expect(validateProjectFile(mappedToIgnored).ok).toBe(true);
+
+		const conflicting = minimalProject();
+		conflicting.mappings.interpretationOverrides["midi:36"] = {
+			kind: "ignore",
+		};
+		conflicting.mappings.targetOverrides["midi:36"] = {
+			lane: "kick",
+			cymbal: false,
+		};
+		expectInvalid(validateProjectFile(conflicting), "INVALID_MAPPING_STATE");
+	});
+});
+
+describe("source timing and export manifest validation", () => {
+	it("accepts a complete ordered tempo map with time signatures and sections", () => {
+		const result = validateProjectFile(completeProject());
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.project.sourceDocument.tempos.map((tempo) => tempo.tick)).toEqual([
+				0, 1920,
+			]);
+		}
+	});
+
+	it("requires a tempo event at tick zero", () => {
+		const project = minimalProject();
+		project.sourceDocument.tempos = [{ tick: 480, bpm: 120 }];
+
+		expectInvalid(validateProjectFile(project), "MISSING_INITIAL_TEMPO");
+	});
+
+	it("rejects unsorted or duplicate timing entries", () => {
+		const project = completeProject();
+		project.sourceDocument.tempos = [
+			{ tick: 480, bpm: 130 },
+			{ tick: 0, bpm: 120 },
+		];
+		expectInvalid(validateProjectFile(project), "INVALID_TIMING_ORDER");
+
+		const duplicate = completeProject();
+		duplicate.sourceDocument.timeSignatures.push({
+			tick: 1920,
+			numerator: 3,
+			denominator: 4,
+		});
+		expectInvalid(validateProjectFile(duplicate), "INVALID_TIMING_ORDER");
+	});
+
+	it("rejects an invalid managed-file manifest", () => {
+		const project = completeProject() as unknown as {
+			export: { managedFiles: Record<string, unknown> };
+		};
+		project.export.managedFiles["background.png"] = {
+			sha256: HASH_A,
+			sizeBytes: 10,
+			writtenAt: CREATED_AT,
+		};
+
+		expectInvalid(validateProjectFile(project), "INVALID_EXPORT_MANIFEST");
+	});
+
+	it("rejects managed metadata without an export target", () => {
+		const project = completeProject();
+		delete project.export.targetDirectory;
+
+		expectInvalid(validateProjectFile(project), "INVALID_EXPORT_MANIFEST");
+	});
+});
+
+describe("hostile record keys and canonical collection order", () => {
+	it("preserves a valid __proto__ source key through strict canonical round trip", () => {
+		const hostileJson = JSON.stringify(minimalProject()).replaceAll(
+			"midi:36",
+			"__proto__",
+		);
+		const parsed = parseProjectFile(hostileJson);
+
+		expect(parsed.ok).toBe(true);
+		if (parsed.ok) {
+			expect(
+				Object.hasOwn(parsed.project.import.sourceMappings, "__proto__"),
+			).toBe(true);
+			expect(Object.getPrototypeOf(parsed.project.import.sourceMappings)).toBe(
+				null,
+			);
+			const serialized = serializeProjectFile(parsed.project);
+			expect(serialized).toContain('"__proto__"');
+			const reparsed = parseProjectFile(serialized);
+			expect(reparsed).toEqual(parsed);
+		}
+	});
+
+	it.each(["constructor", "prototype", "toString"])(
+		"does not let inherited-looking dangling override key %s bypass validation",
+		(hostileKey) => {
+			const project = minimalProject();
+			Object.defineProperty(project.mappings.targetOverrides, hostileKey, {
+				enumerable: true,
+				value: { lane: "kick", cymbal: false },
+			});
+
+			expectInvalid(validateProjectFile(project), "DANGLING_MAPPING_OVERRIDE");
+		},
+	);
+
+	it("does not drop hostile dangling correction or export keys", () => {
+		const correction = minimalProject();
+		Object.defineProperty(correction.corrections, "__proto__", {
+			enumerable: true,
+			value: {
+				hitId: "__proto__",
+				deleted: true,
+				updatedAt: CREATED_AT,
+			},
+		});
+		expectInvalid(validateProjectFile(correction), "DANGLING_CORRECTION");
+
+		const exported = completeProject();
+		Object.defineProperty(exported.export.managedFiles!, "toString", {
+			enumerable: true,
+			value: {
+				sha256: HASH_A,
+				sizeBytes: 1,
+				writtenAt: CREATED_AT,
+			},
+		});
+		expectInvalid(validateProjectFile(exported), "INVALID_EXPORT_MANIFEST");
+	});
+
+	it("canonicalizes duplicate/reordered selected tracks and reordered hits", () => {
+		const canonical = completeProject();
+		canonical.sourceDocument.hits[1]!.tick = 0;
+		const reordered = completeProject();
+		reordered.sourceDocument.hits[1]!.tick = 0;
+		reordered.import.selectedTrackIds = [1, 0, 1, 0];
+		reordered.sourceDocument.hits = [
+			reordered.sourceDocument.hits[1]!,
+			reordered.sourceDocument.hits[0]!,
+		];
+
+		const canonicalText = serializeProjectFile(canonical);
+		const reorderedText = serializeProjectFile(reordered);
+
+		expect(reorderedText).toBe(canonicalText);
+		const parsed = parseProjectFile(reorderedText);
+		expect(parsed.ok).toBe(true);
+		if (parsed.ok) {
+			expect(parsed.project.import.selectedTrackIds).toEqual([0, 1]);
+			expect(parsed.project.sourceDocument.hits.map((hit) => hit.id)).toEqual([
+				"gpif:0:0:0:0:0:ride",
+				"gpif:0:0:0:1:0:snare",
+			]);
+			expect(serializeProjectFile(parsed.project)).toBe(canonicalText);
+		}
+	});
+});
+
+function minimalProject(): ChdgProjectFile {
+	const sourceIdentity = {
+		kind: "midi" as const,
+		trackIndex: 0,
+		channel: 9,
+		tick: 0,
+		midiNote: 36,
+		occurrenceIndex: 0,
+	};
+	const id = "midi:0:9:0:36:0";
 	return {
 		schemaVersion: 1,
+		appVersion: "0.1.0",
 		project: {
-			name: "Demo",
-			createdAt: "2026-01-01T00:00:00.000Z",
-			updatedAt: "2026-01-01T00:00:00.000Z",
+			projectId: "project-demo",
+			artist: "Artist",
+			songName: "Song",
+			projectName: "Project",
+			createdAt: CREATED_AT,
+			updatedAt: CREATED_AT,
 		},
-		paths: {},
-		selection: { selectedTracks: [] },
-		metadata: {},
-		generation: { status: "not-generated" },
-		...overrides,
+		import: {
+			selectedTrackIds: [0],
+			sourceMappings: {
+				"midi:36": {
+					key: "midi:36",
+					sourceKind: "midi",
+					sourceLabel: "MIDI note 36",
+					detectedPiece: "kick",
+					defaultTarget: { lane: "kick", cymbal: false },
+					count: 1,
+					confidence: "high",
+					status: "mapped",
+				},
+			},
+			importedAt: CREATED_AT,
+			importerVersion: "0.1.0",
+		},
+		assets: {
+			source: {
+				relativePath: "assets/source.mid",
+				originalFileName: "source.mid",
+				sourceKind: "midi",
+				sha256: HASH_A,
+				importedAt: CREATED_AT,
+			},
+			audio: {
+				relativePath: "assets/song.ogg",
+				sha256: HASH_B,
+			},
+		},
+		sourceDocument: {
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits: [
+				{
+					id,
+					tick: 0,
+					detectedPiece: "kick",
+					velocity: 100,
+					durationTicks: 0,
+					sourceMappingKey: "midi:36",
+					sourceIdentity,
+					source: {
+						midiNote: 36,
+						trackIndex: 0,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+		},
+		mappings: {
+			interpretationOverrides: {},
+			targetOverrides: {},
+		},
+		corrections: {},
+		editor: {
+			offsetMs: 0,
+		},
+		export: {
+			status: "never-exported",
+		},
 	};
+}
+
+function completeProject(): ChdgProjectFile {
+	const project = minimalProject();
+	project.project.album = "Album";
+	project.project.year = "2026";
+	project.project.genre = "Rock";
+	project.project.charter = "CHDG";
+	project.assets.cover = {
+		relativePath: "assets/album.jpg",
+		sha256: HASH_A,
+	};
+	project.assets.audio.durationMs = 240_000;
+	project.assets.source.relativePath = "assets/source.gp";
+	project.assets.source.originalFileName = "source.gp";
+	(project.assets.source as { sourceKind: "gpif" }).sourceKind = "gpif";
+	project.import.selectedTrackIds = [0, 1];
+	project.import.sourceMappings = {
+		"gpif:ride": {
+			key: "gpif:ride",
+			sourceKind: "gpif",
+			sourceLabel: "Ride",
+			detectedPiece: "ride",
+			defaultTarget: { lane: "green", cymbal: true },
+			count: 1,
+			status: "mapped",
+		},
+		"gpif:snare": {
+			key: "gpif:snare",
+			sourceKind: "gpif",
+			sourceLabel: "Snare",
+			detectedPiece: "snare",
+			defaultTarget: { lane: "red", cymbal: false },
+			count: 1,
+			confidence: "medium",
+			status: "mapped",
+		},
+	};
+	project.sourceDocument.tempos = [
+		{ tick: 0, bpm: 120 },
+		{ tick: 1920, bpm: 128 },
+	];
+	project.sourceDocument.timeSignatures = [
+		{ tick: 0, numerator: 4, denominator: 4 },
+		{ tick: 1920, numerator: 3, denominator: 4 },
+	];
+	project.sourceDocument.sections = [
+		{ tick: 0, name: "Intro" },
+		{ tick: 1920, name: "Verse" },
+	];
+	project.sourceDocument.hits = [
+		{
+			id: "gpif:0:0:0:0:0:ride",
+			tick: 0,
+			detectedPiece: "ride",
+			velocity: 110,
+			durationTicks: 120,
+			sourceMappingKey: "gpif:ride",
+			sourceIdentity: {
+				kind: "gpif",
+				trackIndex: 0,
+				measureIndex: 0,
+				voiceIndex: 0,
+				beatIndex: 0,
+				noteIndex: 0,
+				articulationKey: "ride",
+			},
+			source: {
+				kind: "gpif",
+				trackIndex: 0,
+				trackName: "Drums",
+				articulationKey: "ride",
+				rawArticulation: "Ride",
+				noteName: "Ride",
+				inputMidiNumbers: [51],
+				outputMidiNumber: 51,
+				resolvedVia: "articulation",
+				measureIndex: 0,
+				beatIndex: 0,
+				noteIndex: 0,
+			},
+		},
+		{
+			id: "gpif:0:0:0:1:0:snare",
+			tick: 480,
+			detectedPiece: "snare",
+			velocity: 92,
+			durationTicks: 0,
+			sourceMappingKey: "gpif:snare",
+			sourceIdentity: {
+				kind: "gpif",
+				trackIndex: 0,
+				measureIndex: 0,
+				voiceIndex: 0,
+				beatIndex: 1,
+				noteIndex: 0,
+				articulationKey: "snare",
+			},
+			source: {
+				kind: "gpif",
+				trackIndex: 0,
+				trackName: "Drums",
+				articulationKey: "snare",
+				rawArticulation: "Snare",
+				noteName: "Snare",
+				inputMidiNumbers: [38],
+				outputMidiNumber: 38,
+				resolvedVia: "articulation",
+				measureIndex: 0,
+				beatIndex: 1,
+				noteIndex: 0,
+			},
+		},
+	];
+	project.mappings = {
+		interpretationOverrides: {
+			"gpif:ride": { kind: "piece", piece: "ride" },
+		},
+		targetOverrides: {
+			"gpif:ride": { lane: "green", cymbal: true },
+		},
+	};
+	project.corrections = {
+		"gpif:0:0:0:0:0:ride": {
+			hitId: "gpif:0:0:0:0:0:ride",
+			piece: "tom_floor",
+			target: { lane: "blue", cymbal: false },
+			accent: true,
+			updatedAt: CREATED_AT,
+		},
+	};
+	project.editor.offsetMs = 900;
+	project.export = {
+		status: "current",
+		targetDirectory: "/Clone Hero/Songs/Artist - Song - Project",
+		lastSuccessfulAt: CREATED_AT,
+		fingerprints: {
+			sourceDocument: HASH_A,
+			mappings: HASH_B,
+			corrections: HASH_A,
+			metadata: HASH_B,
+			audio: HASH_A,
+			cover: HASH_B,
+		},
+		managedFiles: {
+			"notes.chart": {
+				sha256: HASH_A,
+				sizeBytes: 1000,
+				writtenAt: CREATED_AT,
+			},
+			"song.ini": {
+				sha256: HASH_B,
+				sizeBytes: 200,
+				writtenAt: CREATED_AT,
+			},
+		},
+	};
+	return project;
 }
 
 function expectInvalid(
