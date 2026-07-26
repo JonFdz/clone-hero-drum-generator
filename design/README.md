@@ -112,25 +112,24 @@ and implementation feasibility.
 
 ## Simplified V1 Pencil work
 
-Create new top-level sections without deleting old ones. Recommended naming:
+Issue #94 established the D1 checkpoint in three new top-level sections:
 
 ```text
-08 / SUPERSEDED / Design V1 Workflow
-09 / REFERENCE / Simplified V1 Approved Mockups
-10 / SELECTED / Simplified V1 Foundations Delta
-11 / SELECTED / Simplified V1 Components
-12 / V1 / Simplified Flow / 1440
-13 / V1 / Simplified Flow / 1024
-14 / V1 / Simplified States
-15 / HANDOFF / Simplified V1
+08 / SIMPLIFIED V1 / IA
+09 / SIMPLIFIED V1 / STRUCTURAL COMPONENTS
+10 / SIMPLIFIED V1 / ROUTE AND STATE MAP
 ```
 
-The exact numeric prefix may be adjusted to avoid collision with existing
-sections, but the human-readable names must remain stable and explicit.
+These are structural D1 artifacts, not final D2 screens. Review the decision and
+handoff records before treating a placement or responsive pattern as final:
 
-## Required main frames
+- `design/decisions/simplified-v1-information-architecture.md`
+- `design/handoff/simplified-v1-ia-inventory.md`
+- `design/handoff/simplified-v1-component-state-inventory.md`
+- `design/handoff/simplified-v1-mockup-traceability.md`
+- `design/handoff/simplified-v1-ia-validation.md`
 
-At both 1440 × 900 and 1024 × 768:
+## D1 structural inventory
 
 ```text
 Simplified V1 / Home / Recent Projects
@@ -146,7 +145,18 @@ Simplified V1 / Export / Success
 Simplified V1 / Export / Failure
 ```
 
-Additional state frames are defined by the OpenSpec and the screen inventory.
+Issue #94 represents the full route/state inventory as 22 review cards. It also
+includes two production-scale structural examples:
+
+```text
+Editor / Preview Default — 1440 × 900
+Editor / 1024 Structural Adaptation — 1024 × 768
+```
+
+These examples prove the desktop and compact structural strategies; they do not
+claim that every listed state has a full-size frame at both breakpoints. D2 may
+add the remaining production-scale state frames while preserving D1 ownership
+and navigation.
 
 ## Working rules
 
