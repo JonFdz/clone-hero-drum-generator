@@ -4,25 +4,23 @@ import {
 	type ProjectStatePayload,
 } from "../../services/desktop-bridge.service";
 import { ProjectSessionStore } from "./project-session.store";
-import {
-	projectFileToPayload,
-	toMissingPathWarnings,
-} from "./project-session.mapper";
+import { toMissingPathWarnings } from "./project-session.mapper";
 import type {
 	CreateProjectOutcome,
 	OpenFromPickerOutcome,
 	OpenProjectOutcome,
-	PersistenceCancelled,
 	ProjectPersistenceError,
 	SaveAsOutcome,
 	SaveProjectOutcome,
 } from "./project-session.model";
 
-const cancelled = (): PersistenceCancelled => ({ ok: false, cancelled: true });
 const error = (code: string, message: string): ProjectPersistenceError => ({
 	code,
 	message,
 });
+
+export const PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE =
+	"Canonical project creation and saving are not available in this legacy workflow.";
 
 /**
  * Centralizes project persistence flows (create, open, save, save-as) and
@@ -48,21 +46,14 @@ export class ProjectPersistenceService {
 	}
 
 	async createProject(name: string): Promise<CreateProjectOutcome> {
-		try {
-			const envelope = await this.bridge.createProject({
-				projectName: name,
-			});
-			if (!envelope.ok) {
-				return { ok: false, error: error("create_failed", envelope.error.message) };
-			}
-			this.session.applyHydration(envelope.data);
-			return { ok: true, payload: envelope.data };
-		} catch (e) {
-			return {
-				ok: false,
-				error: error("create_error", e instanceof Error ? e.message : "Create project failed."),
-			};
-		}
+		void name;
+		return {
+			ok: false,
+			error: error(
+				"create_unavailable",
+				PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
+			),
+		};
 	}
 
 	async openProject(filePath: string): Promise<OpenProjectOutcome> {
@@ -90,7 +81,7 @@ export class ProjectPersistenceService {
 	async openProjectFromPicker(): Promise<OpenFromPickerOutcome> {
 		try {
 			const picked = await this.bridge.openProjectFile();
-			if (!picked) return cancelled();
+			if (!picked) return { ok: false, cancelled: true };
 			return await this.openProject(picked.path);
 		} catch (e) {
 			return {
@@ -101,50 +92,24 @@ export class ProjectPersistenceService {
 	}
 
 	async saveProject(payload: ProjectStatePayload): Promise<SaveProjectOutcome> {
-		try {
-			const envelope = await this.bridge.saveProject(payload);
-			if (!envelope.ok) {
-				return { ok: false, error: error("save_failed", envelope.error.message) };
-			}
-			const savedPayload = projectFileToPayload(
-				envelope.data.filePath,
-				envelope.data.project,
-			);
-			this.session.applyHydration(savedPayload);
-			return { ok: true, filePath: envelope.data.filePath, payload: savedPayload };
-		} catch (e) {
-			return {
-				ok: false,
-				error: error("save_error", e instanceof Error ? e.message : "Save project failed."),
-			};
-		}
+		void payload;
+		return {
+			ok: false,
+			error: error(
+				"save_unavailable",
+				PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
+			),
+		};
 	}
 
 	async saveProjectAs(payload: ProjectStatePayload): Promise<SaveAsOutcome> {
-		try {
-			const picked = await this.bridge.saveProjectFile(
-				payload.projectName,
-				payload.projectFilePath,
-			);
-			if (!picked) return cancelled();
-			const envelope = await this.bridge.saveProjectAs({
-				...payload,
-				filePath: picked.path,
-			});
-			if (!envelope.ok) {
-				return { ok: false, error: error("save_as_failed", envelope.error.message) };
-			}
-			const savedPayload = projectFileToPayload(
-				envelope.data.filePath,
-				envelope.data.project,
-			);
-			this.session.applyHydration(savedPayload);
-			return { ok: true, filePath: envelope.data.filePath, payload: savedPayload };
-		} catch (e) {
-			return {
-				ok: false,
-				error: error("save_as_error", e instanceof Error ? e.message : "Save project failed."),
-			};
-		}
+		void payload;
+		return {
+			ok: false,
+			error: error(
+				"save_as_unavailable",
+				PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
+			),
+		};
 	}
 }

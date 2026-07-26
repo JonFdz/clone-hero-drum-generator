@@ -48,6 +48,8 @@
 						<button
 							class="button secondary small"
 							type="button"
+							[disabled]="true"
+							[title]="persistenceUnavailableMessage"
 							(click)="saveProject()"
 						>
 							Save
@@ -56,10 +58,13 @@
 					<button
 						class="button secondary small"
 						type="button"
+						[disabled]="true"
+						[title]="persistenceUnavailableMessage"
 						(click)="saveProjectAs()"
 					>
 						Save As
 					</button>
+					<span class="pill warning">{{ persistenceUnavailableMessage }}</span>
 					@if (project().outputStatus === "needs-regenerate") {
 						<span class="pill warning">Needs Regenerate</span>
 					}

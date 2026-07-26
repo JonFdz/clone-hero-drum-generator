@@ -16,6 +16,13 @@ describe("ProjectSessionStore", () => {
 		const store = new ProjectSessionStore();
 		store.markDirty();
 		store.applyHydration({
+			project: {
+				projectId: "project-demo",
+				artist: "Artist",
+				songName: "Demo",
+				projectName: "Expert Drums",
+				displayName: "Artist - Demo - Expert Drums",
+			},
 			projectName: "Demo",
 			projectFilePath: "/p/demo.chdg.json",
 			generationStatus: "generated",
@@ -23,6 +30,7 @@ describe("ProjectSessionStore", () => {
 			metadata: {},
 		});
 		expect(store.projectName()).toBe("Demo");
+		expect(store.project()?.projectId).toBe("project-demo");
 		expect(store.projectFilePath()).toBe("/p/demo.chdg.json");
 		expect(store.outputStatus()).toBe("generated");
 		expect(store.isDirty()).toBe(false);
@@ -32,6 +40,13 @@ describe("ProjectSessionStore", () => {
 	it("markNeedsRegenerate transitions generated -> needs-regenerate and marks dirty", () => {
 		const store = new ProjectSessionStore();
 		store.applyHydration({
+			project: {
+				projectId: "project-demo",
+				artist: "Artist",
+				songName: "Demo",
+				projectName: "Expert Drums",
+				displayName: "Artist - Demo - Expert Drums",
+			},
 			projectName: "Demo",
 			generationStatus: "generated",
 			selectedTracks: [],
@@ -79,6 +94,13 @@ describe("ProjectSessionStore", () => {
 	it("resetActiveProject restores initial session state", () => {
 		const store = new ProjectSessionStore();
 		store.applyHydration({
+			project: {
+				projectId: "project-demo",
+				artist: "Artist",
+				songName: "Demo",
+				projectName: "Expert Drums",
+				displayName: "Artist - Demo - Expert Drums",
+			},
 			projectName: "Demo",
 			projectFilePath: "/p.json",
 			generationStatus: "generated",
@@ -89,6 +111,7 @@ describe("ProjectSessionStore", () => {
 		store.resetActiveProject();
 		expect(store.projectName()).toBe("Untitled");
 		expect(store.projectFilePath()).toBeUndefined();
+		expect(store.project()).toBeUndefined();
 		expect(store.outputStatus()).toBe("not-generated");
 		expect(store.isDirty()).toBe(false);
 	});

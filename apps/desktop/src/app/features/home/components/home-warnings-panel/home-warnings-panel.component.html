@@ -11,11 +11,11 @@
 							</li>
 						}
 					</ul>
-					<p>Use Continue Setup to choose the missing source, audio, output folder, or optional cover again.</p>
+					<p>This project references unavailable local files. Replacement and persistence are unavailable in this migration.</p>
 				}
 				@if (model.outputStatus.tone === "danger") {
 					<h2>Generation failed</h2>
-					<p>{{ model.outputStatus.detail }} Open Generate to review the latest logs and retry safely.</p>
+					<p>{{ model.outputStatus.detail }} Managed regeneration is unavailable in this migration.</p>
 				}
 			</section>
 		}

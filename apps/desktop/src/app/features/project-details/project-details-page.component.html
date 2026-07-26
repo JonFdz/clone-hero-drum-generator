@@ -2,19 +2,20 @@
 			<div class="hero-copy">
 				<p class="eyebrow">Projects / Details</p>
 				<h1>{{ title() }}</h1>
-				<p>Configure the local .chdg project, source files, metadata, cover art, and chart offset.</p>
+				<p>Inspect an opened canonical .chdg project. Creation and persistence are unavailable in this legacy workflow.</p>
 			</div>
 			<div class="hero-actions">
-				<button class="button secondary" type="button" (click)="createProject()">New Project</button>
+				<button class="button secondary" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="createProject()">New Project Unavailable</button>
 				<a class="button ghost" routerLink="/projects">Back to Projects</a>
 			</div>
 		</header>
+		<p class="message warning" role="status">{{ persistenceUnavailableMessage }}</p>
 
 		@if (projectState.missingPathWarnings().length > 0) {
 			<section class="notice warning-notice">
 				<div>
 					<h2>Missing local paths</h2>
-					<p>Re-select missing source/audio/output paths before generation. Missing cover artwork is non-blocking.</p>
+					<p>The opened project references unavailable local files. Replacement and persistence are unavailable in this migration.</p>
 				</div>
 				<ul>
 					@for (warning of projectState.missingPathWarnings(); track warning.kind) {
@@ -26,8 +27,8 @@
 
 		@if (projectState.outputStatus() === 'needs-regenerate') {
 			<section class="notice warning-notice compact-notice">
-				<h2>Output outdated</h2>
-				<p>Generation inputs changed since the last successful generation. Regenerate to update output.</p>
+				<h2>Persisted export status: outdated</h2>
+				<p>This read-only view cannot regenerate or update managed output.</p>
 			</section>
 		}
 
@@ -38,14 +39,14 @@
 						<span class="step-badge">1</span>
 						<div class="header-text">
 							<h2>Project Identity</h2>
-							<p>Name the local project file and track its save status.</p>
+							<p>Read-only canonical identity. Renaming and persistence are unavailable in this migration.</p>
 						</div>
 					</div>
 					<div class="identity-grid">
-						<label class="field-label">Project Name<input [(ngModel)]="projectNameInput" (change)="updateProjectName()" placeholder="Enter project name" /></label>
+						<label class="field-label">Project Name<input [(ngModel)]="projectNameInput" (change)="updateProjectName()" placeholder="Canonical project name" [disabled]="setupDisabled()" [title]="setupDisabled() ? persistenceUnavailableMessage : ''" /></label>
 						<div class="project-file-pill">
-							<span>{{ projectState.state().projectFilePath ? 'Project file' : 'Unsaved project' }}</span>
-							<strong>{{ projectState.state().projectFilePath || 'Save to create a .chdg file path' }}</strong>
+							<span>{{ projectState.state().projectFilePath ? 'Opened project file' : 'No canonical project open' }}</span>
+							<strong>{{ projectState.state().projectFilePath || 'Open an existing .chdg project from Projects' }}</strong>
 						</div>
 					</div>
 				</section>
@@ -55,7 +56,7 @@
 						<span class="step-badge">2</span>
 						<div class="header-text">
 							<h2>Cover / Portada</h2>
-							<p>Optional local artwork reference. The image path is saved; the image is not embedded.</p>
+							<p>Read-only persisted cover reference. Editing and replacement are unavailable.</p>
 						</div>
 					</div>
 					<div class="cover-content">
@@ -66,10 +67,10 @@
 						}
 						<div class="cover-copy">
 							<strong>{{ coverLabel() }}</strong>
-							<p>Supported: .png, .jpg, .jpeg, .webp. Missing cover files show a warning but do not block generation.</p>
+							<p>The canonical cover reference is displayed when its local asset is available.</p>
 							<div class="button-row">
-								<button class="button secondary" type="button" (click)="pickCover()">Choose Cover</button>
-								<button class="button ghost" type="button" [disabled]="!state().cover?.imagePath" (click)="clearCover()">Remove Cover</button>
+								<button class="button secondary" type="button" [disabled]="setupDisabled()" [title]="setupDisabled() ? persistenceUnavailableMessage : ''" (click)="pickCover()">Cover Replacement Unavailable</button>
+								<button class="button ghost" type="button" [disabled]="setupDisabled() || !state().cover?.imagePath" (click)="clearCover()">Cover Removal Unavailable</button>
 							</div>
 						</div>
 					</div>
@@ -78,76 +79,76 @@
 				<section class="setup-card path-card">
 					<div class="card-header-row">
 						<span class="step-badge">3</span>
-						<div class="header-text"><h2>Source File</h2><p>Select a local chart source. Supports .mid, .midi, and .gp.</p></div>
-						<button class="button secondary" type="button" (click)="pickSource()">Choose File</button>
+						<div class="header-text"><h2>Source File</h2><p>Read-only project-owned source reference. Replacement is unavailable.</p></div>
+						<button class="button secondary" type="button" [disabled]="setupDisabled()" [title]="setupDisabled() ? persistenceUnavailableMessage : ''" (click)="pickSource()">Source Replacement Unavailable</button>
 					</div>
-					<div class="file-row"><span class="file-icon">♬</span><div><strong>{{ fileName(state().sourcePath) || 'No source selected' }}</strong><p>{{ state().sourceKind || 'Local source required. No network files or URLs.' }}</p></div><span class="ok" [class.on]="state().sourcePath">✓</span></div>
+					<div class="file-row"><span class="file-icon">♬</span><div><strong>{{ fileName(state().sourcePath) || 'No persisted source reference' }}</strong><p>{{ state().sourceKind || 'Source kind unavailable' }}</p></div><span class="ok" [class.on]="state().sourcePath">✓</span></div>
 				</section>
 
 				<section class="setup-card path-card">
 					<div class="card-header-row">
 						<span class="step-badge">4</span>
-						<div class="header-text"><h2>Audio File (Required)</h2><p>Select the local audio file for this project.</p></div>
-						<button class="button secondary" type="button" (click)="pickAudio()">Choose File</button>
+						<div class="header-text"><h2>Audio File</h2><p>Read-only project-owned audio reference. Replacement is unavailable.</p></div>
+						<button class="button secondary" type="button" [disabled]="setupDisabled()" [title]="setupDisabled() ? persistenceUnavailableMessage : ''" (click)="pickAudio()">Audio Replacement Unavailable</button>
 					</div>
-					<div class="file-row"><span class="file-icon">♫</span><div><strong>{{ fileName(state().audioPath) || 'No audio selected' }}</strong><p>Audio is required for Desktop Generate MVP.</p></div><span class="ok" [class.on]="state().audioPath">✓</span></div>
+					<div class="file-row"><span class="file-icon">♫</span><div><strong>{{ fileName(state().audioPath) || 'No persisted audio reference' }}</strong><p>Canonical audio asset inspection only.</p></div><span class="ok" [class.on]="state().audioPath">✓</span></div>
 				</section>
 
 				<section class="setup-card path-card">
 					<div class="card-header-row">
 						<span class="step-badge">5</span>
-						<div class="header-text"><h2>Output Folder</h2><p>Choose where notes.chart, song.ini, and song.ogg will be written.</p></div>
-						<button class="button secondary" type="button" (click)="pickOutput()">Choose Folder</button>
+						<div class="header-text"><h2>Export Target</h2><p>Read-only persisted export target. Editing and export are unavailable.</p></div>
+						<button class="button secondary" type="button" [disabled]="setupDisabled()" [title]="setupDisabled() ? persistenceUnavailableMessage : ''" (click)="pickOutput()">Target Editing Unavailable</button>
 					</div>
-					<div class="file-row"><span class="file-icon">□</span><div><strong>{{ state().outputDir || 'No output folder selected' }}</strong><p>A .chdg file stores project settings separately from generated output.</p></div><span class="ok" [class.on]="state().outputDir">✓</span></div>
+					<div class="file-row"><span class="file-icon">□</span><div><strong>{{ state().outputDir || 'No persisted export target' }}</strong><p>Canonical export state inspection only.</p></div><span class="ok" [class.on]="state().outputDir">✓</span></div>
 				</section>
 
 				<section class="setup-card metadata-card">
 					<div class="card-header-row">
 						<span class="step-badge">6</span>
-						<div class="header-text"><h2>Metadata</h2><p>Set song information for song.ini.</p></div>
+						<div class="header-text"><h2>Metadata</h2><p>Read-only canonical metadata. Editing and persistence are unavailable.</p></div>
 					</div>
 					<div class="metadata-grid">
-						<label class="field-label">Song Name<input [(ngModel)]="metadata.name" (ngModelChange)="updateMetadata()" /></label>
-						<label class="field-label">Artist<input [(ngModel)]="metadata.artist" (ngModelChange)="updateMetadata()" /></label>
-						<label class="field-label">Album<input [(ngModel)]="metadata.album" (ngModelChange)="updateMetadata()" /></label>
-						<label class="field-label">Year<input [(ngModel)]="metadata.year" (ngModelChange)="updateMetadata()" /></label>
-						<label class="field-label">Genre<input [(ngModel)]="metadata.genre" (ngModelChange)="updateMetadata()" /></label>
-						<label class="field-label">Charter<input [(ngModel)]="metadata.charter" (ngModelChange)="updateMetadata()" /></label>
+						<label class="field-label">Song Name<input [(ngModel)]="metadata.name" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
+						<label class="field-label">Artist<input [(ngModel)]="metadata.artist" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
+						<label class="field-label">Album<input [(ngModel)]="metadata.album" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
+						<label class="field-label">Year<input [(ngModel)]="metadata.year" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
+						<label class="field-label">Genre<input [(ngModel)]="metadata.genre" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
+						<label class="field-label">Charter<input [(ngModel)]="metadata.charter" (ngModelChange)="updateMetadata()" [disabled]="setupDisabled()" /></label>
 					</div>
 				</section>
 
 				<section class="setup-card options-card">
 					<div class="card-header-row">
 						<span class="step-badge">7</span>
-						<div class="header-text"><h2>Offset and Options</h2><p>Chart offset is stored in the chart while note ticks are not moved.</p></div>
+						<div class="header-text"><h2>Offset</h2><p>Read-only persisted editor offset. Editing and managed chart updates are unavailable.</p></div>
 					</div>
 					<div class="options-layout">
-						<label class="field-label offset-field">Chart Offset (ms)<input type="number" [ngModel]="state().offsetMs" (ngModelChange)="setOffset($event)" /></label>
-						<ul class="option-list"><li>Auto-detect source type</li><li>Track selection later</li><li>Local-only workflow</li></ul>
+						<label class="field-label offset-field">Chart Offset (ms)<input type="number" [ngModel]="state().offsetMs" (ngModelChange)="setOffset($event)" [disabled]="setupDisabled()" /></label>
+						<ul class="option-list"><li>Canonical value</li><li>No replacement</li><li>No persistence</li></ul>
 					</div>
 				</section>
 			</main>
 
 			<aside class="summary-card">
 				<p class="summary-eyebrow">Project Summary</p>
-				<h2>{{ projectState.state().projectName }}</h2>
+				<h2>{{ projectState.state().project?.projectName || 'No project' }}</h2>
 				<div class="status-row">
-					<span class="status-pill" [class.modified]="projectState.state().dirty">{{ projectState.state().dirty ? 'Modified' : 'Saved' }}</span>
+					<span class="status-pill">Read-only</span>
 					<span class="status-pill">{{ projectState.state().outputStatus }}</span>
 				</div>
 				<dl class="summary-list">
 					<dt>Cover</dt><dd>{{ coverLabel() }}</dd>
 					<dt>Source</dt><dd>{{ fileName(state().sourcePath) || 'Not selected' }}</dd>
-					<dt>Audio</dt><dd>{{ fileName(state().audioPath) || 'Required' }}</dd>
-					<dt>Output Folder</dt><dd>{{ state().outputDir || 'Not selected' }}</dd>
+					<dt>Audio</dt><dd>{{ fileName(state().audioPath) || 'Unavailable' }}</dd>
+					<dt>Export Target</dt><dd>{{ state().outputDir || 'Unavailable' }}</dd>
 					<dt>Offset</dt><dd>{{ state().offsetMs ?? 0 }} ms</dd>
 				</dl>
-				<ul class="readiness-list"><li [class.ready]="state().sourcePath">Source file</li><li [class.ready]="state().audioPath">Audio file</li><li [class.ready]="state().outputDir">Output folder</li><li class="ready">Local-only workflow</li></ul>
+				<ul class="readiness-list"><li [class.ready]="state().sourcePath">Persisted source reference</li><li [class.ready]="state().audioPath">Persisted audio reference</li><li [class.ready]="state().outputDir">Persisted export target</li><li class="ready">Read-only local inspection</li></ul>
 				@if (validation().errors.length > 0) {
-					<div class="message warning small-message"><strong>Before generation:</strong><ul><li *ngFor="let error of validation().errors">{{ error }}</li></ul></div>
+					<div class="message warning small-message"><strong>Validation snapshot:</strong><ul><li *ngFor="let error of validation().errors">{{ error }}</li></ul></div>
 				}
-				<div class="summary-actions"><button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="reviewSource()">Review Source</button><button class="button secondary" type="button" (click)="saveProject()">{{ primarySaveLabel() }}</button><button class="button ghost" type="button" (click)="saveProjectAs()">Save As</button></div>
-				<p class="summary-note">You can review and adjust settings before proceeding.</p>
+				<div class="summary-actions"><button class="button primary" type="button" [disabled]="setupDisabled() || !state().sourcePath" (click)="reviewSource()">Review Unavailable</button><button class="button secondary" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="saveProject()">{{ primarySaveLabel }}</button><button class="button ghost" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="saveProjectAs()">Save As Unavailable</button></div>
+				<p class="summary-note">Read-only inspection. Editing, replacement, review, and persistence are unavailable.</p>
 			</aside>
 		</div>

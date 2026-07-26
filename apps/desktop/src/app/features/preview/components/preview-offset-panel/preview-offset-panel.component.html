@@ -1,6 +1,6 @@
 <section class="offset-panel">
 	<h2>Offset Adjustment</h2>
-	<p>Fine-tune the audio offset to improve note timing and sync.</p>
+	<p>Fine-tune playback timing for this preview session only. The canonical project and notes.chart are not changed.</p>
 
 	<div class="offset-readout">
 		<span>Current Offset</span>
@@ -25,7 +25,7 @@
 			[disabled]="!canApplyOffset"
 			(click)="apply.emit()"
 		>
-			✓ Apply Offset
+			✓ Apply to Preview Session
 		</button>
 		<button
 			type="button"
@@ -86,7 +86,7 @@
 
 	<p class="status" *ngIf="offsetStatus">{{ offsetStatus }}</p>
 	<p class="saved">
-		Saved offset: {{ signedOffset(savedOffsetMs) }} ms · Delta:
+		Preview-session baseline: {{ signedOffset(savedOffsetMs) }} ms · Delta:
 		{{ signedOffset(offsetDeltaMs) }} ms
 	</p>
 </section>

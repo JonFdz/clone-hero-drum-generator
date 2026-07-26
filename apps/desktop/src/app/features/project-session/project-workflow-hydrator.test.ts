@@ -5,29 +5,14 @@ import {
 } from "./project-workflow-hydrator";
 import type { ProjectStatePayload } from "../../services/desktop-bridge.service";
 import type { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import type {
-	ChdgProjectAnalysisCache,
-	ProjectMappingOverrides,
-} from "@chdg/project/browser";
-
-const mappingOverrides = {
-	"0": {
-		sourceKind: "midi",
-		key: "36",
-		target: { kind: "piece", piece: "kick" },
-	},
-} as unknown as ProjectMappingOverrides;
-
-const analysis = {
-	schemaVersion: 1,
-	sourceFingerprint: { hash: "abc", trackIndex: 3 },
-	mappingFingerprint: "fp",
-	selectedTracks: [3],
-	inspectedAt: "2026-01-01T00:00:00.000Z",
-	inspection: { sourceKind: "midi", tracks: [], issues: [] },
-} as unknown as ChdgProjectAnalysisCache;
-
 const fullPayload: ProjectStatePayload = {
+	project: {
+		projectId: "project-demo",
+		artist: "Artist",
+		songName: "Demo",
+		projectName: "Expert Drums",
+		displayName: "Artist - Demo - Expert Drums",
+	},
 	projectName: "Demo",
 	projectFilePath: "/p/demo.chdg.json",
 	sourcePath: "/songs/demo.mid",
@@ -38,6 +23,12 @@ const fullPayload: ProjectStatePayload = {
 	selectedTracks: [3, 7],
 	metadata: { name: "Demo", artist: "Artist", album: "Album", year: "2026" },
 	offsetMs: 12,
+	sourceTiming: {
+		resolution: 960,
+		tempos: [{ tick: 0, bpm: 120 }],
+		timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+		sections: [],
+	},
 	generationStatus: "generated",
 	lastGeneratedAt: "2026-01-01T00:00:00.000Z",
 	outputFiles: {
@@ -46,8 +37,6 @@ const fullPayload: ProjectStatePayload = {
 		songOgg: "/out/demo/song.ogg",
 		albumJpg: "/out/demo/album.jpg",
 	},
-	mappingOverrides,
-	analysis,
 };
 
 describe("toGenerateWorkflowState", () => {
@@ -67,14 +56,15 @@ describe("toGenerateWorkflowState", () => {
 			year: "2026",
 		});
 		expect(mapped.offsetMs).toBe(12);
+		expect(mapped.sourceTiming?.resolution).toBe(960);
 		expect(mapped.outputFiles).toEqual({
 			chart: "/out/demo/notes.chart",
 			songIni: "/out/demo/song.ini",
 			songOgg: "/out/demo/song.ogg",
 			albumJpg: "/out/demo/album.jpg",
 		});
-		expect(mapped.mappingOverrides).toBe(mappingOverrides);
-		expect(mapped.analysis).toBe(analysis);
+		expect(mapped.mappingOverrides).toBeUndefined();
+		expect(mapped.analysis).toBeUndefined();
 		expect(mapped.lastGeneratedAt).toBe("2026-01-01T00:00:00.000Z");
 	});
 
@@ -89,6 +79,13 @@ describe("toGenerateWorkflowState", () => {
 
 	it("preserves undefined optional workflow fields without inventing values", () => {
 		const sparse: ProjectStatePayload = {
+			project: {
+				projectId: "project-empty",
+				artist: "Artist",
+				songName: "Empty",
+				projectName: "Expert Drums",
+				displayName: "Artist - Empty - Expert Drums",
+			},
 			projectName: "Empty",
 			selectedTracks: [],
 			metadata: {},
@@ -138,6 +135,7 @@ describe("ProjectWorkflowHydrator", () => {
 
 		const arg = loadProjectState.mock.calls[0][0];
 		expect(arg).toEqual(toGenerateWorkflowState(fullPayload));
-		expect(arg.analysis).toBe(fullPayload.analysis);
+		expect(arg.analysis).toBeUndefined();
+		expect(arg.mappingOverrides).toBeUndefined();
 	});
 });

@@ -1,13 +1,15 @@
 import { CommonModule } from "@angular/common";
 import { ChangeDetectionStrategy, Component, computed, effect, inject, InjectionToken, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { Router, RouterModule } from "@angular/router";
+import { RouterModule } from "@angular/router";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator } from "../project-session/public-api";
-import { ProjectLibraryService } from "../projects/public-api";
-import { SettingsService } from "../settings/public-api";
+import {
+	ProjectSessionStore,
+} from "../project-session/public-api";
 import { ProjectDetailsService } from "./project-details.service";
-import { createDefaultProjectName } from "../../services/project-name-model";
+
+export const PROJECT_DETAILS_UNAVAILABLE_MESSAGE =
+	"Project Details editing, replacement, review, and saving are not available in this legacy workflow.";
 
 export const PROJECT_DETAILS_REACTIVE_EFFECTS = new InjectionToken<boolean>(
 	"PROJECT_DETAILS_REACTIVE_EFFECTS",
@@ -26,11 +28,6 @@ export class ProjectDetailsPageComponent {
 	private readonly details = inject(ProjectDetailsService);
 	readonly generateState = inject(DesktopGenerateStateService);
 	readonly projectState = inject(ProjectSessionStore);
-	private readonly persistence = inject(ProjectPersistenceService);
-	private readonly library = inject(ProjectLibraryService);
-	private readonly settingsService = inject(SettingsService);
-	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
-	private readonly router = inject(Router);
 	private readonly reactiveEffects = inject(PROJECT_DETAILS_REACTIVE_EFFECTS);
 
 	readonly state = this.generateState.state;
@@ -40,17 +37,19 @@ export class ProjectDetailsPageComponent {
 	);
 	private lastLoadedProjectKey = "";
 	metadata = { ...this.generateState.state().metadata };
-	projectNameInput = this.projectState.state().projectName;
+	projectNameInput =
+		this.projectState.state().project?.projectName ?? "No project";
 	readonly coverPreviewSrc = signal<string | undefined>(undefined);
+	readonly persistenceUnavailableMessage =
+		PROJECT_DETAILS_UNAVAILABLE_MESSAGE;
 
 	readonly title = computed(() =>
-		this.projectState.state().projectFilePath
+		this.projectState.hasProject()
 			? "Project Details"
-			: "Create Project",
+			: "Project Setup Unavailable",
 	);
-	readonly primarySaveLabel = computed(() =>
-		this.projectState.state().projectFilePath ? "Save Changes" : "Save Draft",
-	);
+	readonly setupDisabled = computed(() => true);
+	readonly primarySaveLabel = "Save Unavailable";
 	readonly coverLabel = computed(() =>
 		this.state().cover?.imagePath
 			? this.fileName(this.state().cover?.imagePath)
@@ -63,7 +62,8 @@ export class ProjectDetailsPageComponent {
 				const key = this.loadedProjectKey();
 				if (key !== this.lastLoadedProjectKey) {
 					this.lastLoadedProjectKey = key;
-					this.projectNameInput = this.projectState.state().projectName;
+					this.projectNameInput =
+						this.projectState.state().project?.projectName ?? "No project";
 					this.metadata = { ...this.generateState.state().metadata };
 				}
 			});
@@ -73,104 +73,55 @@ export class ProjectDetailsPageComponent {
 			});
 		}
 
-		const settings = this.settingsService.settings();
-		if (settings.defaultCharter && !this.metadata.charter) {
-			this.metadata.charter = settings.defaultCharter;
-			this.generateState.setMetadata(this.metadata);
-		}
-		if (
-			settings.defaultOffsetMs !== undefined &&
-			this.state().offsetMs === undefined
-		) {
-			this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
-		}
 	}
 
 	updateProjectName(): void {
-		this.projectState.setProjectName(this.projectNameInput);
+		this.reportUnavailable();
 	}
 
 	async createProject(): Promise<void> {
-		const name = createDefaultProjectName();
-		const result = await this.persistence.createProject(name);
-		if (result.ok) {
-			this.workflowHydrator.hydrate(result.payload);
-			await this.library.refresh();
-			this.projectNameInput = result.payload.projectName;
-			await this.router.navigateByUrl("/projects/details?mode=new");
-		}
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async saveProject(): Promise<void> {
-		const name = this.projectState.state().projectName;
-		const filePath = this.projectState.state().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(name, filePath);
-		const saved = await this.persistence.saveProject(payload);
-		if (saved.ok) {
-			await this.library.refresh();
-			this.generateState.setSavedOutputDir(saved.payload.outputDir);
-		}
-
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async saveProjectAs(): Promise<void> {
-		const name = this.projectState.state().projectName;
-		const currentPath = this.projectState.state().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(name, currentPath);
-		const result = await this.persistence.saveProjectAs(payload);
-		if (result.ok) await this.library.refresh();
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async pickSource(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.details.pickSource();
-			if (picked) this.generateState.setSourcePath(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	async pickAudio(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.details.pickAudio();
-			if (picked) this.generateState.setAudioPath(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	async pickOutput(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.details.pickOutput();
-			if (picked) this.generateState.setOutputDir(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	async pickCover(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.details.pickCover();
-			if (picked) {
-				this.generateState.setCoverImagePath(picked.path);
-				this.coverPreviewSrc.set(picked.fileUrl);
-			}
-		});
+		this.reportUnavailable();
 	}
 
 	clearCover(): void {
-		this.generateState.setCoverImagePath(undefined);
-		this.coverPreviewSrc.set(undefined);
+		this.reportUnavailable();
 	}
 
 	updateMetadata(): void {
-		this.generateState.setMetadata(this.metadata);
+		this.reportUnavailable();
 	}
 
 	setOffset(value: number | string | null): void {
-		this.generateState.setOffsetMsInput(value === null ? "" : String(value));
+		void value;
+		this.reportUnavailable();
 	}
 
 	async reviewSource(): Promise<void> {
-		if (!this.state().sourcePath) {
-			this.generateState.applyError("Source file is required.");
-			return;
-		}
-		await this.router.navigateByUrl("/source-review");
+		this.reportUnavailable();
 	}
 
 	fileName(filePath: string | undefined): string {
@@ -193,13 +144,7 @@ export class ProjectDetailsPageComponent {
 		}
 	}
 
-	private async runPicker(action: () => Promise<void>): Promise<void> {
-		try {
-			await action();
-		} catch (error) {
-			this.generateState.applyError(
-				error instanceof Error ? error.message : "Desktop bridge unavailable.",
-			);
-		}
+	private reportUnavailable(): void {
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 }

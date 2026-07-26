@@ -2,13 +2,20 @@ import { describe, expect, it } from "vitest";
 import { createBrowserBridge } from "./install-browser-bridge";
 import { resolveBrowserScenario } from "./scenario-registry";
 import { DesktopPreviewService } from "../app/services/desktop-preview.service";
-import { HARNESS_PATHS } from "./fixture-builders";
+import {
+	HARNESS_AUDIO_PREVIEW_SRC,
+	HARNESS_PATHS,
+} from "./fixture-builders";
 
 describe("initial browser harness scenarios", () => {
 	it("keeps empty stateless and project-loaded project-backed", () => {
 		expect(resolveBrowserScenario("empty").project).toBeUndefined();
 		expect(resolveBrowserScenario("project-loaded").project).toMatchObject({
-			projectName: "Demo Project",
+			projectName: "Synthetic Artist - Harness Demo - Demo Project",
+			project: {
+				projectName: "Demo Project",
+				displayName: "Synthetic Artist - Harness Demo - Demo Project",
+			},
 			generationStatus: "not-generated",
 		});
 	});
@@ -53,21 +60,22 @@ describe("initial browser harness scenarios", () => {
 		);
 	});
 
-	it("provides chart preview data while honestly rejecting browser audio", async () => {
+	it("provides chart and usable synthetic audio for ready Preview", async () => {
 		const bridge = createBrowserBridge(resolveBrowserScenario("preview-ready"));
 		const chart = await bridge.getChartPreviewData({
-			outputDir: HARNESS_PATHS.OUTPUT,
 			chartPath: HARNESS_PATHS.CHART,
 		});
 		const audio = await bridge.getAudioPreviewSource({
-			outputDir: HARNESS_PATHS.OUTPUT,
 			generatedSongOggPath: HARNESS_PATHS.SONG_OGG,
 		});
 		expect(chart).toMatchObject({ ok: true, data: { resolution: 480 } });
 		expect(chart.ok && chart.data.noteEvents.length).toBeGreaterThan(0);
 		expect(audio).toMatchObject({
-			ok: false,
-			error: { code: "BROWSER_AUDIO_UNAVAILABLE" },
+			ok: true,
+			data: {
+				src: HARNESS_AUDIO_PREVIEW_SRC,
+				sourceKind: "generated",
+			},
 		});
 	});
 
@@ -81,20 +89,23 @@ describe("initial browser harness scenarios", () => {
 					sourcePath: project.sourcePath,
 					outputDir: project.outputDir,
 					outputFiles: project.outputFiles,
-					analysisCache: project.analysis,
+					analysisCache: scenario.runtimeAnalysis,
 					selectedTracks: project.selectedTracks,
-					mappingOverrides: project.mappingOverrides ?? {},
+					mappingOverrides: scenario.runtimeMappingOverrides ?? {},
 					metadata: project.metadata,
 					status: "generated",
 				}),
 			} as never,
-			{} as never,
 		);
 
 		await service.load();
 
 		expect(service.chartData()?.noteEvents.length).toBeGreaterThan(0);
-		expect(service.previewStatus()).toBe("Chart ready · audio unavailable");
+		expect(service.audioSrc()).toBe(HARNESS_AUDIO_PREVIEW_SRC);
+		expect(service.error()).toBeNull();
+		expect(service.previewStatus()).toBe(
+			"Preview ready · waveform unavailable",
+		);
 	});
 
 	it("never runs generation as part of scenario setup", async () => {

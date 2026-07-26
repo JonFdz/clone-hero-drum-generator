@@ -7,20 +7,20 @@ import {
 	pickAudioPreviewCandidate,
 	resolveChartPreviewPath,
 	sourceTimingFromAnalysisCache,
+	sourceTimingFromDocument,
 } from "./previewData";
 
 describe("pickAudioPreviewCandidate", () => {
 	it("prefers generated song.ogg path when explicit", () => {
 		const result = pickAudioPreviewCandidate({
 			generatedSongOggPath: "/tmp/output/song.ogg",
-			outputDir: "/tmp/output",
 		});
 		expect(result.generatedPath).toBe("/tmp/output/song.ogg");
 	});
 
-	it("derives generated song.ogg from output dir", () => {
+	it("does not synthesize an unmanifested song.ogg from output dir", () => {
 		const result = pickAudioPreviewCandidate({ outputDir: "/tmp/output" });
-		expect(result.generatedPath).toBe("/tmp/output/song.ogg");
+		expect(result.generatedPath).toBeUndefined();
 	});
 
 	it("does not accept selected source audio as a generated Preview fallback", () => {
@@ -358,6 +358,21 @@ describe("parseChartPreviewData", () => {
 });
 
 describe("sourceTimingFromAnalysisCache", () => {
+	it("projects canonical sourceDocument timing without a provisional analysis cache", () => {
+		expect(
+			sourceTimingFromDocument({
+				resolution: 960,
+				tempos: [{ tick: 0, bpm: 140 }],
+				timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+				sections: [{ tick: 960, name: "Verse" }],
+			}),
+		).toEqual({
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 140 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [{ tick: 960, name: "Verse" }],
+		});
+	});
 	it("extracts only cached resolution, tempo, time-signature, and section data", () => {
 		const source = sourceTimingFromAnalysisCache({
 			schemaVersion: 2,
@@ -648,9 +663,17 @@ describe("sourceTimingFromAnalysisCache", () => {
 });
 
 describe("resolveChartPreviewPath", () => {
-	it("accepts notes.chart in output dir", () => {
-		const out = resolveChartPreviewPath({ outputDir: "/tmp/out" });
+	it("accepts an explicit managed notes.chart path", () => {
+		const out = resolveChartPreviewPath({
+			chartPath: "/tmp/out/notes.chart",
+		});
 		expect(out.chartPath).toBe(path.resolve("/tmp/out/notes.chart"));
+	});
+
+	it("does not synthesize an unmanifested notes.chart from output dir", () => {
+		expect(() =>
+			resolveChartPreviewPath({ outputDir: "/tmp/out" }),
+		).toThrowError("PREVIEW_CHART_NOT_AVAILABLE");
 	});
 
 	it("rejects non-notes chart path", () => {

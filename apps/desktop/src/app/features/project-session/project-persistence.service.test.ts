@@ -19,6 +19,13 @@ type Bridge = Pick<
 >;
 
 const samplePayload: ProjectStatePayload = {
+	project: {
+		projectId: "project-demo",
+		artist: "Artist",
+		songName: "Demo",
+		projectName: "Expert Drums",
+		displayName: "Artist - Demo - Expert Drums",
+	},
 	projectName: "Demo",
 	projectFilePath: "/p/demo.chdg.json",
 	sourcePath: "/songs/demo.mid",
@@ -63,21 +70,26 @@ function makeService(bridge: Bridge) {
 }
 
 describe("ProjectPersistenceService", () => {
-	it("creates a project, hydrates the session, and returns a typed success outcome", async () => {
+	it("reports canonical project creation as unavailable without calling name-only IPC", async () => {
 		const bridge = makeBridge();
 		const { session, persistence } = makeService(bridge);
 
 		const result = await persistence.createProject("Demo");
 
-		expect(result.ok).toBe(true);
-		if (!result.ok) return;
-		expect(result.payload).toEqual(samplePayload);
-		expect(session.projectName()).toBe("Demo");
-		expect(session.projectFilePath()).toBe("/p/demo.chdg.json");
+		expect(result).toEqual({
+			ok: false,
+			error: {
+				code: "create_unavailable",
+				message:
+					"Canonical project creation and saving are not available in this legacy workflow.",
+			},
+		});
+		expect(bridge.createProject).not.toHaveBeenCalled();
+		expect(session.projectName()).toBe("Untitled");
 		expect(session.isDirty()).toBe(false);
 	});
 
-	it("returns a typed error outcome when createProject fails", async () => {
+	it("does not delegate creation even when a legacy bridge implementation exists", async () => {
 		const bridge = makeBridge({
 			createProject: vi.fn().mockResolvedValue({ ok: false, error: { message: "nope" } }),
 		});
@@ -87,7 +99,8 @@ describe("ProjectPersistenceService", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		expect(result.error.code).toBe("create_failed");
+		expect(result.error.code).toBe("create_unavailable");
+		expect(bridge.createProject).not.toHaveBeenCalled();
 		expect(session.projectName()).toBe("Untitled");
 	});
 
@@ -131,108 +144,78 @@ describe("ProjectPersistenceService", () => {
 		expect(bridge.openProjectFile).toHaveBeenCalled();
 	});
 
-	it("saves a project, hydrates the session from the saved file, and returns the saved payload", async () => {
-		const bridge = makeBridge({
-			saveProject: vi.fn().mockResolvedValue({
-				ok: true,
-				data: {
-					filePath: "/p/saved.chdg.json",
-					project: {
-						project: { name: "Saved" },
-						paths: { sourcePath: "/s.mid", audioPath: "/s.ogg", outputDir: "/o" },
-						cover: { imagePath: "/c.jpg" },
-						source: { sourceKind: "midi" },
-						selection: { selectedTracks: [1] },
-						metadata: {},
-						generation: { offsetMs: 0, status: "not-generated" },
-						mappingOverrides: {},
-						analysis: undefined,
-					},
-				},
-			}),
-		});
+	it("reports legacy state save as unavailable without manufacturing a canonical aggregate", async () => {
+		const bridge = makeBridge();
 		const { session, persistence } = makeService(bridge);
 
 		const result = await persistence.saveProject(samplePayload);
 
-		expect(result.ok).toBe(true);
-		if (!result.ok) return;
-		expect(result.filePath).toBe("/p/saved.chdg.json");
-		expect(result.payload.projectName).toBe("Saved");
-		expect(session.projectFilePath()).toBe("/p/saved.chdg.json");
-		expect(session.isDirty()).toBe(false);
+		expect(result).toEqual({
+			ok: false,
+			error: {
+				code: "save_unavailable",
+				message:
+					"Canonical project creation and saving are not available in this legacy workflow.",
+			},
+		});
+		expect(bridge.saveProject).not.toHaveBeenCalled();
+		expect(session.projectFilePath()).toBeUndefined();
 	});
 
-	it("saveProjectAs returns cancelled when the save picker is dismissed", async () => {
+	it("saveProjectAs returns an error outcome rather than a cancellation outcome", async () => {
 		const bridge = makeBridge({ saveProjectFile: vi.fn().mockResolvedValue(null) });
 		const { persistence } = makeService(bridge);
 
 		const result = await persistence.saveProjectAs(samplePayload);
 
 		expect(result.ok).toBe(false);
-		expect("cancelled" in result).toBe(true);
+		expect("error" in result && result.error.code).toBe("save_as_unavailable");
+		expect(result).not.toHaveProperty("cancelled");
+		expect(bridge.saveProjectFile).not.toHaveBeenCalled();
 		expect(bridge.saveProjectAs).not.toHaveBeenCalled();
 	});
 
-	it("saveProjectAs picks a path, saves, and hydrates the session", async () => {
-		const bridge = makeBridge({
-			saveProjectFile: vi.fn().mockResolvedValue({ path: "/p/as.chdg.json", name: "as" }),
-			saveProjectAs: vi.fn().mockResolvedValue({
-				ok: true,
-				data: {
-					filePath: "/p/as.chdg.json",
-					project: {
-						project: { name: "As" },
-						paths: { sourcePath: "/s.mid", audioPath: "/s.ogg", outputDir: "/o" },
-						cover: { imagePath: "/c.jpg" },
-						source: { sourceKind: "midi" },
-						selection: { selectedTracks: [1] },
-						metadata: {},
-						generation: { offsetMs: 0, status: "not-generated" },
-						mappingOverrides: {},
-						analysis: undefined,
-					},
-				},
-			}),
-		});
+	it("reports Save As as unavailable without opening a legacy picker", async () => {
+		const bridge = makeBridge();
 		const { session, persistence } = makeService(bridge);
 
 		const result = await persistence.saveProjectAs(samplePayload);
 
-		expect(result.ok).toBe(true);
-		if (!result.ok) return;
-		expect(result.filePath).toBe("/p/as.chdg.json");
-		expect(bridge.saveProjectAs).toHaveBeenCalledWith(
-			expect.objectContaining({ filePath: "/p/as.chdg.json" }),
-		);
-		expect(session.projectFilePath()).toBe("/p/as.chdg.json");
+		expect(result).toEqual({
+			ok: false,
+			error: {
+				code: "save_as_unavailable",
+				message:
+					"Canonical project creation and saving are not available in this legacy workflow.",
+			},
+		});
+		expect(bridge.saveProjectFile).not.toHaveBeenCalled();
+		expect(bridge.saveProjectAs).not.toHaveBeenCalled();
+		expect(session.projectFilePath()).toBeUndefined();
 	});
 
-	it("saveProjectAs opens exactly one file picker (no double-picker)", async () => {
+	it("saveProjectAs never opens the provisional save picker", async () => {
 		const saveProjectFile = vi.fn().mockResolvedValue({ path: "/p/as.chdg.json", name: "as" });
 		const bridge = makeBridge({ saveProjectFile });
 		const { persistence } = makeService(bridge);
 
 		await persistence.saveProjectAs(samplePayload);
 
-		expect(saveProjectFile).toHaveBeenCalledTimes(1);
-		// The persisted path is the picker's selected path, not a caller-supplied one.
-		expect(bridge.saveProjectAs).toHaveBeenCalledWith(
-			expect.objectContaining({ filePath: "/p/as.chdg.json" }),
-		);
+		expect(saveProjectFile).not.toHaveBeenCalled();
+		expect(bridge.saveProjectAs).not.toHaveBeenCalled();
 	});
 
-	it("saveProjectAs cancelling the picker does not trigger a save", async () => {
+	it("saveProjectAs does not consult legacy picker cancellation", async () => {
 		const saveProjectFile = vi.fn().mockResolvedValue(null);
 		const bridge = makeBridge({ saveProjectFile });
 		const { persistence } = makeService(bridge);
 
 		const result = await persistence.saveProjectAs(samplePayload);
 
-		expect(saveProjectFile).toHaveBeenCalledTimes(1);
+		expect(saveProjectFile).not.toHaveBeenCalled();
 		expect(bridge.saveProjectAs).not.toHaveBeenCalled();
 		expect(result.ok).toBe(false);
-		expect("cancelled" in result).toBe(true);
+		expect("error" in result && result.error.code).toBe("save_as_unavailable");
 	});
 
 	it("does not inject or use the Angular Router", async () => {

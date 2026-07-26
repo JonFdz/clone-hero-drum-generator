@@ -1,13 +1,10 @@
-import type { ChdgOutputStatus, RecentProject } from "@chdg/project/browser";
+import type { RecentProject } from "@chdg/project/browser";
+import type { DesktopOutputStatus } from "../../services/desktop-project-runtime";
 import type { MissingPathWarning } from "../project-session/public-api";
 
 export type HomeNextActionId =
-	| "new_project"
-	| "continue_setup"
-	| "source_review"
-	| "generate"
+	| "mappings"
 	| "preview"
-	| "review_generate"
 	| "open_project";
 
 export type HomeWorkflowStepStatus =
@@ -59,7 +56,7 @@ export type HomeDashboardModel = {
 export type HomeDashboardModelInput = {
 	projectName: string;
 	projectFilePath?: string;
-	outputStatus: ChdgOutputStatus;
+	outputStatus: DesktopOutputStatus;
 	missingPathWarnings: MissingPathWarning[];
 	recentProjects: RecentProject[];
 	hasProject: boolean;
@@ -70,10 +67,18 @@ export type HomeDashboardModelInput = {
 	selectedTrackCount: number;
 };
 
+export type HomeOutputReadiness = {
+	hasRecordedTarget: boolean;
+	recordedTargetMissing: boolean;
+	requiredManagedPreviewMissing: boolean;
+	canOpenOutputFolder: boolean;
+	canPreviewCurrentOutput: boolean;
+};
+
 export const HOME_WORKFLOW_LABELS = [
-	"Import source",
-	"Source Review",
-	"Generate",
+	"Project source",
+	"Mappings",
+	"Export status",
 	"Preview",
 ] as const;
 
@@ -81,16 +86,20 @@ const workflowDescriptions: Record<
 	(typeof HOME_WORKFLOW_LABELS)[number],
 	string
 > = {
-	"Import source": "Load a source file (MIDI, GP, etc.)",
-	"Source Review": "Analyze source content, selected tracks, and mapping",
-	Generate: "Validate readiness and generate drum chart output",
-	Preview: "Preview chart and listen back",
+	"Project source": "Use the project-owned imported MIDI or Guitar Pro source",
+	Mappings: "Inspect mapping information available for the opened project",
+	"Export status": "Inspect the persisted canonical export status",
+	Preview: "Preview existing managed output when it is available",
 };
 
 export function deriveHomeDashboardModel(
 	input: HomeDashboardModelInput,
 ): HomeDashboardModel {
-	const outputStatus = formatHomeOutputStatus(input.outputStatus);
+	const outputReadiness = deriveHomeOutputReadiness(input);
+	const outputStatus = formatHomeOutputStatus(
+		input.outputStatus,
+		outputReadiness,
+	);
 	const recentProjects = deriveRecentProjectItems(
 		limitRecentProjects(input.recentProjects),
 		input,
@@ -116,47 +125,37 @@ export function deriveHomeNextAction(
 	input: HomeDashboardModelInput,
 ): HomeNextAction {
 	const { hasProject } = input;
+	const outputReadiness = deriveHomeOutputReadiness(input);
 	if (!hasProject) {
 		return {
-			id: "new_project",
-			label: "New Project",
+			id: "open_project",
+			label: "Open Project",
 			description:
-				"Create a .chdg project to start a local drum chart workflow.",
-			route: "/projects/details",
-			secondaryLabel: "Open Project",
-			secondaryRoute: "/projects",
+				"Open an existing canonical .chdg project. Project creation and source import are not yet available.",
+			route: "/projects",
 		};
 	}
 
-	if (input.missingPathWarnings.length > 0 || hasMissingSetupPaths(input)) {
+	if (hasRequiredAssetWarning(input) || hasMissingSetupPaths(input)) {
 		return {
-			id: "continue_setup",
-			label: "Continue Setup",
+			id: "open_project",
+			label: "Open Project",
 			description:
-				"Add or repair the source, audio, and output folder before generation.",
-			route: "/projects/details",
-			secondaryLabel: "Source Review",
-			secondaryRoute: input.sourcePath ? "/source-review" : undefined,
+				"This project references unavailable local files. Replacement and setup are unavailable in this migration.",
+			route: "/projects",
 		};
 	}
 
-	if (input.outputStatus === "failed") {
+	if (
+		input.outputStatus === "generated" &&
+		!outputReadiness.canPreviewCurrentOutput
+	) {
 		return {
-			id: "review_generate",
-			label: "Review Generate",
+			id: "open_project",
+			label: "Open Project",
 			description:
-				"Generation failed. Review the Generate page logs and try again.",
-			route: "/generate",
-		};
-	}
-
-	if (input.outputStatus === "needs-regenerate") {
-		return {
-			id: "generate",
-			label: "Generate",
-			description:
-				"Project inputs changed since the last successful Clone Hero output.",
-			route: "/generate",
+				"The persisted export status is current, but its recorded output folder or required managed preview files are unavailable. Preview cannot open existing managed output, and generation is unavailable in this migration.",
+			route: "/projects",
 		};
 	}
 
@@ -167,28 +166,27 @@ export function deriveHomeNextAction(
 			description:
 				"Ready to preview notes.chart with song.ogg from the output folder.",
 			route: "/preview",
-			secondaryLabel: "Generate",
-			secondaryRoute: "/generate",
+			secondaryLabel: "Mappings",
+			secondaryRoute: "/mapping",
 		};
 	}
 
 	if (input.sourcePath) {
 		return {
-			id: "source_review",
-			label: "Source Review",
+			id: "mappings",
+			label: "Mappings",
 			description:
-				"Source is set. Review source analysis, selected tracks, and mapping before generation.",
-			route: "/source-review",
-			secondaryLabel: "Generate",
-			secondaryRoute: input.selectedTrackCount > 0 ? "/generate" : undefined,
+				"Inspect available runtime mapping information. Editing and generation are unavailable in this migration.",
+			route: "/mapping",
 		};
 	}
 
 	return {
-		id: "continue_setup",
-		label: "Continue Setup",
-		description: "Complete project setup before reviewing or generating.",
-		route: "/projects/details",
+		id: "open_project",
+		label: "Open Project",
+		description:
+			"Project setup, replacement, and generation are unavailable in this migration.",
+		route: "/projects",
 	};
 }
 
@@ -200,20 +198,19 @@ export function deriveWorkflowStepStatuses(
 	const selected = input.selectedTrackCount > 0;
 	const generated = input.outputStatus === "generated";
 	const failed = input.outputStatus === "failed";
-	const canGenerate =
-		hasSource && !!input.audioPath && !!input.outputDir && selected;
+	const outputReadiness = deriveHomeOutputReadiness(input);
 
 	const statuses: HomeWorkflowStepStatus[] = [
-		hasSource ? "complete" : hasProject ? "current" : "upcoming",
-		!hasSource ? "blocked" : selected ? "complete" : "current",
+		hasSource ? "complete" : hasProject ? "unknown" : "upcoming",
+		hasSource ? (selected ? "complete" : "available") : "blocked",
 		generated
-			? "complete"
+			? outputReadiness.canPreviewCurrentOutput
+				? "complete"
+				: "unknown"
 			: failed
-				? "current"
-				: canGenerate
-					? "current"
-					: "upcoming",
-		generated ? "current" : "upcoming",
+				? "unknown"
+				: "upcoming",
+		outputReadiness.canPreviewCurrentOutput ? "available" : "blocked",
 	];
 
 	return HOME_WORKFLOW_LABELS.map((label, index) => ({
@@ -224,13 +221,24 @@ export function deriveWorkflowStepStatuses(
 	}));
 }
 
-export function formatHomeOutputStatus(status: ChdgOutputStatus): {
+export function formatHomeOutputStatus(
+	status: DesktopOutputStatus,
+	readiness?: HomeOutputReadiness,
+): {
 	label: string;
 	detail: string;
 	tone: HomeTone;
 } {
 	switch (status) {
 		case "generated":
+			if (readiness && !readiness.canPreviewCurrentOutput) {
+				return {
+					label: "Generated output unavailable",
+					detail:
+						"The persisted export status is current, but its recorded output folder or required managed preview files cannot be opened.",
+					tone: "warning",
+				};
+			}
 			return {
 				label: "Generated",
 				detail: "Clone Hero output is available.",
@@ -259,7 +267,7 @@ export function formatHomeOutputStatus(status: ChdgOutputStatus): {
 }
 
 export function compactPathLabel(path?: string, maxLength = 52): string {
-	if (!path) return "Not saved yet";
+	if (!path) return "No project file";
 	if (path.length <= maxLength) return path;
 	const parts = path.split(/[\\/]/).filter(Boolean);
 	if (parts.length <= 2) return `…${path.slice(-(maxLength - 1))}`;
@@ -338,7 +346,47 @@ function hasMissingSetupPaths(input: HomeDashboardModelInput): boolean {
 }
 
 function countMissingSetupPaths(input: HomeDashboardModelInput): number {
-	return [input.sourcePath, input.audioPath, input.outputDir].filter(
-		(path) => !path,
-	).length;
+	return [input.sourcePath, input.audioPath].filter((path) => !path).length;
+}
+
+function hasRequiredAssetWarning(input: HomeDashboardModelInput): boolean {
+	return input.missingPathWarnings.some(
+		(warning) =>
+			warning.kind === "sourcePath" || warning.kind === "audioPath",
+	);
+}
+
+function hasMissingRecordedExportTarget(
+	input: Pick<HomeDashboardModelInput, "missingPathWarnings">,
+): boolean {
+	return input.missingPathWarnings.some(
+		(warning) => warning.kind === "outputDir",
+	);
+}
+
+export function deriveHomeOutputReadiness(
+	input: Pick<
+		HomeDashboardModelInput,
+		"outputStatus" | "outputDir" | "missingPathWarnings"
+	>,
+): HomeOutputReadiness {
+	const hasRecordedTarget = !!input.outputDir;
+	const recordedTargetMissing = hasMissingRecordedExportTarget(input);
+	const requiredManagedPreviewMissing = input.missingPathWarnings.some(
+		(warning) =>
+			warning.kind === "outputChartPath" ||
+			warning.kind === "outputAudioPath",
+	);
+	const canOpenOutputFolder =
+		hasRecordedTarget &&
+		!recordedTargetMissing &&
+		!requiredManagedPreviewMissing;
+	return {
+		hasRecordedTarget,
+		recordedTargetMissing,
+		requiredManagedPreviewMissing,
+		canOpenOutputFolder,
+		canPreviewCurrentOutput:
+			input.outputStatus === "generated" && canOpenOutputFolder,
+	};
 }

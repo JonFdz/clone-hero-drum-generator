@@ -11,7 +11,7 @@ import { RouterModule } from "@angular/router";
 })
 export class ProjectsEmptyStateComponent {
 	@Input() hasProjects = false;
+	@Input() newProjectUnavailableMessage = "";
 	@Output() openProject = new EventEmitter<void>();
-	@Output() newProject = new EventEmitter<void>();
 	@Output() resetFilters = new EventEmitter<void>();
 }

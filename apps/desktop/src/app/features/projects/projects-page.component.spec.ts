@@ -8,16 +8,28 @@ import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator
 import { ProjectLibraryService } from "./project-library.service";
 import { ProjectsPageComponent } from "./projects-page.component";
 
-const payload = { projectName: "Demo", generationStatus: "not-generated", selectedTracks: [], metadata: {}, mappingOverrides: {} } as never;
+const payload = {
+  project: {
+    projectId: "project-demo",
+    artist: "Artist",
+    songName: "Demo",
+    projectName: "Expert Drums",
+    displayName: "Artist - Demo - Expert Drums",
+  },
+  projectName: "Artist - Demo - Expert Drums",
+  generationStatus: "not-generated",
+  selectedTracks: [],
+  metadata: {},
+} as never;
 
 describe("ProjectsPageComponent", () => {
   const navigateByUrl = vi.fn();
   const refresh = vi.fn();
   const openProject = vi.fn();
   const openProjectFromPicker = vi.fn();
-  const createProject = vi.fn();
   const deleteFile = vi.fn();
   const resetWorkflow = vi.fn();
+  const applyError = vi.fn();
   const hydrate = vi.fn();
   let component: ProjectsPageComponent;
   let session: ProjectSessionStore;
@@ -29,9 +41,9 @@ describe("ProjectsPageComponent", () => {
       { provide: ProjectSessionStore, useValue: session },
       { provide: Router, useValue: { navigateByUrl } },
       { provide: ProjectLibraryService, useValue: { recentProjects: signal([]), loading: signal(false), error: signal(null), refresh, remove: vi.fn(), deleteFile } },
-      { provide: ProjectPersistenceService, useValue: { openProject, openProjectFromPicker, createProject } },
+      { provide: ProjectPersistenceService, useValue: { openProject, openProjectFromPicker } },
       { provide: ProjectWorkflowHydrator, useValue: { hydrate } },
-      { provide: DesktopGenerateStateService, useValue: { reset: resetWorkflow } },
+      { provide: DesktopGenerateStateService, useValue: { reset: resetWorkflow, applyError } },
     ]});
     component = runInInjectionContext(injector, () => new ProjectsPageComponent());
   });
@@ -50,11 +62,11 @@ describe("ProjectsPageComponent", () => {
     expect(navigateByUrl).not.toHaveBeenCalled();
   });
 
-  it("creates through persistence before navigating", async () => {
-    createProject.mockResolvedValue({ ok: true, payload });
-    await component.newProject();
-    expect(refresh).toHaveBeenCalled();
-    expect(navigateByUrl).toHaveBeenCalledWith("/projects/details?mode=new");
+  it("exposes canonical creation as unavailable to disabled child controls", () => {
+    expect(component.persistenceUnavailableMessage).toBe(
+      "Canonical project creation and saving are not available in this legacy workflow.",
+    );
+    expect(applyError).not.toHaveBeenCalled();
   });
 
   it("resets the active session and workflow after deleting the active project", async () => {

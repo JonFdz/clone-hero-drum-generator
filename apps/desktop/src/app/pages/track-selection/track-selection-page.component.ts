@@ -1,6 +1,6 @@
 import { CommonModule } from "@angular/common";
 import { Component } from "@angular/core";
-import { Router, RouterModule } from "@angular/router";
+import { RouterModule } from "@angular/router";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { formatTrackNoteCount } from "../../services/track-note-count";
@@ -20,7 +20,7 @@ import { formatTrackNoteCount } from "../../services/track-note-count";
       <section class="card message warning">
         <h2>Inspection required</h2>
         <p>Inspect a source before selecting tracks.</p>
-        <a class="button primary" routerLink="/new-project">Start New Project</a>
+        <button class="button primary" type="button" disabled title="Canonical project creation and source import are unavailable.">Project Creation Unavailable</button>
       </section>
     } @else {
       <div class="grid two">
@@ -89,7 +89,7 @@ import { formatTrackNoteCount } from "../../services/track-note-count";
       <div class="action-row">
         <a class="button ghost" routerLink="/inspect-source">Back</a>
         <button class="button secondary" type="button" [disabled]="state().selectedTracks.length === 0" (click)="normalize()">Normalize Preview</button>
-        <button class="button primary" type="button" [disabled]="state().selectedTracks.length === 0" (click)="continueToGenerate()">Continue to Generate</button>
+        <button class="button primary" type="button" disabled title="Managed generation is unavailable in this migration.">Generation Unavailable</button>
       </div>
     }
   `,
@@ -100,7 +100,6 @@ export class TrackSelectionPageComponent {
 	constructor(
 		private readonly bridge: DesktopBridgeService,
 		private readonly generateState: DesktopGenerateStateService,
-		private readonly router: Router,
 	) {}
 
 	toggleTrack(trackIndex: number): void {
@@ -124,15 +123,6 @@ export class TrackSelectionPageComponent {
 			this.generateState.applyError(
 				error instanceof Error ? error.message : "Normalization failed.",
 			);
-		}
-	}
-
-	async continueToGenerate(): Promise<void> {
-		if (!this.state().normalizationPreview) {
-			await this.normalize();
-		}
-		if (this.state().normalizationPreview) {
-			await this.router.navigateByUrl("/generate");
 		}
 	}
 

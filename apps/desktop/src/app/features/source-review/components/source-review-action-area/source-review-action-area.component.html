@@ -9,9 +9,13 @@
 	<button
 		class="button primary continue-button"
 		type="button"
-		[disabled]="!canContinue"
-		(click)="continueToGenerate.emit()"
+		disabled
+		title="Managed generation is unavailable in this migration."
 	>
-		Continue to Generate <span aria-hidden="true">→</span>
+		Generation Unavailable
 	</button>
 </div>
+<p class="message warning">
+	Runtime review is session-only. Continuing to managed generation is unavailable
+	in this migration.
+</p>

@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from "@angular/core";
-import type { ChdgOutputStatus } from "@chdg/project/browser";
+import type { DesktopOutputStatus } from "../../services/desktop-project-runtime";
 import {
 	type MissingPathWarning,
 	type ProjectSessionState,
@@ -19,6 +19,7 @@ import type { ProjectStatePayload } from "../../services/desktop-bridge.service"
 export class ProjectSessionStore {
 	readonly state = signal<ProjectSessionState>(initialProjectSessionState);
 
+	readonly project = computed(() => this.state().project);
 	readonly projectFilePath = computed(() => this.state().projectFilePath);
 	readonly projectName = computed(() => this.state().projectName);
 	readonly hasProject = computed(
@@ -27,7 +28,7 @@ export class ProjectSessionStore {
 			!!this.state().projectFilePath,
 	);
 	readonly isDirty = computed(() => this.state().dirty);
-	readonly outputStatus = computed<ChdgOutputStatus>(
+	readonly outputStatus = computed<DesktopOutputStatus>(
 		() => this.state().outputStatus,
 	);
 	readonly missingPathWarnings = computed(
@@ -37,6 +38,7 @@ export class ProjectSessionStore {
 	/** Hydrates project identity/status from a persistence payload. */
 	applyHydration(payload: ProjectStatePayload): void {
 		this.patch({
+			project: payload.project,
 			projectName: payload.projectName,
 			projectFilePath: payload.projectFilePath,
 			outputStatus: payload.generationStatus,

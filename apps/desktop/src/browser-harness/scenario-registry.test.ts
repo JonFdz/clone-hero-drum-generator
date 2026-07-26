@@ -56,13 +56,13 @@ describe("browser scenario registry", () => {
 			const expectedTimestamp = "2026-01-15T12:00:01.000Z";
 
 			for (const scenario of [first, second]) {
-				expect(scenario.project?.analysis?.normalizedAt).toBe(expectedTimestamp);
+				expect(scenario.runtimeAnalysis?.normalizedAt).toBe(expectedTimestamp);
 				expect(
 					validateSourceReviewCache({
-						cache: scenario.project?.analysis,
+						cache: scenario.runtimeAnalysis,
 						sourceFingerprint: scenario.sourceFingerprint!,
 						mappingFingerprint: stableMappingFingerprint(
-							scenario.project?.mappingOverrides,
+							scenario.runtimeMappingOverrides,
 						),
 						selectedTracks: scenario.project?.selectedTracks ?? [],
 					}),
@@ -92,8 +92,13 @@ describe("browser fixture builders", () => {
 		const second = buildProjectPayload();
 		expect(first).toEqual(second);
 		expect(first.projectFilePath).toBe(
-			"C:\\CHDG-Harness\\Projects\\Demo Project.chdg.json",
+			"C:\\CHDG-Harness\\Projects\\Synthetic Artist - Harness Demo - Demo Project\\project.chdg",
 		);
+		expect(first.project.projectName).toBe("Demo Project");
+		expect(first.project.displayName).toBe(
+			"Synthetic Artist - Harness Demo - Demo Project",
+		);
+		expect(first.projectName).toBe(first.project.displayName);
 		expect(first.sourcePath).not.toContain("/Users/");
 	});
 });

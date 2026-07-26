@@ -1,14 +1,14 @@
 import { Injectable, inject, signal } from "@angular/core";
 import type {
-	ChdgProjectAnalysisCache,
-	ChdgSourceFingerprint,
 	JsonEnvelope,
 	NormalizationPreview,
 	SourceInspectionResult,
 } from "@chdg/project/browser";
+import type {
+	SourceReviewFingerprint,
+} from "./desktop-project-runtime";
 import { DesktopBridgeService } from "./desktop-bridge.service";
 import { DesktopGenerateStateService } from "./desktop-generate-state.service";
-import { DesktopProjectStateService } from "./desktop-project-state.service";
 import {
 	createAnalysisCache,
 	stableMappingFingerprint,
@@ -28,7 +28,6 @@ export type SourceReviewStatus =
 export class SourceReviewOrchestratorService {
 	private readonly bridge = inject(DesktopBridgeService);
 	private readonly generateState = inject(DesktopGenerateStateService);
-	private readonly projectState = inject(DesktopProjectStateService);
 	private runId = 0;
 	private currentSourceKey = "";
 
@@ -163,7 +162,7 @@ export class SourceReviewOrchestratorService {
 
 	private async normalizeAndCache(input: {
 		runId: number;
-		sourceFingerprint: ChdgSourceFingerprint;
+		sourceFingerprint: SourceReviewFingerprint;
 		inspection: SourceInspectionResult;
 		visibleStatus: SourceReviewStatus;
 	}): Promise<boolean> {
@@ -199,7 +198,7 @@ export class SourceReviewOrchestratorService {
 	}
 
 	private persistAnalysisCache(
-		sourceFingerprint: ChdgSourceFingerprint,
+		sourceFingerprint: SourceReviewFingerprint,
 		inspection: SourceInspectionResult,
 		envelope: JsonEnvelope<NormalizationPreview>,
 	): void {
@@ -216,27 +215,11 @@ export class SourceReviewOrchestratorService {
 			normalizedAt: now,
 		});
 		this.generateState.setAnalysisCache(cache);
-		void this.autosaveAnalysis(cache);
-	}
-
-	private async autosaveAnalysis(
-		_cache: ChdgProjectAnalysisCache,
-	): Promise<void> {
-		const project = this.projectState.state();
-		if (!project.projectFilePath) return;
-		const payload = this.generateState.buildProjectStatePayload(
-			project.projectName,
-			project.projectFilePath,
-		);
-		const saved = await this.projectState.saveProject(payload);
-		if (!saved) {
-			this.autosaveWarning.set("Analysis updated, but autosave failed.");
-		}
 	}
 
 	private async readSourceFingerprint(
 		sourcePath: string,
-	): Promise<ChdgSourceFingerprint> {
+	): Promise<SourceReviewFingerprint> {
 		const envelope = await this.bridge.getSourceFingerprint(sourcePath);
 		if (!envelope.ok) {
 			return { path: sourcePath };

@@ -1,10 +1,10 @@
 import { CommonModule } from "@angular/common";
 import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { type Router, RouterModule } from "@angular/router";
-import type { DesktopBridgeService } from "../../services/desktop-bridge.service";
+import { RouterModule } from "@angular/router";
 import type { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import type { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import { PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE } from "../../features/project-session/public-api";
 
 @Component({
 	selector: "chdg-new-project-page",
@@ -12,9 +12,9 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
 	imports: [CommonModule, FormsModule, RouterModule],
 	template: `
     <header class="page-header">
-      <p class="eyebrow">New Project</p>
-      <h1>{{ projectState.state().projectName }}</h1>
-      <p>Select local source/audio files, an output folder, metadata, and chart offset.</p>
+      <p class="eyebrow">Project Creation Unavailable</p>
+      <h1>Legacy runtime setup</h1>
+      <p>This dormant screen cannot create or save a canonical .chdg project. Any selected values remain runtime-only.</p>
     </header>
 
     @if (projectState.missingPathWarnings().length > 0) {
@@ -25,18 +25,18 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
             <li>{{ warning.message }}</li>
           }
         </ul>
-        <p>Re-select missing files before generating.</p>
+        <p>File replacement and managed generation are unavailable in this dormant workflow.</p>
       </section>
     }
 
     @if (projectState.outputStatus() === 'needs-regenerate') {
       <section class="card message warning">
         <h2>Output outdated</h2>
-        <p>Generation inputs changed since the last successful generation. Regenerate to update output.</p>
+        <p>The persisted export status is outdated. Managed regeneration is unavailable in this dormant workflow.</p>
       </section>
     }
 
-    <div class="grid two">
+    <fieldset class="grid two" disabled [title]="persistenceUnavailableMessage">
       <section class="card form-card">
         <h2>Project inputs</h2>
 
@@ -44,7 +44,7 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
           <label>Project Name <span class="required">required</span></label>
           <div class="picker-row">
             <input class="input-like" [(ngModel)]="projectNameInput" (change)="updateProjectName()" placeholder="Enter project name" />
-            <button class="button secondary" type="button" (click)="createProject()">Create Project</button>
+            <button class="button secondary" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="createProject()">Creation Unavailable</button>
           </div>
         </div>
 
@@ -91,8 +91,7 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
         }
 
         <div class="action-row">
-          <button class="button primary" type="button" [disabled]="!state().sourcePath" (click)="reviewSource()">Review Source</button>
-          <a class="button ghost" routerLink="/source-review">Source Review</a>
+          <button class="button primary" type="button" disabled [title]="persistenceUnavailableMessage" (click)="reviewSource()">Source Review Unavailable</button>
         </div>
       </section>
 
@@ -100,7 +99,7 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
         <h2>Project Summary</h2>
         <dl class="summary-list">
           <dt>Project</dt><dd>{{ projectState.state().projectName }}</dd>
-          <dt>Status</dt><dd>{{ projectState.state().dirty ? 'Modified' : 'Saved' }}</dd>
+          <dt>Status</dt><dd>Runtime only</dd>
           <dt>Output</dt><dd>{{ projectState.state().outputStatus }}</dd>
           <dt>Source</dt><dd>{{ state().sourcePath || "Not selected" }}</dd>
           <dt>Source type</dt><dd>{{ state().sourceKind || "Unknown" }}</dd>
@@ -109,11 +108,12 @@ import type { DesktopProjectStateService } from "../../services/desktop-project-
           <dt>Offset</dt><dd>{{ state().offsetMs ?? 0 }} ms</dd>
         </dl>
         <div class="action-row">
-          <button class="button secondary small" type="button" (click)="saveProject()">Save</button>
-          <button class="button secondary small" type="button" (click)="saveProjectAs()">Save As</button>
+          <button class="button secondary small" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="saveProject()">Save Unavailable</button>
+          <button class="button secondary small" type="button" [disabled]="true" [title]="persistenceUnavailableMessage" (click)="saveProjectAs()">Save As Unavailable</button>
         </div>
+        <p class="message warning" role="status">{{ persistenceUnavailableMessage }}</p>
       </aside>
-    </div>
+    </fieldset>
   `,
 })
 export class NewProjectPageComponent {
@@ -121,108 +121,56 @@ export class NewProjectPageComponent {
 	readonly validation = this.generateState.validation;
 	readonly metadata = { ...this.generateState.state().metadata };
 	projectNameInput = this.projectState.state().projectName;
+	readonly persistenceUnavailableMessage =
+		PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE;
 
 	constructor(
-		private readonly bridge: DesktopBridgeService,
 		readonly generateState: DesktopGenerateStateService,
 		readonly projectState: DesktopProjectStateService,
-		private readonly router: Router,
-	) {
-		// Apply default charter/offset from settings if empty
-		const settings = this.projectState.state().settings;
-		if (settings.defaultCharter && !this.metadata.charter) {
-			this.metadata.charter = settings.defaultCharter;
-			this.generateState.setMetadata(this.metadata);
-		}
-		if (
-			settings.defaultOffsetMs !== undefined &&
-			this.state().offsetMs === undefined
-		) {
-			this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
-		}
-	}
+	) {}
 
 	updateProjectName(): void {
-		this.projectState.setProjectName(this.projectNameInput);
+		this.reportUnavailable();
 	}
 
 	async createProject(): Promise<void> {
-		if (!this.projectNameInput.trim()) return;
-		const ok = await this.projectState.createProject(
-			this.projectNameInput.trim(),
-		);
-		if (ok) {
-			this.generateState.reset();
-			// Apply defaults from settings
-			const settings = this.projectState.state().settings;
-			if (settings.defaultCharter) {
-				this.metadata.charter = settings.defaultCharter;
-				this.generateState.setMetadata(this.metadata);
-			}
-			if (settings.defaultOffsetMs !== undefined) {
-				this.generateState.setOffsetMsInput(String(settings.defaultOffsetMs));
-			}
-		}
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async saveProject(): Promise<void> {
-		const name = this.projectState.state().projectName;
-		const filePath = this.projectState.state().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(name, filePath);
-		await this.projectState.saveProject(payload);
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async saveProjectAs(): Promise<void> {
-		const name = this.projectState.state().projectName;
-		const currentPath = this.projectState.state().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(name, currentPath);
-		await this.projectState.saveProjectAs(payload);
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 
 	async pickSource(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.bridge.pickSourceFile();
-			if (picked) this.generateState.setSourcePath(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	async pickAudio(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.bridge.pickAudioFile();
-			if (picked) this.generateState.setAudioPath(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	async pickOutput(): Promise<void> {
-		await this.runPicker(async () => {
-			const picked = await this.bridge.pickOutputFolder();
-			if (picked) this.generateState.setOutputDir(picked.path);
-		});
+		this.reportUnavailable();
 	}
 
 	updateMetadata(): void {
-		this.generateState.setMetadata(this.metadata);
+		this.reportUnavailable();
 	}
 
 	setOffset(value: number | string | null): void {
-		this.generateState.setOffsetMsInput(value === null ? "" : String(value));
+		void value;
+		this.reportUnavailable();
 	}
 
 	async reviewSource(): Promise<void> {
-		if (!this.state().sourcePath) {
-			this.generateState.applyError("Source file is required.");
-			return;
-		}
-		await this.router.navigateByUrl("/source-review");
+		this.reportUnavailable();
 	}
 
-	private async runPicker(action: () => Promise<void>): Promise<void> {
-		try {
-			await action();
-		} catch (error) {
-			this.generateState.applyError(
-				error instanceof Error ? error.message : "Desktop bridge unavailable.",
-			);
-		}
+	private reportUnavailable(): void {
+		this.generateState.applyError(this.persistenceUnavailableMessage);
 	}
 }

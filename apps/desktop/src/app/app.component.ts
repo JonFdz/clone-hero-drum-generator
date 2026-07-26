@@ -13,11 +13,11 @@ import {
 } from "@angular/router";
 import { ApplicationStartupService } from "./core/application-startup.service";
 import {
+	PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
 	ProjectPersistenceService,
 	ProjectSessionStore,
 	ProjectWorkflowHydrator,
 } from "./features/project-session/public-api";
-import { DesktopGenerateStateService } from "./services/desktop-generate-state.service";
 import { desktopRuntimeStatusLabel } from "./services/desktop-bridge-model";
 
 type NavItem = {
@@ -39,7 +39,6 @@ export class AppComponent implements OnInit {
 	private readonly session = inject(ProjectSessionStore);
 	private readonly persistence = inject(ProjectPersistenceService);
 	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
-	private readonly generateState = inject(DesktopGenerateStateService);
 	private readonly router = inject(Router);
 
 	readonly navItems: NavItem[] = [
@@ -61,6 +60,8 @@ export class AppComponent implements OnInit {
 		desktopRuntimeStatusLabel(this.health()),
 	);
 	readonly project = this.session.state;
+	readonly persistenceUnavailableMessage =
+		PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE;
 
 	async ngOnInit(): Promise<void> {
 		await this.startup.initialize();
@@ -70,27 +71,12 @@ export class AppComponent implements OnInit {
 		return this.router.url === "/home" || this.router.url === "/";
 	}
 
-	async saveProject(): Promise<void> {
-		const name = this.project().projectName;
-		const filePath = this.project().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(name, filePath);
-		const result = await this.persistence.saveProject(payload);
-		if (result.ok) {
-			await this.startup.refreshRecentProjects();
-		}
+	saveProject(): void {
+		// Disabled in the template until canonical save orchestration exists.
 	}
 
-	async saveProjectAs(): Promise<void> {
-		const name = this.project().projectName;
-		const currentPath = this.project().projectFilePath;
-		const payload = this.generateState.buildProjectStatePayload(
-			name,
-			currentPath,
-		);
-		const result = await this.persistence.saveProjectAs(payload);
-		if (result.ok) {
-			await this.startup.refreshRecentProjects();
-		}
+	saveProjectAs(): void {
+		// Disabled in the template until canonical Save a Copy exists.
 	}
 
 	async openProject(): Promise<void> {

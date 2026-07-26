@@ -112,7 +112,6 @@ export class PreviewPageComponent implements AfterViewInit, OnDestroy {
 
 	async applyOffset(): Promise<void> {
 		await this.preview.applyOffset();
-		await this.preview.load();
 	}
 
 	formatDiagnosticTime(seconds: number | undefined): string {

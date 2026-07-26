@@ -15,17 +15,11 @@ describe("electron main payload validation regressions", () => {
 		);
 	});
 
-	it("preserves mappingOverrides in generate input validation", () => {
-		expect(source).toContain("function assertGenerateInput(input: unknown): DesktopGeneratePackageInput {");
-		expect(source).toContain(
-			'mappingOverrides: optionalMappingOverrides(value["mappingOverrides"]),',
-		);
-	});
-
-	it("treats album.jpg as a known generated output", () => {
-		expect(source).toContain(
-			'const knownOutputFiles = ["notes.chart", "song.ini", "song.ogg", "album.jpg"];',
-		);
+	it("retires managed package generation explicitly", () => {
+		expect(source).toContain('"GENERATION_NOT_AVAILABLE"');
+		expect(source).not.toContain("function assertGenerateInput(");
+		expect(source).not.toMatch(/\bgeneratePackage\(/);
+		expect(source).not.toContain("OVERWRITE_CONFIRMATION_REQUIRED");
 	});
 
 	it("uses validation helper for optional mapping overrides", () => {
@@ -35,12 +29,24 @@ describe("electron main payload validation regressions", () => {
 		expect(source).toContain("return validateMappingOverrides(value);");
 	});
 
-	it("passes only optional cached source analysis into Preview timing comparison", () => {
+	it("prefers canonical source timing and uses transient analysis only as a runtime fallback", () => {
+		expect(source).toContain(
+			'const sourceTiming = sourceTimingFromDocument(value["sourceTiming"]);',
+		);
 		expect(source).toContain(
 			'const analysis = optionalAnalysisCache(value["analysis"]);',
 		);
 		expect(source).toContain(
-			"sourceTimingFromAnalysisCache(analysis)",
+			"sourceTiming ?? sourceTimingFromAnalysisCache(analysis)",
 		);
+	});
+
+	it("retires name-only create and provisional save handlers explicitly", () => {
+		expect(source).toContain('"PROJECT_CREATION_NOT_AVAILABLE"');
+		expect(source).toContain('"PROJECT_SAVE_NOT_AVAILABLE"');
+		expect(source).toContain('"PROJECT_SAVE_AS_NOT_AVAILABLE"');
+		expect(source).toContain('"PROJECT_SAVE_PICKER_NOT_AVAILABLE"');
+		expect(source).not.toContain("dialog.showSaveDialog");
+		expect(source).not.toContain("buildProjectFileFromState");
 	});
 });
