@@ -30,9 +30,8 @@ export function buildDesktopValidationItems(
 			errorItem(
 				"source.missing",
 				"source",
-				"Source file required",
-				"Choose a .mid, .midi, or .gp source file before generating.",
-				"/projects/details",
+				"Runtime source unavailable",
+				"No runtime source is available for this dormant diagnostic view. Source replacement is unavailable in this migration.",
 			),
 		);
 	} else if (!detectDesktopSourceKind(generate.sourcePath)) {
@@ -41,8 +40,7 @@ export function buildDesktopValidationItems(
 				"source.unsupported",
 				"source",
 				"Unsupported source type",
-				"Supported source files are .mid, .midi, and .gp.",
-				"/projects/details",
+				"The runtime source is not a supported .mid, .midi, or .gp file. Source replacement is unavailable in this migration.",
 			),
 		);
 	} else {
@@ -63,7 +61,6 @@ export function buildDesktopValidationItems(
 				"source",
 				"Saved source path is missing",
 				missingPathMessage(project.missingPaths, "sourcePath"),
-				"/projects/details",
 			),
 		);
 	}
@@ -73,9 +70,8 @@ export function buildDesktopValidationItems(
 			errorItem(
 				"audio.missing",
 				"audio",
-				"Audio file required",
-				"Audio is required for the Desktop Generate MVP so CHDG can create song.ogg.",
-				"/projects/details",
+				"Runtime audio unavailable",
+				"No runtime audio is available for this dormant diagnostic view. Audio replacement is unavailable in this migration.",
 			),
 		);
 	} else {
@@ -83,8 +79,8 @@ export function buildDesktopValidationItems(
 			infoItem(
 				"audio.ready",
 				"audio",
-				"Audio selected",
-				`${generate.audioPath} will be converted to song.ogg.`,
+				"Runtime audio reference",
+				generate.audioPath,
 			),
 		);
 	}
@@ -96,19 +92,17 @@ export function buildDesktopValidationItems(
 				"audio",
 				"Saved audio path is missing",
 				missingPathMessage(project.missingPaths, "audioPath"),
-				"/projects/details",
 			),
 		);
 	}
 
 	if (!generate.outputDir) {
 		items.push(
-			errorItem(
+			infoItem(
 				"output.missing",
 				"output",
-				"Output folder required",
-				"Choose the Clone Hero song output folder before generating.",
-				"/projects/details",
+				"Export target not recorded",
+				"No runtime export target is recorded. A target is optional until export, and managed export is unavailable in this migration.",
 			),
 		);
 	} else {
@@ -116,7 +110,7 @@ export function buildDesktopValidationItems(
 			infoItem(
 				"output.ready",
 				"output",
-				"Output folder selected",
+				"Runtime export target",
 				generate.outputDir,
 			),
 		);
@@ -127,9 +121,36 @@ export function buildDesktopValidationItems(
 			errorItem(
 				"output.path-missing",
 				"output",
-				"Saved output folder is missing",
-				missingPathMessage(project.missingPaths, "outputDir"),
-				"/projects/details",
+				"Recorded export target unavailable",
+				`Existing managed preview output cannot be opened. ${missingPathMessage(project.missingPaths, "outputDir")}`,
+			),
+		);
+	}
+	if (
+		project.missingPaths.some(
+			(warning) => warning.kind === "outputChartPath",
+		)
+	) {
+		items.push(
+			errorItem(
+				"output.chart-missing",
+				"output",
+				"Managed preview chart unavailable",
+				missingPathMessage(project.missingPaths, "outputChartPath"),
+			),
+		);
+	}
+	if (
+		project.missingPaths.some(
+			(warning) => warning.kind === "outputAudioPath",
+		)
+	) {
+		items.push(
+			errorItem(
+				"output.audio-missing",
+				"output",
+				"Managed preview audio unavailable",
+				missingPathMessage(project.missingPaths, "outputAudioPath"),
 			),
 		);
 	}
@@ -139,9 +160,8 @@ export function buildDesktopValidationItems(
 			errorItem(
 				"tracks.missing",
 				"tracks",
-				"Select at least one drum track",
-				"Generation needs one or more selected drum tracks.",
-				"/source-review",
+				"No runtime track selection",
+				"No runtime drum-track selection is available. Source Review is dormant in this migration.",
 			),
 		);
 	} else {
@@ -156,16 +176,15 @@ export function buildDesktopValidationItems(
 	}
 
 	if (generate.offsetMs !== undefined && !Number.isFinite(generate.offsetMs)) {
-	items.push(
-		errorItem(
-			"offset.invalid",
-			"offset",
-			"Invalid chart offset",
-			"Offset must be a finite number of milliseconds.",
-			"/projects/details",
-		),
-	);
-}
+		items.push(
+			errorItem(
+				"offset.invalid",
+				"offset",
+				"Invalid chart offset",
+				"Offset must be a finite number of milliseconds.",
+			),
+		);
+	}
 
 	if (generate.errorMessage?.toLowerCase().includes("offset")) {
 		items.push(
@@ -174,7 +193,6 @@ export function buildDesktopValidationItems(
 				"offset",
 				"Invalid chart offset",
 				generate.errorMessage,
-				"/projects/details",
 			),
 		);
 	}
@@ -185,8 +203,7 @@ export function buildDesktopValidationItems(
 				"metadata.missing-artist",
 				"metadata",
 				"Artist metadata missing",
-				"Artist is recommended for song.ini quality.",
-				"/projects/details",
+				"The dormant runtime metadata does not include an artist. Canonical identity is read-only in this migration.",
 			),
 		);
 	}
@@ -196,8 +213,7 @@ export function buildDesktopValidationItems(
 				"metadata.missing-charter",
 				"metadata",
 				"Charter metadata missing",
-				"Charter is recommended for song.ini quality.",
-				"/projects/details",
+				"The dormant runtime metadata does not include a charter. Metadata editing is unavailable in this migration.",
 			),
 		);
 	}
@@ -266,9 +282,8 @@ export function buildDesktopValidationItems(
 				warningItem(
 					"generation.needs-regenerate",
 					"generation",
-					"Output needs regenerate",
-					"Project inputs changed after the last generated output. Regenerate to refresh Clone Hero files.",
-					"/generate",
+					"Persisted export status is outdated",
+					"Managed regeneration is unavailable in this migration.",
 				),
 			);
 			break;
@@ -278,8 +293,7 @@ export function buildDesktopValidationItems(
 					"generation.failed",
 					"generation",
 					"Previous generation failed",
-					"Review the Generate page log and try again after fixing blocking errors.",
-					"/generate",
+					"Managed regeneration is unavailable in this migration.",
 				),
 			);
 			break;
@@ -289,7 +303,7 @@ export function buildDesktopValidationItems(
 					"generation.not-generated",
 					"generation",
 					"Not generated yet",
-					"Generate the Clone Hero song folder when required inputs are ready.",
+					"Managed generation is unavailable in this migration.",
 				),
 			);
 			break;
@@ -353,10 +367,7 @@ function validationItemFromProjectIssue(
 		title: titleForProjectIssue(issue.code),
 		message: issue.message,
 		blocking: severity === "error",
-		fixAction:
-			severity === "error"
-				? { label: fixLabel(category), route: routeForCategory(category) }
-				: undefined,
+		fixAction: undefined,
 	};
 }
 
@@ -460,23 +471,9 @@ function fixLabel(category: ValidationCategory): string {
 		case "chart":
 			return "Review Source";
 		case "generation":
-			return "Open Generate";
+			return "Open Project";
 		default:
 			return "Review Project Details";
-	}
-}
-
-function routeForCategory(category: ValidationCategory): string {
-	switch (category) {
-		case "ffmpeg":
-			return "/settings";
-		case "tracks":
-		case "chart":
-			return "/source-review";
-		case "generation":
-			return "/generate";
-		default:
-			return "/projects/details";
 	}
 }
 

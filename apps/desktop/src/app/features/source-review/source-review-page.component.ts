@@ -800,10 +800,6 @@ export class SourceReviewPageComponent implements OnInit {
 		await this.orchestrator.mappingChanged();
 	}
 
-	async continueToGenerate(): Promise<void> {
-		if (this.canContinue()) await this.router.navigateByUrl("/generate");
-	}
-
 	goBack(): void {
 		void this.router.navigateByUrl("/projects/details");
 	}

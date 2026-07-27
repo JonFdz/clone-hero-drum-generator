@@ -1,7 +1,7 @@
 <header class="generate-header">
 	<div>
 		<h1>Generate</h1>
-		<p>Validate project readiness and create the Clone Hero package.</p>
+		<p>Review existing generation state. Creating or overwriting managed package files is unavailable.</p>
 	</div>
 	<chdg-generation-readiness
 		[tone]="statusTone()"
@@ -13,7 +13,7 @@
 
 @if (autosaveWarning()) {
 	<section class="card message warning autosave-warning">
-		<h2>Autosave warning</h2>
+		<h2>Generation unavailable</h2>
 		<p>{{ autosaveWarning() }}</p>
 	</section>
 }
@@ -65,14 +65,4 @@
 	(openOutputFolder)="openOutputFolder()"
 	(openPreview)="openPreview()"
 	(generate)="generate()"
-/>
-
-<chdg-confirmation-dialog
-	[isOpen]="showOverwriteDialog()"
-	title="Overwrite existing files?"
-	message="Overwrite only notes.chart, song.ini, and song.ogg?"
-	confirmLabel="Overwrite"
-	[destructive]="true"
-	(confirmed)="confirmOverwrite()"
-	(cancelled)="cancelOverwrite()"
 />

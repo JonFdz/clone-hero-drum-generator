@@ -1,6 +1,5 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
 import type {
-	ChdgProjectAnalysisCache,
 	GeneratePackageInput,
 	GeneratePackageResult,
 	JsonEnvelope,
@@ -10,6 +9,10 @@ import type {
 	SourceKind,
 	ProjectMappingOverrides,
 } from "@chdg/project/browser";
+import type {
+	DesktopSourceTiming,
+	SourceReviewRuntimeCache,
+} from "./desktop-project-runtime";
 import {
 	chooseDefaultTracks,
 	cleanMetadata,
@@ -46,8 +49,9 @@ export type DesktopGenerateState = {
 	cover?: { imagePath?: string };
 	metadata: DesktopMetadata;
 	offsetMs?: number;
+	sourceTiming?: DesktopSourceTiming;
 	inspection?: SourceInspectionResult;
-	analysisCache?: ChdgProjectAnalysisCache;
+	analysisCache?: SourceReviewRuntimeCache;
 	selectedTracks: number[];
 	normalizationPreview?: NormalizationPreview;
 	normalizationPreviewStale?: boolean;
@@ -221,7 +225,7 @@ export class DesktopGenerateStateService {
 		});
 	}
 
-	applySourceReviewCache(cache: ChdgProjectAnalysisCache): void {
+	applySourceReviewCache(cache: SourceReviewRuntimeCache): void {
 		this.patch({
 			analysisCache: cache,
 			inspection: cache.inspection,
@@ -240,8 +244,31 @@ export class DesktopGenerateStateService {
 		});
 	}
 
-	setAnalysisCache(analysisCache: ChdgProjectAnalysisCache | undefined): void {
+	setAnalysisCache(analysisCache: SourceReviewRuntimeCache | undefined): void {
 		this.patch({ analysisCache });
+	}
+
+	loadRuntimeSourceReviewState(input: {
+		analysis?: SourceReviewRuntimeCache;
+		mappingOverrides?: ProjectMappingOverrides;
+	}): void {
+		const analysis = input.analysis;
+		this.patch({
+			mappingOverrides: { ...(input.mappingOverrides ?? {}) },
+			analysisCache: analysis,
+			inspection: analysis?.inspection,
+			normalizationPreview: analysis?.normalizationPreview,
+			normalizationPreviewStale: false,
+			issues: [
+				...(analysis?.inspection.issues ?? []),
+				...(analysis?.normalizationPreview?.issues ?? []),
+			],
+			status: analysis?.normalizationPreview
+				? "ready-to-generate"
+				: analysis
+					? "ready-to-select-tracks"
+					: this.state().status,
+		});
 	}
 
 	toggleTrack(trackIndex: number): void {
@@ -259,7 +286,6 @@ export class DesktopGenerateStateService {
 
 	setSelectedTracks(selectedTracks: number[]): void {
 		this.patch({ selectedTracks: [...selectedTracks].sort((a, b) => a - b) });
-		this.projectState.markNeedsRegenerate();
 	}
 
 	startNormalizing(): void {
@@ -394,8 +420,9 @@ export class DesktopGenerateStateService {
 		selectedTracks: number[];
 		metadata: DesktopMetadata;
 		offsetMs?: number;
+		sourceTiming?: DesktopSourceTiming;
 		mappingOverrides?: ProjectMappingOverrides;
-		analysis?: ChdgProjectAnalysisCache;
+		analysis?: SourceReviewRuntimeCache;
 		generationResult?: GeneratePackageResult;
 		lastGeneratedAt?: string;
 		outputFiles?: {
@@ -420,6 +447,7 @@ export class DesktopGenerateStateService {
 			selectedTracks: payload.selectedTracks,
 			metadata: payload.metadata,
 			offsetMs: payload.offsetMs,
+			sourceTiming: payload.sourceTiming,
 			generationResult: payload.generationResult,
 			lastGeneratedAt: payload.lastGeneratedAt,
 			outputFiles: payload.outputFiles,
@@ -437,42 +465,11 @@ export class DesktopGenerateStateService {
 		});
 	}
 
-	buildProjectStatePayload(
-		projectName: string,
-		projectFilePath?: string,
-	): import("./desktop-bridge.service").ProjectStatePayload {
-		const state = this.state();
-		return {
-			projectName,
-			projectFilePath,
-			sourcePath: state.sourcePath,
-			audioPath: state.audioPath,
-			outputDir: state.outputDir,
-			cover: state.cover,
-			sourceKind: state.sourceKind,
-			selectedTracks: state.selectedTracks,
-			metadata: state.metadata,
-			offsetMs: state.offsetMs,
-			generationStatus: this.projectState.outputStatus(),
-			lastGeneratedAt: state.lastGeneratedAt,
-			outputFiles: state.generationResult
-				? {
-						chart: state.generationResult.files.chart,
-						songIni: state.generationResult.files.songIni,
-						songOgg: state.generationResult.files.songOgg,
-					}
-				: state.outputFiles,
-			mappingOverrides: state.mappingOverrides,
-			analysis: state.analysisCache,
-		};
-	}
-
 	setMappingOverrides(mappingOverrides: ProjectMappingOverrides): void {
 		this.patch({
 			mappingOverrides: { ...mappingOverrides },
 			normalizationPreviewStale: true,
 		});
-		this.projectState.markNeedsRegenerate();
 	}
 
 	private patch(patch: Partial<DesktopGenerateState>): void {

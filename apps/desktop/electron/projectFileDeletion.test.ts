@@ -1,15 +1,18 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	ProjectFileDeletionError,
-	resolveDeletableProjectFilePath,
+	CANONICAL_PROJECT_DELETE_NOT_AVAILABLE,
+	CANONICAL_PROJECT_DELETE_NOT_AVAILABLE_MESSAGE,
+	deleteProjectFilePath,
 } from "./projectFileDeletion.js";
-
-function emptyRecents() {
-	return Promise.resolve([]);
-}
 
 describe("projectFileDeletion", () => {
 	let tempDir: string;
@@ -22,73 +25,28 @@ describe("projectFileDeletion", () => {
 		rmSync(tempDir, { recursive: true, force: true });
 	});
 
-	it("allows selected .chdg files", async () => {
-		const filePath = join(tempDir, "demo.chdg");
-		writeFileSync(filePath, "{}", "utf8");
-		await expect(
-			resolveDeletableProjectFilePath(
-				filePath,
-				new Set([filePath]),
-				emptyRecents,
-			),
-		).resolves.toEqual({ filePath, exists: true });
-	});
+	it("rejects manifest-only deletion without changing the canonical project folder", async () => {
+		const projectFile = join(tempDir, "project.chdg");
+		const sourceFile = join(tempDir, "assets", "source.mid");
+		const audioFile = join(tempDir, "assets", "song.ogg");
+		const recoveryFile = join(tempDir, "recovery", "previous.chdg");
+		mkdirSync(join(tempDir, "assets"), { recursive: true });
+		mkdirSync(join(tempDir, "recovery"), { recursive: true });
+		writeFileSync(projectFile, "{}");
+		writeFileSync(sourceFile, "source");
+		writeFileSync(audioFile, "audio");
+		writeFileSync(recoveryFile, "{}");
 
-	it("allows .chdg files from Electron recents", async () => {
-		const filePath = join(tempDir, "recent.chdg");
-		writeFileSync(filePath, "{}", "utf8");
-		await expect(
-			resolveDeletableProjectFilePath(filePath, new Set(), () =>
-				Promise.resolve([
-					{ path: filePath, name: "Recent", lastOpenedAt: "now" },
-				]),
-			),
-		).resolves.toEqual({ filePath, exists: true });
-	});
+		await expect(deleteProjectFilePath(projectFile)).rejects.toMatchObject({
+			code: CANONICAL_PROJECT_DELETE_NOT_AVAILABLE,
+			message: CANONICAL_PROJECT_DELETE_NOT_AVAILABLE_MESSAGE,
+		});
 
-	it("rejects non-.chdg files", async () => {
-		const filePath = join(tempDir, "demo.mid");
-		writeFileSync(filePath, "midi", "utf8");
-		await expect(
-			resolveDeletableProjectFilePath(
-				filePath,
-				new Set([filePath]),
-				emptyRecents,
-			),
-		).rejects.toMatchObject({ code: "PROJECT_DELETE_NOT_CHDG" });
-	});
-
-	it("rejects directories", async () => {
-		const dirPath = join(tempDir, "folder.chdg");
-		mkdirSync(dirPath);
-		await expect(
-			resolveDeletableProjectFilePath(
-				dirPath,
-				new Set([dirPath]),
-				emptyRecents,
-			),
-		).rejects.toBeInstanceOf(ProjectFileDeletionError);
-		await expect(
-			resolveDeletableProjectFilePath(
-				dirPath,
-				new Set([dirPath]),
-				emptyRecents,
-			),
-		).rejects.toMatchObject({ code: "PROJECT_DELETE_NOT_FILE" });
-	});
-
-	it("allows trusted missing .chdg files so recents can be cleaned", async () => {
-		const filePath = join(tempDir, "missing.chdg");
-		await expect(
-			resolveDeletableProjectFilePath(filePath, new Set([filePath]), emptyRecents),
-		).resolves.toEqual({ filePath, exists: false });
-	});
-
-	it("rejects untrusted .chdg files", async () => {
-		const filePath = join(tempDir, "untrusted.chdg");
-		writeFileSync(filePath, "{}", "utf8");
-		await expect(
-			resolveDeletableProjectFilePath(filePath, new Set(), emptyRecents),
-		).rejects.toMatchObject({ code: "PROJECT_DELETE_NOT_ALLOWED" });
+		expect(existsSync(projectFile)).toBe(true);
+		expect(existsSync(sourceFile)).toBe(true);
+		expect(existsSync(audioFile)).toBe(true);
+		expect(existsSync(recoveryFile)).toBe(true);
+		expect(existsSync(join(tempDir, "assets"))).toBe(true);
+		expect(existsSync(join(tempDir, "recovery"))).toBe(true);
 	});
 });

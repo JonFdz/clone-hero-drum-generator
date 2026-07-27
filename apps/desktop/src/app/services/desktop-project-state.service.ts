@@ -1,9 +1,7 @@
 import { Injectable, computed, inject } from "@angular/core";
-import type {
-	ChdgOutputStatus,
-	DesktopSettings,
-	RecentProject,
-} from "@chdg/project/browser";
+import type { DesktopSettings, RecentProject } from "@chdg/project/browser";
+import type { DesktopOutputStatus } from "./desktop-project-runtime";
+import type { DesktopProjectIdentity } from "./desktop-project-runtime";
 import type {
 	FfmpegDiagnostic,
 	ProjectStatePayload,
@@ -24,10 +22,11 @@ export type { MissingPathWarning } from "../features/project-session/project-ses
  * {@link SettingsService}) instead.
  */
 export type DesktopProjectState = {
+	project?: DesktopProjectIdentity;
 	projectFilePath?: string;
 	projectName: string;
 	dirty: boolean;
-	outputStatus: ChdgOutputStatus;
+	outputStatus: DesktopOutputStatus;
 	missingPaths: MissingPathWarning[];
 	recentProjects: RecentProject[];
 	settings: DesktopSettings;
@@ -84,39 +83,6 @@ export class DesktopProjectStateService {
 		await this.library.refresh();
 	}
 
-	async createProject(name: string): Promise<ProjectStatePayload | null> {
-		const result = await this.persistence.createProject(name);
-		if (!result.ok) {
-			console.error("Create project failed:", result.error.message);
-			return null;
-		}
-		await this.library.refresh();
-		return result.payload;
-	}
-
-	async saveProject(
-		payload: ProjectStatePayload,
-	): Promise<{ filePath: string; payload: ProjectStatePayload } | null> {
-		const result = await this.persistence.saveProject(payload);
-		if (!result.ok) {
-			console.error("Save project failed:", result.error.message);
-			return null;
-		}
-		await this.library.refresh();
-		return { filePath: result.filePath, payload: result.payload };
-	}
-
-	async saveProjectAs(payload: ProjectStatePayload): Promise<string | null> {
-		const result = await this.persistence.saveProjectAs(payload);
-		if (!result.ok) {
-			if ("cancelled" in result) return null;
-			console.error("Save project as failed:", result.error.message);
-			return null;
-		}
-		await this.library.refresh();
-		return result.filePath;
-	}
-
 	async openProject(filePath: string): Promise<ProjectStatePayload | null> {
 		const result = await this.persistence.openProject(filePath);
 		if (!result.ok) {
@@ -132,11 +98,7 @@ export class DesktopProjectStateService {
 	}
 
 	async deleteProjectFile(projectPath: string): Promise<boolean> {
-		const ok = await this.library.deleteFile(projectPath);
-		if (ok && this.session.projectFilePath() === projectPath) {
-			this.session.resetActiveProject();
-		}
-		return ok;
+		return this.library.deleteFile(projectPath);
 	}
 
 	async saveSettings(settings: DesktopSettings): Promise<void> {

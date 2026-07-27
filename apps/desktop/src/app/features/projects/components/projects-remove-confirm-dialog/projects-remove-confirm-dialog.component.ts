@@ -22,7 +22,6 @@ export class ProjectsRemoveConfirmDialogComponent {
 	@Input() projectPath = "";
 	@Output() cancelled = new EventEmitter<void>();
 	@Output() removeFromRecents = new EventEmitter<void>();
-	@Output() removeAndDelete = new EventEmitter<void>();
 
 	@HostListener("document:keydown.escape")
 	onEscape(): void {

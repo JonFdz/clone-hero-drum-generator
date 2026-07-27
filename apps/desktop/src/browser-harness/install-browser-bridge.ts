@@ -3,7 +3,6 @@ import type {
 	MappingOverrideProfile,
 	NormalizeSelectionInput,
 } from "@chdg/project/browser";
-import type { ProjectStatePayload } from "../app/services/desktop-bridge.service";
 import { stableMappingFingerprint } from "../app/services/source-review-model";
 import { BrowserHarnessError } from "./browser-harness-error";
 import type { BrowserHarnessScenario } from "./browser-scenario";
@@ -11,10 +10,9 @@ import {
 	buildBrowserAppInfo,
 	buildBrowserHealth,
 	buildChartPreviewData,
-	buildProjectFile,
 	buildRecentProjects,
 	buildSettings,
-	failureEnvelope,
+	HARNESS_AUDIO_PREVIEW_SRC,
 	successEnvelope,
 } from "./fixture-builders";
 
@@ -28,6 +26,18 @@ function unsupported<T>(scenario: BrowserHarnessScenario, operation: string): Pr
 			`operation "${operation}" is unsupported in scenario "${scenario.id}"`,
 		),
 	);
+}
+
+function canonicalProjectDeleteUnavailable() {
+	return Promise.resolve({
+		ok: false as const,
+		error: {
+			code: "CANONICAL_PROJECT_DELETE_NOT_AVAILABLE",
+			message:
+				"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.",
+		},
+		issues: [],
+	});
 }
 
 function invalidInput(
@@ -103,37 +113,13 @@ function validateNormalizationInput(
 	}
 	if (
 		stableMappingFingerprint(input.mappingOverrides ?? {}) !==
-		stableMappingFingerprint(scenario.project?.mappingOverrides ?? {})
+		stableMappingFingerprint(scenario.runtimeMappingOverrides ?? {})
 	) {
 		invalidInput(
 			scenario,
 			"normalizeSelection",
 			"mappingOverrides must equal the scenario mapping state",
 		);
-	}
-}
-
-function validateProjectIdentity(
-	scenario: BrowserHarnessScenario,
-	payload: ProjectStatePayload,
-): void {
-	const project = scenario.project;
-	if (!project) invalidInput(scenario, "saveProject", "no active project exists");
-	const fields: Array<keyof ProjectStatePayload> = [
-		"projectName",
-		"projectFilePath",
-		"sourcePath",
-		"audioPath",
-		"outputDir",
-	];
-	for (const field of fields) {
-		if (payload[field] !== project[field]) {
-			invalidInput(
-				scenario,
-				"saveProject",
-				`${field} must identify the active synthetic project`,
-			);
-		}
 	}
 }
 
@@ -191,19 +177,12 @@ export function createBrowserBridge(
 		saveProjectFile: () => unsupported(scenario, "saveProjectFile"),
 		openProjectFile: () => unsupported(scenario, "openProjectFile"),
 		createProject: () => unsupported(scenario, "createProject"),
-		saveProject: async (payload) => {
-			if (!scenario.project) return unsupported(scenario, "saveProject");
-			validateProjectIdentity(scenario, payload);
-			return successEnvelope({
-				filePath: scenario.project.projectFilePath ?? "",
-				project: buildProjectFile(payload),
-			});
-		},
+		saveProject: () => unsupported(scenario, "saveProject"),
 		saveProjectAs: () => unsupported(scenario, "saveProjectAs"),
 		openProject: () => unsupported(scenario, "openProject"),
 		readRecentProjects: async () => successEnvelope(recents),
 		removeRecentProject: () => unsupported(scenario, "removeRecentProject"),
-		deleteProjectFile: () => unsupported(scenario, "deleteProjectFile"),
+		deleteProjectFile: () => canonicalProjectDeleteUnavailable(),
 		getCoverImagePreviewUrl: () =>
 			unsupported(scenario, "getCoverImagePreviewUrl"),
 		readSettings: async () => successEnvelope(settings),
@@ -233,33 +212,19 @@ export function createBrowserBridge(
 			validatePreviewPath(
 				scenario,
 				"getAudioPreviewSource",
-				input.outputDir,
-				scenario.project?.outputDir,
-				"outputDir",
-			);
-			validatePreviewPath(
-				scenario,
-				"getAudioPreviewSource",
 				input.generatedSongOggPath,
 				scenario.project?.outputFiles?.songOgg,
 				"generatedSongOggPath",
 			);
-			return failureEnvelope(
-				"BROWSER_AUDIO_UNAVAILABLE",
-				"Synthetic browser scenario does not provide audio.",
-			);
+			return successEnvelope({
+				src: HARNESS_AUDIO_PREVIEW_SRC,
+				sourceKind: "generated" as const,
+			});
 		},
 		getChartPreviewData: async (input) => {
 			if (scenario.id !== "preview-ready") {
 				return unsupported(scenario, "getChartPreviewData");
 			}
-			validatePreviewPath(
-				scenario,
-				"getChartPreviewData",
-				input.outputDir,
-				scenario.project?.outputDir,
-				"outputDir",
-			);
 			validatePreviewPath(
 				scenario,
 				"getChartPreviewData",

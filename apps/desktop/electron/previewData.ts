@@ -7,8 +7,8 @@ import {
 	type GeneratedChartTiming,
 	type SourceTimingSnapshot,
 	type TimingDiagnosticsSummary,
-	type ChdgProjectAnalysisCache,
 } from "@chdg/project";
+import type { SourceReviewRuntimeCache } from "./desktopRuntimeTypes.js";
 
 export type AudioPreviewSourceKind = "generated";
 
@@ -55,7 +55,7 @@ export type ChartPreviewRequest = {
 };
 
 export function sourceTimingFromAnalysisCache(
-	cache: ChdgProjectAnalysisCache | undefined,
+	cache: SourceReviewRuntimeCache | undefined,
 ): SourceTimingSnapshot | undefined {
 	if (!cache) return undefined;
 	const normalized = sourceTimingSnapshot(cache.normalizedTiming, true);
@@ -69,6 +69,21 @@ export function sourceTimingFromAnalysisCache(
 		inspection.timeSignatures.length === 0 &&
 		inspection.sections.length === 0;
 	return hasNoGpifTimingData ? undefined : inspection;
+}
+
+export function sourceTimingFromDocument(
+	document: unknown,
+): SourceTimingSnapshot | undefined {
+	if (typeof document !== "object" || document === null) return undefined;
+	return sourceTimingSnapshot(
+		document as {
+			resolution?: unknown;
+			tempos?: unknown;
+			timeSignatures?: unknown;
+			sections?: unknown;
+		},
+		true,
+	);
 }
 
 function sourceTimingSnapshot(input: {
@@ -138,9 +153,7 @@ export function resolveChartPreviewPath(input: ChartPreviewRequest): {
 	const chartPathCandidate =
 		typeof input.chartPath === "string" && input.chartPath.trim().length > 0
 			? input.chartPath
-			: resolvedOutputDir
-				? path.join(resolvedOutputDir, "notes.chart")
-				: "";
+			: "";
 	const chartPath = path.resolve(chartPathCandidate);
 	if (!chartPathCandidate || !chartPath) {
 		throw new Error("PREVIEW_CHART_NOT_AVAILABLE");
@@ -162,9 +175,7 @@ export function pickAudioPreviewCandidate(input: AudioPreviewRequest): {
 		typeof input.generatedSongOggPath === "string" &&
 		input.generatedSongOggPath.trim().length > 0
 			? input.generatedSongOggPath
-			: typeof input.outputDir === "string" && input.outputDir.trim().length > 0
-				? path.join(input.outputDir, "song.ogg")
-				: undefined;
+			: undefined;
 
 	return { generatedPath };
 }

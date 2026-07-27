@@ -6,6 +6,6 @@
 			<div class="header-actions">
 				<span class="project-count" aria-label="Total recent projects">{{ projectCount }} projects</span>
 				<button class="button ghost" type="button" (click)="openProject.emit()">▰ Open Project</button>
-				<button class="button primary" type="button" (click)="newProject.emit()">＋ New Project</button>
+				<button class="button primary" type="button" disabled [title]="newProjectUnavailableMessage">＋ New Project</button>
 			</div>
 		</header>

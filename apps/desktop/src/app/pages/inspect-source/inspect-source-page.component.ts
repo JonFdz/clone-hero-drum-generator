@@ -19,8 +19,8 @@ import { formatTrackNoteCount } from "../../services/track-note-count";
     @if (!state().sourcePath) {
       <section class="card message warning">
         <h2>No source selected</h2>
-        <p>Start from New Project and select a local .mid, .midi, or .gp source.</p>
-        <a class="button primary" routerLink="/new-project">New Project</a>
+        <p>Open an existing canonical .chdg project. Project creation and source import are unavailable in this legacy workflow.</p>
+        <button class="button primary" type="button" disabled title="Canonical project creation and source import are unavailable.">Project Creation Unavailable</button>
       </section>
     } @else {
       <div class="action-row top-actions">

@@ -1,24 +1,12 @@
 import { mkdirSync, mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { parseProjectFile, type ChdgProjectFile } from "@chdg/project";
 
-vi.mock("electron", () => ({
-	app: {
-		getPath: (name: string) => {
-			if (name === "documents") return tmpdir() + "/chdg-documents";
-			return tmpdir() + "/chdg-" + name;
-		},
-	},
-}));
 import {
 	readProjectFile,
 	writeProjectFile,
-	buildProjectFileFromState,
-	getDefaultProjectFilePath,
-	getDefaultOutputDir,
-	resolveUniqueProjectTarget,
-	renameManagedProjectTarget,
 } from "./projectFileService.js";
 
 describe("projectFileService", () => {
@@ -33,41 +21,55 @@ describe("projectFileService", () => {
 	});
 
 	describe("writeProjectFile", () => {
-		it("writes a valid project file", async () => {
-			const filePath = join(tempDir, "test.chdg");
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [1],
-				metadata: { name: "Song" },
-				generationStatus: "not-generated",
-			});
+		it("writes a canonical project file through the shared serializer", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const project = canonicalProject();
 			const result = await writeProjectFile(filePath, project);
 			expect(result.ok).toBe(true);
 			const text = readFileSync(filePath, "utf8");
-			const parsed = JSON.parse(text);
-			expect(parsed.project.name).toBe("Demo");
-			expect(parsed.project.updatedAt).toBeTypeOf("string");
+			const parsed = parseProjectFile(text);
+			expect(parsed.ok).toBe(true);
+			expect(text.endsWith("\n")).toBe(true);
+			expect(text).toContain('"projectId": "project-demo"');
+			expect(text).not.toContain('"paths"');
+			expect(text).not.toContain('"generation"');
+		});
+
+		it("rejects a noncanonical project filename without writing it", async () => {
+			const filePath = join(tempDir, "test.chdg");
+
+			const result = await writeProjectFile(filePath, canonicalProject());
+
+			expect(result).toEqual({
+				ok: false,
+				code: "INVALID_PROJECT_FILE_NAME",
+				message:
+					"A canonical project must be opened through its project.chdg file.",
+			});
+			expect(() => readFileSync(filePath, "utf8")).toThrow();
 		});
 	});
 
 	describe("readProjectFile", () => {
-		it("reads a valid project file", async () => {
-			const filePath = join(tempDir, "test.chdg");
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [1],
-				metadata: {},
-				generationStatus: "generated",
-			});
+		it("reads a valid canonical project file and resolves owned assets", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const project = canonicalProject();
+			mkdirSync(join(tempDir, "assets"), { recursive: true });
+			writeFileSync(join(tempDir, "assets", "source.mid"), "midi");
+			writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
 			await writeProjectFile(filePath, project);
 			const result = await readProjectFile(filePath);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
-				expect(result.project.project.name).toBe("Demo");
+				expect(result.project.project.projectId).toBe("project-demo");
 				expect(result.missingPaths).toEqual([]);
 			}
 		});
 
 		it("returns error for missing file", async () => {
-			const result = await readProjectFile(join(tempDir, "missing.chdg"));
+			const result = await readProjectFile(
+				join(tempDir, "missing-project", "project.chdg"),
+			);
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.code).toBe("PROJECT_FILE_NOT_FOUND");
@@ -75,7 +77,7 @@ describe("projectFileService", () => {
 		});
 
 		it("returns error for invalid JSON", async () => {
-			const filePath = join(tempDir, "bad.chdg");
+			const filePath = join(tempDir, "project.chdg");
 			writeFileSync(filePath, "not json", "utf8");
 			const result = await readProjectFile(filePath);
 			expect(result.ok).toBe(false);
@@ -85,7 +87,7 @@ describe("projectFileService", () => {
 		});
 
 		it("returns error for unsupported schema version", async () => {
-			const filePath = join(tempDir, "old.chdg");
+			const filePath = join(tempDir, "project.chdg");
 			writeFileSync(filePath, JSON.stringify({ schemaVersion: 99 }), "utf8");
 			const result = await readProjectFile(filePath);
 			expect(result.ok).toBe(false);
@@ -94,185 +96,352 @@ describe("projectFileService", () => {
 			}
 		});
 
-		it("saves and opens cover image path", async () => {
-			const filePath = join(tempDir, "cover.chdg");
-			const coverPath = join(tempDir, "cover.png");
-			writeFileSync(coverPath, "image", "utf8");
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [],
-				metadata: {},
-				generationStatus: "not-generated",
-				cover: { imagePath: coverPath },
-			});
-			await writeProjectFile(filePath, project);
+		it("reports missing required owned assets without weakening parsing", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			writeFileSync(filePath, JSON.stringify(canonicalProject()), "utf8");
 			const result = await readProjectFile(filePath);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
-				expect(result.project.cover?.imagePath).toBe(coverPath);
+				expect(result.missingPaths).toEqual(["sourcePath", "audioPath"]);
+			}
+		});
+
+		it("reports missing managed preview files for a current export", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const outputDir = join(tempDir, "clone-hero-output");
+			const project = currentExportProject(outputDir);
+			project.assets.cover = {
+				relativePath: "assets/album.jpg",
+				sha256: "4".repeat(64),
+			};
+			mkdirSync(join(tempDir, "assets"), { recursive: true });
+			mkdirSync(outputDir, { recursive: true });
+			writeFileSync(join(tempDir, "assets", "source.mid"), "midi");
+			writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
+			writeFileSync(join(tempDir, "assets", "album.jpg"), "cover");
+			await writeProjectFile(filePath, project);
+
+			const result = await readProjectFile(filePath);
+
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.project.export.status).toBe("current");
+				expect(result.missingPaths).toEqual([
+					"outputChartPath",
+					"outputAudioPath",
+				]);
+			}
+		});
+
+		it("accepts a current export whose manifested preview files exist", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const outputDir = join(tempDir, "clone-hero-output");
+			const project = currentExportProject(outputDir);
+			project.assets.cover = {
+				relativePath: "assets/album.jpg",
+				sha256: "4".repeat(64),
+			};
+			mkdirSync(join(tempDir, "assets"), { recursive: true });
+			mkdirSync(outputDir, { recursive: true });
+			writeFileSync(join(tempDir, "assets", "source.mid"), "midi");
+			writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
+			writeFileSync(join(tempDir, "assets", "album.jpg"), "cover");
+			writeFileSync(join(outputDir, "notes.chart"), "chart");
+			writeFileSync(join(outputDir, "song.ogg"), "managed audio");
+			await writeProjectFile(filePath, project);
+
+			const result = await readProjectFile(filePath);
+
+			expect(result.ok).toBe(true);
+			if (result.ok) {
 				expect(result.missingPaths).toEqual([]);
 			}
 		});
 
-		it("reports missing cover without blocking project open", async () => {
-			const filePath = join(tempDir, "missing-cover.chdg");
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [],
-				metadata: {},
-				generationStatus: "not-generated",
-				cover: { imagePath: join(tempDir, "missing.png") },
-			});
-			await writeProjectFile(filePath, project);
+		it("rejects the provisional pre-release shape", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			writeFileSync(
+				filePath,
+				JSON.stringify({
+					schemaVersion: 1,
+					project: { name: "Demo" },
+					paths: {},
+					selection: { selectedTracks: [] },
+					metadata: {},
+					generation: { status: "not-generated" },
+				}),
+				"utf8",
+			);
+
 			const result = await readProjectFile(filePath);
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.missingPaths).toContain("coverImagePath");
+
+			expect(result).toEqual({
+				ok: false,
+				code: "UNSUPPORTED_PROVISIONAL_FORMAT",
+				message: "Provisional pre-release project formats are not supported.",
+			});
+		});
+
+		it("preserves meaningful canonical validation errors", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const invalid = canonicalProject() as unknown as Record<string, unknown>;
+			invalid["project"] = {
+				...(invalid["project"] as Record<string, unknown>),
+				artist: "",
+			};
+			writeFileSync(filePath, JSON.stringify(invalid), "utf8");
+
+			const result = await readProjectFile(filePath);
+
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.code).toBe("INVALID_PROJECT_IDENTITY");
+				expect(result.message).toContain("artist");
 			}
 		});
 
-		it("omits cover when cover image path is cleared", () => {
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [],
-				metadata: {},
-				generationStatus: "not-generated",
-				cover: undefined,
+		it.each(["test.chdg", "Artist - Song - Project.chdg"])(
+			"rejects the noncanonical active filename %s",
+			async (fileName) => {
+				const filePath = join(tempDir, fileName);
+				writeFileSync(filePath, JSON.stringify(canonicalProject()), "utf8");
+
+				await expect(readProjectFile(filePath)).resolves.toEqual({
+					ok: false,
+					code: "INVALID_PROJECT_FILE_NAME",
+					message:
+						"A canonical project must be opened through its project.chdg file.",
+				});
+			},
+		);
+
+		it("rejects recovery/previous.chdg as an active project", async () => {
+			const recoveryDirectory = join(tempDir, "recovery");
+			mkdirSync(recoveryDirectory);
+			const filePath = join(recoveryDirectory, "previous.chdg");
+			writeFileSync(filePath, JSON.stringify(canonicalProject()), "utf8");
+
+			await expect(readProjectFile(filePath)).resolves.toMatchObject({
+				ok: false,
+				code: "INVALID_PROJECT_FILE_NAME",
 			});
-			expect(project.cover).toBeUndefined();
 		});
 
-		it("detects missing paths", async () => {
-			const filePath = join(tempDir, "test.chdg");
-			const project = buildProjectFileFromState("Demo", "0.1.0", {
-				selectedTracks: [],
-				metadata: {},
-				generationStatus: "not-generated",
-				outputDir: join(tempDir, "missing-output"),
-			});
+		it.each([
+			{ asset: "source", warning: "sourcePath" },
+			{ asset: "audio", warning: "audioPath" },
+		] as const)(
+			"reports a directory at the owned $asset path as invalid",
+			async ({ asset, warning }) => {
+				const filePath = join(tempDir, "project.chdg");
+				const project = canonicalProject();
+				mkdirSync(join(tempDir, "assets"), { recursive: true });
+				const sourcePath = join(tempDir, project.assets.source.relativePath);
+				const audioPath = join(tempDir, project.assets.audio.relativePath);
+				if (asset === "source") {
+					mkdirSync(sourcePath);
+					writeFileSync(audioPath, "audio");
+				} else {
+					writeFileSync(sourcePath, "source");
+					mkdirSync(audioPath);
+				}
+				await writeProjectFile(filePath, project);
+
+				const result = await readProjectFile(filePath);
+
+				expect(result.ok).toBe(true);
+				if (result.ok) expect(result.missingPaths).toEqual([warning]);
+			},
+		);
+
+		it("reports a directory at the owned cover path as invalid", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const project = canonicalProject();
+			project.assets.cover = {
+				relativePath: "assets/album.jpg",
+				sha256: "4".repeat(64),
+			};
+			mkdirSync(join(tempDir, "assets", "album.jpg"), { recursive: true });
+			writeFileSync(join(tempDir, "assets", "source.mid"), "source");
+			writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
 			await writeProjectFile(filePath, project);
+
 			const result = await readProjectFile(filePath);
+
+			expect(result.ok).toBe(true);
+			if (result.ok) expect(result.missingPaths).toEqual(["coverImagePath"]);
+		});
+
+		it("reports a regular file at the export target as an invalid outputDir", async () => {
+			const filePath = join(tempDir, "project.chdg");
+			const outputDir = join(tempDir, "not-a-directory");
+			const project = currentExportProject(outputDir);
+			mkdirSync(join(tempDir, "assets"), { recursive: true });
+			writeFileSync(join(tempDir, "assets", "source.mid"), "source");
+			writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
+			writeFileSync(outputDir, "file");
+			await writeProjectFile(filePath, project);
+
+			const result = await readProjectFile(filePath);
+
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.missingPaths).toContain("outputDir");
 			}
 		});
+
+		it.each([
+			{ fileName: "notes.chart", warning: "outputChartPath" },
+			{ fileName: "song.ogg", warning: "outputAudioPath" },
+		] as const)(
+			"reports a directory at managed $fileName as invalid",
+			async ({ fileName, warning }) => {
+				const filePath = join(tempDir, "project.chdg");
+				const outputDir = join(tempDir, "clone-hero-output");
+				const project = currentExportProject(outputDir);
+				mkdirSync(join(tempDir, "assets"), { recursive: true });
+				mkdirSync(outputDir);
+				writeFileSync(join(tempDir, "assets", "source.mid"), "source");
+				writeFileSync(join(tempDir, "assets", "song.ogg"), "audio");
+				const otherFile =
+					fileName === "notes.chart" ? "song.ogg" : "notes.chart";
+				mkdirSync(join(outputDir, fileName));
+				writeFileSync(join(outputDir, otherFile), "managed");
+				await writeProjectFile(filePath, project);
+
+				const result = await readProjectFile(filePath);
+
+				expect(result.ok).toBe(true);
+				if (result.ok) expect(result.missingPaths).toEqual([warning]);
+			},
+		);
 	});
 
-	describe("resolveUniqueProjectTarget", () => {
-		it("adds a unique suffix when the requested project file exists", async () => {
-			const requestedName = "Untitled 2026-05-24 13-32-10";
-			const existingFolder = join(tempDir, requestedName);
-			const existingFile = join(existingFolder, `${requestedName}.chdg`);
-			mkdirSync(existingFolder, { recursive: true });
-			writeFileSync(existingFile, "original", { encoding: "utf8", flag: "wx" });
-
-			const target = await resolveUniqueProjectTarget(tempDir, requestedName);
-
-			expect(target.name).toBe("Untitled 2026-05-24 13-32-10 2");
-			expect(target.filePath).toContain("Untitled 2026-05-24 13-32-10 2.chdg");
-			expect(readFileSync(existingFile, "utf8")).toBe("original");
-		});
-	});
-
-	describe("renameManagedProjectTarget", () => {
-		it("renames auto-created project folder, file, default output dir, and generated output file paths", async () => {
-			const oldFolder = join(tempDir, "Old Name");
-			const oldOutputDir = join(oldFolder, "output");
-			const oldFile = join(oldFolder, "Old Name.chdg");
-			mkdirSync(oldFolder, { recursive: true });
-			writeFileSync(oldFile, "{}", "utf8");
-
-			const result = await renameManagedProjectTarget({
-				currentFilePath: oldFile,
-				oldProjectName: "Old Name",
-				newProjectName: "New Name",
-				projectLocation: tempDir,
-				outputDir: oldOutputDir,
-				outputFiles: {
-					chart: join(oldOutputDir, "notes.chart"),
-					songIni: join(oldOutputDir, "song.ini"),
-					songOgg: join(oldOutputDir, "song.ogg"),
-					albumJpg: join(oldOutputDir, "album.jpg"),
-				},
-			});
-
-			const newOutputDir = join(tempDir, "New Name", "output");
-			expect(result).toMatchObject({
-				filePath: join(tempDir, "New Name", "New Name.chdg"),
-				outputDir: newOutputDir,
-				outputFiles: {
-					chart: join(newOutputDir, "notes.chart"),
-					songIni: join(newOutputDir, "song.ini"),
-					songOgg: join(newOutputDir, "song.ogg"),
-					albumJpg: join(newOutputDir, "album.jpg"),
-				},
-				renamed: true,
-				oldOutputDir,
-				newOutputDir,
-			});
-			expect(readFileSync(result.filePath, "utf8")).toBe("{}");
-		});
-
-		it("does not rewrite custom output dirs or output files outside the old default output dir", async () => {
-			const oldFolder = join(tempDir, "Old Name");
-			const oldFile = join(oldFolder, "Old Name.chdg");
-			const customOutputDir = join(tempDir, "custom-output");
-			mkdirSync(oldFolder, { recursive: true });
-			writeFileSync(oldFile, "{}", "utf8");
-
-			const outputFiles = {
-				chart: join(customOutputDir, "notes.chart"),
-				songIni: join(customOutputDir, "song.ini"),
-				songOgg: join(customOutputDir, "song.ogg"),
-				albumJpg: join(customOutputDir, "album.jpg"),
-			};
-			const result = await renameManagedProjectTarget({
-				currentFilePath: oldFile,
-				oldProjectName: "Old Name",
-				newProjectName: "New Name",
-				projectLocation: tempDir,
-				outputDir: customOutputDir,
-				outputFiles,
-			});
-
-			expect(result.outputDir).toBe(customOutputDir);
-			expect(result.outputFiles).toEqual(outputFiles);
-		});
-
-		it("does not rename custom project paths", async () => {
-			const customFolder = join(tempDir, "custom");
-			const customFile = join(customFolder, "project.chdg");
-			mkdirSync(customFolder, { recursive: true });
-			writeFileSync(customFile, "{}", "utf8");
-
-			const result = await renameManagedProjectTarget({
-				currentFilePath: customFile,
-				oldProjectName: "Old Name",
-				newProjectName: "New Name",
-				projectLocation: tempDir,
-				outputDir: join(customFolder, "output"),
-			});
-
-			expect(result).toEqual({
-				filePath: customFile,
-				outputDir: join(customFolder, "output"),
-				outputFiles: undefined,
-				renamed: false,
-			});
-			expect(readFileSync(customFile, "utf8")).toBe("{}");
-		});
-	});
-
-	describe("getDefaultProjectFilePath", () => {
-		it("includes project name and extension", () => {
-			const path = getDefaultProjectFilePath("My Song");
-			expect(path).toContain("My Song");
-			expect(path).toContain("My Song.chdg");
-		});
-	});
-
-	describe("getDefaultOutputDir", () => {
-		it("returns output folder inside project directory", () => {
-			const out = getDefaultOutputDir("/projects/My Song/My Song.chdg");
-			expect(out).toContain("output");
+	describe("retired legacy project target helpers", () => {
+		it("keeps project creation and rename behavior out of the canonical IO service", () => {
+			const source = readFileSync(
+				new URL("./projectFileService.ts", import.meta.url),
+				"utf8",
+			);
+			expect(source).not.toContain("resolveUniqueProjectTarget");
+			expect(source).not.toContain("renameManagedProjectTarget");
+			expect(source).not.toContain("getDefaultProjectFilePath");
+			expect(source).not.toContain("rename(");
 		});
 	});
 });
+
+function canonicalProject(): ChdgProjectFile {
+	const timestamp = "2026-07-26T10:00:00.000Z";
+	return {
+		schemaVersion: 1,
+		appVersion: "0.1.0",
+		project: {
+			projectId: "project-demo",
+			artist: "Artist",
+			songName: "Song",
+			projectName: "Project",
+			createdAt: timestamp,
+			updatedAt: timestamp,
+		},
+		import: {
+			selectedTrackIds: [0],
+			sourceMappings: {
+				"midi:36": {
+					key: "midi:36",
+					sourceKind: "midi",
+					sourceLabel: "MIDI note 36",
+					detectedPiece: "kick",
+					defaultTarget: { lane: "kick", cymbal: false },
+					count: 1,
+					confidence: "high",
+					status: "mapped",
+				},
+			},
+			importedAt: timestamp,
+			importerVersion: "0.1.0",
+		},
+		assets: {
+			source: {
+				relativePath: "assets/source.mid",
+				originalFileName: "source.mid",
+				sourceKind: "midi",
+				sha256: "a".repeat(64),
+				importedAt: timestamp,
+			},
+			audio: {
+				relativePath: "assets/song.ogg",
+				sha256: "b".repeat(64),
+			},
+		},
+		sourceDocument: {
+			resolution: 960,
+			tempos: [{ tick: 0, bpm: 120 }],
+			timeSignatures: [{ tick: 0, numerator: 4, denominator: 4 }],
+			sections: [],
+			hits: [
+				{
+					id: "midi:0:9:0:36:0",
+					tick: 0,
+					detectedPiece: "kick",
+					velocity: 100,
+					durationTicks: 0,
+					sourceMappingKey: "midi:36",
+					sourceIdentity: {
+						kind: "midi",
+						trackIndex: 0,
+						channel: 9,
+						tick: 0,
+						midiNote: 36,
+						occurrenceIndex: 0,
+					},
+					source: {
+						midiNote: 36,
+						trackIndex: 0,
+						trackName: "Drums",
+						channel: 9,
+					},
+				},
+			],
+		},
+		mappings: {
+			interpretationOverrides: {},
+			targetOverrides: {},
+		},
+		corrections: {},
+		editor: { offsetMs: 125 },
+		export: { status: "never-exported" },
+	};
+}
+
+function currentExportProject(outputDir: string): ChdgProjectFile {
+	const project = canonicalProject();
+	const writtenAt = "2026-07-26T10:00:00.000Z";
+	return {
+		...project,
+		export: {
+			status: "current",
+			targetDirectory: outputDir,
+			lastSuccessfulAt: writtenAt,
+			fingerprints: {
+				sourceDocument: "e".repeat(64),
+				mappings: "f".repeat(64),
+				corrections: "1".repeat(64),
+				metadata: "2".repeat(64),
+				audio: "3".repeat(64),
+			},
+			managedFiles: {
+				"notes.chart": {
+					sha256: "c".repeat(64),
+					sizeBytes: 5,
+					writtenAt,
+				},
+				"song.ogg": {
+					sha256: "d".repeat(64),
+					sizeBytes: 13,
+					writtenAt,
+				},
+			},
+		},
+	};
+}

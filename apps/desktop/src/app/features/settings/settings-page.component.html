@@ -16,19 +16,19 @@
           <span class="pill">Purple</span>
         </div>
         <div class="setting-row">
-          <div><strong>Default project location</strong><p>Folder where new projects are created by default.</p></div>
+          <div><strong>Stored project location</strong><p>Legacy preference retained in settings. Canonical project creation is unavailable, so this value is not currently applied.</p></div>
           <input class="input-like" [ngModel]="settings().projectLocation" (ngModelChange)="updateSettings({ projectLocation: $event })" (change)="save()" />
         </div>
         <div class="setting-row">
-          <div><strong>Default output folder</strong><p>Optional override for the default output folder inside each project.</p></div>
+          <div><strong>Stored output folder</strong><p>Legacy preference retained in settings. Managed export is unavailable, so this value is not currently applied.</p></div>
           <input class="input-like" [ngModel]="settings().defaultOutputFolder" (ngModelChange)="updateSettings({ defaultOutputFolder: $event })" (change)="save()" placeholder="<project>/output" />
         </div>
         <div class="setting-row">
-          <div><strong>Default charter</strong><p>Default charter name for new projects.</p></div>
+          <div><strong>Stored charter</strong><p>Legacy preference retained for inspection; canonical creation does not currently consume it.</p></div>
           <input class="input-like" [ngModel]="settings().defaultCharter" (ngModelChange)="updateSettings({ defaultCharter: $event })" (change)="save()" />
         </div>
         <div class="setting-row">
-          <div><strong>Default offset (ms)</strong><p>Default chart offset in milliseconds.</p></div>
+          <div><strong>Stored offset (ms)</strong><p>Legacy preference retained for inspection; preview offset changes remain session-only.</p></div>
           <input class="input-like" type="number" [ngModel]="settings().defaultOffsetMs" (ngModelChange)="updateSettings({ defaultOffsetMs: $event })" (change)="save()" />
         </div>
       </section>
@@ -47,14 +47,14 @@
         </div>
         <div class="setting-row">
           <div><strong>Backend Status</strong><p>Provided through the secure preload bridge.</p></div>
-          <span class="pill">Connected</span>
+          <span class="pill">See application status</span>
         </div>
         <div class="setting-row">
           <div><strong>Local-only / Offline</strong><p>No internet required.</p></div>
           <span class="pill">Enabled</span>
         </div>
         <div class="setting-row">
-          <div><strong>Project Format</strong><p>Future project file extension.</p></div>
+          <div><strong>Project Format</strong><p>Active canonical project file extension.</p></div>
           <span class="input-like">.chdg</span>
         </div>
       </section>

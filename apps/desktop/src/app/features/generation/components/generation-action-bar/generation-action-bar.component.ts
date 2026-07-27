@@ -19,7 +19,7 @@ export class GenerationActionBarComponent {
 	@Input() canOpenOutputFolder = false;
 	@Input() canOpenPreview = false;
 	@Input() canStartGeneration = false;
-	@Input() generateActionLabel = "Start Generate";
+	@Input() generateActionLabel = "Generation Unavailable";
 	@Output() openOutputFolder = new EventEmitter<void>();
 	@Output() openPreview = new EventEmitter<void>();
 	@Output() generate = new EventEmitter<void>();

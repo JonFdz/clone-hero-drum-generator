@@ -11,6 +11,6 @@ import { RouterModule } from "@angular/router";
 })
 export class ProjectsLibraryHeaderComponent {
 	@Input() projectCount = 0;
+	@Input() newProjectUnavailableMessage = "";
 	@Output() openProject = new EventEmitter<void>();
-	@Output() newProject = new EventEmitter<void>();
 }

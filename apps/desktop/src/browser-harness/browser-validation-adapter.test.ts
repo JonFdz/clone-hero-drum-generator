@@ -6,7 +6,7 @@ import { resolveBrowserScenario } from "./scenario-registry";
 
 function projectState(status: DesktopProjectState["outputStatus"]): DesktopProjectState {
 	return {
-		projectName: "Demo Project",
+		projectName: "Synthetic Artist - Harness Demo - Demo Project",
 		dirty: false,
 		outputStatus: status,
 		missingPaths: [],
@@ -26,7 +26,7 @@ function generateState(
 		sourceKind: scenario.project?.sourceKind,
 		selectedTracks: scenario.project?.selectedTracks ?? [],
 		metadata: scenario.project?.metadata ?? {},
-		mappingOverrides: scenario.project?.mappingOverrides ?? {},
+		mappingOverrides: scenario.runtimeMappingOverrides ?? {},
 		issues: [],
 		logs: [],
 		status:

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { DesktopGenerateStateService } from "../app/services/desktop-generate-state.service";
 import { seedBrowserScenario } from "./browser-scenario-initializer";
 import { resolveBrowserScenario } from "./scenario-registry";
 
@@ -6,6 +7,7 @@ function createContext() {
 	return {
 		session: { applyHydration: vi.fn() },
 		workflowHydrator: { hydrate: vi.fn() },
+		runtimeSourceReview: { loadRuntimeSourceReviewState: vi.fn() },
 		generationSeeder: { seed: vi.fn() },
 	};
 }
@@ -16,6 +18,50 @@ describe("browser scenario application-state seeding", () => {
 		seedBrowserScenario(resolveBrowserScenario("empty"), context);
 		expect(context.session.applyHydration).not.toHaveBeenCalled();
 		expect(context.workflowHydrator.hydrate).not.toHaveBeenCalled();
+		expect(
+			context.runtimeSourceReview.loadRuntimeSourceReviewState,
+		).not.toHaveBeenCalled();
+	});
+
+	it("seeds transient Source Review state without adding it to the project payload", () => {
+		const context = createContext();
+		const scenario = resolveBrowserScenario("source-review-ready");
+
+		seedBrowserScenario(scenario, context);
+
+		expect(
+			context.runtimeSourceReview.loadRuntimeSourceReviewState,
+		).toHaveBeenCalledWith({
+			analysis: scenario.runtimeAnalysis,
+			mappingOverrides: scenario.runtimeMappingOverrides,
+		});
+		expect(scenario.project).not.toHaveProperty("analysis");
+		expect(scenario.project).not.toHaveProperty("mappingOverrides");
+	});
+
+	it("makes transient Source Review state available in the real runtime store", () => {
+		const runtimeStore = new DesktopGenerateStateService({
+			markNeedsRegenerate: vi.fn(),
+		} as never);
+		const context = {
+			...createContext(),
+			runtimeSourceReview: runtimeStore,
+		};
+		const scenario = resolveBrowserScenario("source-review-attention");
+
+		seedBrowserScenario(scenario, context);
+
+		expect(runtimeStore.state().analysisCache).toBe(scenario.runtimeAnalysis);
+		expect(runtimeStore.state().inspection).toBe(
+			scenario.runtimeAnalysis?.inspection,
+		);
+		expect(runtimeStore.state().normalizationPreview).toBe(
+			scenario.runtimeAnalysis?.normalizationPreview,
+		);
+		expect(runtimeStore.state().mappingOverrides).toEqual(
+			scenario.runtimeMappingOverrides,
+		);
+		expect(runtimeStore.state().status).toBe("ready-to-generate");
 	});
 
 	it("hydrates project identity and workflow through public APIs", () => {

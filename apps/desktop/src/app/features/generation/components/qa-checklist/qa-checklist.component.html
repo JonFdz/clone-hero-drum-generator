@@ -1,16 +1,16 @@
 <section class="card checklist-card" [class.compact]="hasOnlyInfoChecks">
 	<div class="card-heading">
 		<div>
-			<h2>QA Checklist</h2>
-			<p>Errors block generation. Warnings and info are non-blocking.</p>
+			<h2>Legacy Runtime Diagnostics</h2>
+			<p>Read-only diagnostics from dormant runtime state. Managed generation and corrective actions are unavailable in this migration.</p>
 		</div>
 		@if (hasOnlyInfoChecks) {
-			<span class="pill success">All checks passed</span>
+			<span class="pill success">No diagnostic warnings</span>
 		}
 	</div>
 	@if (hasOnlyInfoChecks) {
 		<div class="empty-state small">
-			<strong>All checks passed</strong
+			<strong>No diagnostic warnings</strong
 			><span
 				>{{ summary.infoCount }} informational checks available.</span
 			>

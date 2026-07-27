@@ -17,6 +17,8 @@ export class ProjectLibraryService {
 	readonly recentProjects = signal<RecentProject[]>([]);
 	readonly loading = signal(false);
 	readonly error = signal<string | null>(null);
+	static readonly deleteUnavailableMessage =
+		"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.";
 
 	constructor(bridge: DesktopBridgeService = inject(DesktopBridgeService)) {
 		this.bridge = bridge;
@@ -51,19 +53,10 @@ export class ProjectLibraryService {
 		}
 	}
 
-	/** Deletes a project file from disk and refreshes recents. Returns success. */
+	/** Retained compatibility facade; physical canonical project deletion is unavailable. */
 	async deleteFile(projectPath: string): Promise<boolean> {
-		try {
-			const envelope = await this.bridge.deleteProjectFile(projectPath);
-			if (!envelope.ok) {
-				console.error("Delete project failed:", envelope.error.message);
-				return false;
-			}
-			await this.refresh();
-			return true;
-		} catch (e) {
-			console.error("Delete project error:", e);
-			return false;
-		}
+		void projectPath;
+		this.error.set(ProjectLibraryService.deleteUnavailableMessage);
+		return false;
 	}
 }

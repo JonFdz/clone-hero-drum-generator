@@ -16,7 +16,6 @@ import type {
 import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
 import { DesktopValidationService } from "../../services/desktop-validation.service";
-import { ConfirmationDialogComponent } from "../../shared/confirmation-dialog/confirmation-dialog.component";
 import { GenerationActionBarComponent } from "./components/generation-action-bar/generation-action-bar.component";
 import {
 	GenerationConfigurationComponent,
@@ -35,7 +34,10 @@ import {
 	type ChecklistRow,
 } from "./components/qa-checklist/qa-checklist.component";
 import { ValidationReportComponent } from "./components/validation-report/validation-report.component";
-import { GenerationService } from "./generation.service";
+import {
+	canOpenCanonicalPreview,
+	GenerationService,
+} from "./generation.service";
 
 const severityRank: Record<ValidationItem["severity"], number> = {
 	error: 0,
@@ -67,7 +69,6 @@ function formatCheckedAt(value: string): string {
 	changeDetection: ChangeDetectionStrategy.OnPush,
 	imports: [
 		CommonModule,
-		ConfirmationDialogComponent,
 		GenerationActionBarComponent,
 		GenerationConfigurationComponent,
 		GenerationLogComponent,
@@ -91,7 +92,6 @@ export class GeneratePageComponent implements OnInit {
 	readonly project = this.projectState.state;
 	readonly autosaveWarning = this.generationService.autosaveWarning;
 	readonly checklistFilter = signal<ChecklistFilter>("all");
-	readonly showOverwriteDialog = signal(false);
 	private readonly validationRun = signal(0);
 
 	readonly summary = computed<ValidationSummary>(() => {
@@ -100,46 +100,21 @@ export class GeneratePageComponent implements OnInit {
 	});
 
 	readonly generationSteps = [
-		"Parse Source",
-		"Normalize Drums",
-		"Merge Selected Tracks",
-		"Write notes.chart",
-		"Write song.ini",
-		"Convert Audio to song.ogg",
-		"Finalize Package",
+		"Managed package generation is unavailable in this migration",
 	];
 
 	// --- Computed presentation state ---
 
 	readonly statusLabel = computed(() => {
-		if (this.state().status === "generating") return "Generating…";
-		if (this.state().generationResult) return "Generated";
-		if (this.project().outputStatus === "failed") return "Failed";
-		if (this.summary().errorCount > 0) return "Cannot generate yet";
-		if (this.summary().warningCount > 0) return "Ready with warnings";
-		return "Ready to generate";
+		return "Generation unavailable";
 	});
 
 	readonly statusDetail = computed(() => {
-		if (this.state().status === "generating")
-			return "Package generation is running.";
-		if (this.state().generationResult) {
-			return `Completed: ${formatCheckedAt(this.state().lastGeneratedAt ?? this.summary().checkedAt)}`;
-		}
-		if (this.project().outputStatus === "failed")
-			return "Generation failed. Review the log.";
-		return `Last checked: ${formatCheckedAt(this.summary().checkedAt)}`;
+		return "This route cannot create or overwrite managed Clone Hero package files.";
 	});
 
 	readonly statusTone = computed<"success" | "warning" | "danger" | "running">(
-		() => {
-			if (this.state().status === "generating") return "running";
-			if (this.state().generationResult) return "success";
-			if (this.project().outputStatus === "failed") return "danger";
-			if (this.summary().errorCount > 0) return "danger";
-			if (this.summary().warningCount > 0) return "warning";
-			return "success";
-		},
+		() => "warning",
 	);
 
 	readonly statusIcon = computed(() => {
@@ -155,21 +130,12 @@ export class GeneratePageComponent implements OnInit {
 		}
 	});
 
-	readonly reportLabel = computed(() =>
-		this.statusLabel() === "Generating…"
-			? "Ready to generate"
-			: this.statusLabel(),
-	);
+	readonly reportLabel = computed(() => this.statusLabel());
 
-	readonly reportMessage = computed(() => {
-		if (this.state().generationResult)
-			return "Package generated successfully. Ready for preview.";
-		if (this.summary().errorCount > 0)
-			return "Fix blocking errors before generating.";
-		if (this.summary().warningCount > 0)
-			return "Warnings are present, but generation is allowed.";
-		return "No blocking issues found. You can generate your Clone Hero package.";
-	});
+	readonly reportMessage = computed(
+		() =>
+			"Managed package generation is unavailable until canonical export orchestration is implemented.",
+	);
 
 	readonly sortedChecklistItems = computed<ValidationItem[]>(() =>
 		[...this.summary().items].sort(
@@ -270,23 +236,16 @@ export class GeneratePageComponent implements OnInit {
 
 	readonly generationStepState = computed<
 		"Pending" | "Running" | "Completed" | "Failed"
-	>(() => {
-		if (this.state().status === "generating") return "Running";
-		if (this.project().outputStatus === "failed") return "Failed";
-		if (this.state().generationResult) return "Completed";
-		return "Pending";
-	});
+	>(() => "Pending");
 
-	readonly canStartGeneration = computed(
-		() => this.state().status !== "generating" && this.summary().canGenerate,
-	);
+	readonly canStartGeneration = computed(() => false);
 
 	readonly canOpenOutputFolder = computed(() =>
 		Boolean(this.state().generationResult?.outputDir ?? this.state().outputDir),
 	);
 
 	readonly canOpenPreview = computed(() =>
-		Boolean(this.state().generationResult),
+		canOpenCanonicalPreview(this.state(), this.project()),
 	);
 
 	readonly outputRows = computed<OutputFileRow[]>(() => {
@@ -295,9 +254,7 @@ export class GeneratePageComponent implements OnInit {
 		return this.outputFileRows(result);
 	});
 
-	readonly generateActionLabel = computed(() =>
-		this.state().generationResult ? "Regenerate" : "Start Generate",
-	);
+	readonly generateActionLabel = computed(() => "Generation Unavailable");
 
 	// --- Lifecycle ---
 
@@ -313,27 +270,9 @@ export class GeneratePageComponent implements OnInit {
 
 	async generate(): Promise<void> {
 		const outcome = await this.generationService.generate(false);
-		if (outcome.ok) {
-			this.runValidation();
-		} else if ("needsOverwriteConfirmation" in outcome) {
-			this.showOverwriteDialog.set(true);
-		} else if (outcome.error) {
+		if (outcome.error) {
 			this.generateState.applyError(outcome.error);
 		}
-	}
-
-	async confirmOverwrite(): Promise<void> {
-		this.showOverwriteDialog.set(false);
-		const outcome = await this.generationService.generate(true);
-		if (outcome.ok) {
-			this.runValidation();
-		} else if (!("needsOverwriteConfirmation" in outcome) && outcome.error) {
-			this.generateState.applyError(outcome.error);
-		}
-	}
-
-	cancelOverwrite(): void {
-		this.showOverwriteDialog.set(false);
 	}
 
 	async openOutputFolder(): Promise<void> {

@@ -1,12 +1,14 @@
 import type {
-	ChdgProjectAnalysisCache,
-	ChdgSourceFingerprint,
 	NormalizationPreview,
 	ProjectMappingOverrides,
 	SourceInspectionResult,
 	TrackCandidate,
 } from "@chdg/project/browser";
 import { MIDI_DRUM_NOTE_ATLAS_VERSION } from "@chdg/project/browser";
+import type {
+	SourceReviewFingerprint,
+	SourceReviewRuntimeCache,
+} from "./desktop-project-runtime";
 import { chooseDefaultTracks } from "./desktop-generate-model";
 
 // Keep this browser-side fingerprint constant aligned with
@@ -103,8 +105,8 @@ export function strongestDefaultTrack(tracks: TrackCandidate[]): number[] {
 }
 
 export function sourceFingerprintMatches(
-	left: ChdgSourceFingerprint | undefined,
-	right: ChdgSourceFingerprint | undefined,
+	left: SourceReviewFingerprint | undefined,
+	right: SourceReviewFingerprint | undefined,
 ): boolean {
 	return Boolean(
 		left &&
@@ -131,8 +133,8 @@ export function stableMappingFingerprint(
 }
 
 export function validateSourceReviewCache(input: {
-	cache: ChdgProjectAnalysisCache | undefined;
-	sourceFingerprint: ChdgSourceFingerprint;
+	cache: SourceReviewRuntimeCache | undefined;
+	sourceFingerprint: SourceReviewFingerprint;
 	mappingFingerprint: string;
 	selectedTracks: number[];
 }): SourceReviewCacheValidation {
@@ -172,17 +174,17 @@ export function validateSourceReviewCache(input: {
 }
 
 export function resolvePreviewAnalysisCache(input: {
-	cache: ChdgProjectAnalysisCache | undefined;
-	sourceFingerprint: ChdgSourceFingerprint;
+	cache: SourceReviewRuntimeCache | undefined;
+	sourceFingerprint: SourceReviewFingerprint;
 	mappingFingerprint: string;
 	selectedTracks: number[];
-}): ChdgProjectAnalysisCache | undefined {
+}): SourceReviewRuntimeCache | undefined {
 	return validateSourceReviewCache(input).valid ? input.cache : undefined;
 }
 
 
 export function hasStaleGpifTrackNoteCounts(
-	cache: ChdgProjectAnalysisCache,
+	cache: SourceReviewRuntimeCache,
 	selectedTracks: number[],
 ): boolean {
 	if (cache.schemaVersion >= 2) return false;
@@ -202,14 +204,14 @@ export function hasStaleGpifTrackNoteCounts(
 }
 
 export function createAnalysisCache(input: {
-	sourceFingerprint: ChdgSourceFingerprint;
+	sourceFingerprint: SourceReviewFingerprint;
 	mappingFingerprint: string;
 	selectedTracks: number[];
 	inspection: SourceInspectionResult;
 	normalizationPreview?: NormalizationPreview;
 	inspectedAt?: string;
 	normalizedAt?: string;
-}): ChdgProjectAnalysisCache {
+}): SourceReviewRuntimeCache {
 	const normalizedTiming = input.normalizationPreview?.normalizedTiming;
 	return {
 		schemaVersion: 2,

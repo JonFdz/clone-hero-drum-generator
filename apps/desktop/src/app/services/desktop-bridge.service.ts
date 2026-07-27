@@ -1,22 +1,23 @@
 import { Injectable, signal } from "@angular/core";
 import type {
-	GeneratePackageInput,
-	GeneratePackageResult,
 	InspectSourceInput,
 	JsonEnvelope,
 	NormalizationPreview,
 	NormalizeSelectionInput,
 	SourceInspectionResult,
-	ChdgProjectAnalysisCache,
 	ChdgProjectFile,
-	ChdgOutputStatus,
-	ChdgSourceFingerprint,
 	DesktopSettings,
 	MappingOverrideProfile,
 	RecentProject,
-	ProjectMappingOverrides,
 } from "@chdg/project/browser";
 import { unavailableDesktopHealth } from "./desktop-bridge-model";
+import type {
+	DesktopOutputStatus,
+	DesktopProjectIdentity,
+	DesktopSourceTiming,
+	SourceReviewFingerprint,
+	SourceReviewRuntimeCache,
+} from "./desktop-project-runtime";
 
 export const RUNTIME_MODE = {
 	DESKTOP: "desktop",
@@ -24,6 +25,14 @@ export const RUNTIME_MODE = {
 } as const;
 
 export type RuntimeMode = (typeof RUNTIME_MODE)[keyof typeof RUNTIME_MODE];
+
+export type ProjectMissingPathKind =
+	| "sourcePath"
+	| "audioPath"
+	| "outputDir"
+	| "outputChartPath"
+	| "outputAudioPath"
+	| "coverImagePath";
 
 export type DesktopAppInfo = {
 	name: string;
@@ -134,6 +143,7 @@ export type ApplyChartOffsetInput = {
 };
 
 export type ProjectStatePayload = {
+	project: DesktopProjectIdentity;
 	projectName: string;
 	projectFilePath?: string;
 	sourcePath?: string;
@@ -151,7 +161,8 @@ export type ProjectStatePayload = {
 		charter?: string;
 	};
 	offsetMs?: number;
-	generationStatus: ChdgOutputStatus;
+	sourceTiming?: DesktopSourceTiming;
+	generationStatus: DesktopOutputStatus;
 	lastGeneratedAt?: string;
 	outputFiles?: {
 		chart?: string;
@@ -159,8 +170,6 @@ export type ProjectStatePayload = {
 		songOgg?: string;
 		albumJpg?: string;
 	};
-	mappingOverrides?: ProjectMappingOverrides;
-	analysis?: ChdgProjectAnalysisCache;
 };
 
 export type SaveProjectResult = {
@@ -230,14 +239,8 @@ export class DesktopBridgeService {
 
 	async getSourceFingerprint(
 		sourcePath: string,
-	): Promise<JsonEnvelope<ChdgSourceFingerprint>> {
+	): Promise<JsonEnvelope<SourceReviewFingerprint>> {
 		return this.requireBridge().getSourceFingerprint(sourcePath);
-	}
-
-	async generatePackage(
-		input: GeneratePackageInput & { overwriteKnownFiles?: boolean },
-	): Promise<JsonEnvelope<GeneratePackageResult>> {
-		return this.requireBridge().generatePackage(input);
 	}
 
 	async openOutputFolder(
@@ -278,7 +281,11 @@ export class DesktopBridgeService {
 
 	async openProject(
 		filePath: string,
-	): Promise<JsonEnvelope<ProjectStatePayload & { missingPaths: string[] }>> {
+	): Promise<
+		JsonEnvelope<
+			ProjectStatePayload & { missingPaths: ProjectMissingPathKind[] }
+		>
+	> {
 		return this.requireBridge().openProject(filePath);
 	}
 
@@ -331,16 +338,15 @@ export class DesktopBridgeService {
 	}
 
 	async getAudioPreviewSource(input: {
-		outputDir?: string;
 		generatedSongOggPath?: string;
 	}): Promise<JsonEnvelope<AudioPreviewSource>> {
 		return this.requireBridge().getAudioPreviewSource(input);
 	}
 
 	async getChartPreviewData(input: {
-		outputDir?: string;
 		chartPath?: string;
-		analysis?: ChdgProjectAnalysisCache;
+		sourceTiming?: DesktopSourceTiming;
+		analysis?: SourceReviewRuntimeCache;
 	}): Promise<JsonEnvelope<ChartPreviewData>> {
 		return this.requireBridge().getChartPreviewData(input);
 	}

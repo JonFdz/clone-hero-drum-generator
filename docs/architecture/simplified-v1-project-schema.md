@@ -21,7 +21,12 @@
 - Missing export target does not block open/edit.
 - External original source/audio paths are not persisted as dependencies.
 
-## Proposed contract
+## Canonical V1 contract
+
+The approved OpenSpec vocabulary is canonical for the serialized V1 format.
+The stable identifier is `project.projectId`, and the immutable imported
+musical source is `sourceDocument`. Provisional `project.id`, top-level
+`projectId`, and persisted `chart` aliases are rejected rather than migrated.
 
 ```ts
 export type ChdgProjectFile = {
@@ -29,12 +34,23 @@ export type ChdgProjectFile = {
   appVersion?: string;
 
   project: {
-    id: string;
+    projectId: string;
     artist: string;
     songName: string;
     projectName: string;
     createdAt: string;
     updatedAt: string;
+    album?: string;
+    year?: string;
+    genre?: string;
+    charter?: string;
+  };
+
+  import: {
+    selectedTrackIds: number[];
+    sourceMappings: Record<string, SourceMappingDefinition>;
+    importedAt: string;
+    importerVersion: string;
   };
 
   assets: {
@@ -56,40 +72,29 @@ export type ChdgProjectFile = {
     };
   };
 
-  import: {
-    selectedTrackIds: number[];
-    sourceMappings: Record<string, SourceMappingDefinition>;
-    importedAt: string;
-    importerVersion: string;
-  };
-
-  chart: {
-    resolution: number;
-    tempos: TempoEvent[];
-    timeSignatures: TimeSignatureEvent[];
-    sections: SongSection[];
-    hits: ImportedDrumHit[];
+  sourceDocument: {
+    readonly resolution: number;
+    readonly tempos: readonly Readonly<TempoEvent>[];
+    readonly timeSignatures: readonly Readonly<TimeSignatureEvent>[];
+    readonly sections: readonly Readonly<SongSection>[];
+    readonly hits: readonly ImportedDrumHit[];
   };
 
   mappings: ProjectMappings;
   corrections: Record<string, NoteCorrection>;
-
-  metadata: {
-    album?: string;
-    year?: string;
-    genre?: string;
-    charter?: string;
-  };
 
   editor: {
     offsetMs: number;
   };
 
   export: {
+    status: "never-exported" | "current" | "outdated" | "failed";
     targetDirectory?: string;
     lastSuccessfulAt?: string;
     fingerprints?: {
-      chart?: string;
+      sourceDocument?: string;
+      mappings?: string;
+      corrections?: string;
       metadata?: string;
       audio?: string;
       cover?: string;
@@ -144,8 +149,10 @@ Assets:
 - cover optional;
 - hashes structurally valid.
 
-Chart:
+Source document:
 
+- imported timing, hits, source identity, and MIDI/GPIF provenance are immutable;
+- nested provenance collections such as input MIDI numbers are readonly;
 - positive resolution;
 - tempo event at tick 0;
 - finite non-negative ticks;
@@ -157,8 +164,20 @@ Chart:
 Mappings:
 
 - valid interpretation pieces;
-- valid lane/cymbal combination;
+- musical piece and Clone Hero target/cymbal semantics remain independent;
+- standard piece targets are defaults, not invariants;
+- cymbal targets are valid only on yellow, blue, or green; kick and red cannot be cymbals;
+- musical kick targets the normal kick lane, and non-kick pieces cannot target kick;
 - unresolved mappings explicit.
+
+Corrections:
+
+- sparse fields inherit their known effective state;
+- open hi-hat defaults to accent while ghost defaults to false;
+- effective accent and ghost cannot both be true, including when open-hi-hat
+  accent is inherited rather than explicitly stored;
+- unresolved or ignored mappings do not invent a musical piece for dynamics
+  validation.
 
 Export:
 

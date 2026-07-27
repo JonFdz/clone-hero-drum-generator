@@ -1,4 +1,5 @@
 import "@angular/compiler";
+import { readFileSync } from "node:fs";
 import { Injector, runInInjectionContext, signal } from "@angular/core";
 import { Router } from "@angular/router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -7,18 +8,11 @@ import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator
 import { ProjectLibraryService } from "../projects/public-api";
 import { SettingsService } from "../settings/public-api";
 import {
+  PROJECT_DETAILS_UNAVAILABLE_MESSAGE,
   PROJECT_DETAILS_REACTIVE_EFFECTS,
   ProjectDetailsPageComponent,
 } from "./project-details-page.component";
 import { ProjectDetailsService } from "./project-details.service";
-
-const projectPayload = {
-  projectName: "Created Project",
-  generationStatus: "not-generated",
-  selectedTracks: [],
-  metadata: {},
-  mappingOverrides: {},
-} as never;
 
 describe("ProjectDetailsPageComponent", () => {
   const navigateByUrl = vi.fn();
@@ -27,19 +21,26 @@ describe("ProjectDetailsPageComponent", () => {
   const createProject = vi.fn();
   const saveProject = vi.fn();
   const saveProjectAs = vi.fn();
-  const buildProjectStatePayload = vi.fn();
   const setSavedOutputDir = vi.fn();
   const applyError = vi.fn();
   const pickSource = vi.fn();
+  const pickAudio = vi.fn();
+  const pickOutput = vi.fn();
+  const pickCover = vi.fn();
+  const setSourcePath = vi.fn();
+  const setAudioPath = vi.fn();
+  const setOutputDir = vi.fn();
+  const setCoverImagePath = vi.fn();
   const workflowState = signal({ metadata: {}, selectedTracks: [], mappingOverrides: {}, issues: [], logs: [], status: "idle", offsetMs: 0 });
   let component: ProjectDetailsPageComponent;
   let session: ProjectSessionStore;
+  let injector: Injector;
 
   beforeEach(() => {
     vi.clearAllMocks();
     workflowState.set({ metadata: {}, selectedTracks: [], mappingOverrides: {}, issues: [], logs: [], status: "idle", offsetMs: 0 });
     session = new ProjectSessionStore();
-    const injector = Injector.create({ providers: [
+    injector = Injector.create({ providers: [
       { provide: PROJECT_DETAILS_REACTIVE_EFFECTS, useValue: false },
       { provide: ProjectSessionStore, useValue: session },
       { provide: Router, useValue: { navigateByUrl } },
@@ -47,61 +48,123 @@ describe("ProjectDetailsPageComponent", () => {
       { provide: ProjectLibraryService, useValue: { refresh } },
       { provide: ProjectWorkflowHydrator, useValue: { hydrate } },
       { provide: SettingsService, useValue: { settings: signal({ schemaVersion: 1, theme: "dark", projectLocation: "" }) } },
-      { provide: ProjectDetailsService, useValue: { pickSource, pickAudio: vi.fn(), pickOutput: vi.fn(), pickCover: vi.fn(), coverPreview: vi.fn() } },
+      { provide: ProjectDetailsService, useValue: { pickSource, pickAudio, pickOutput, pickCover, coverPreview: vi.fn() } },
       { provide: DesktopGenerateStateService, useValue: {
         state: workflowState,
         validation: signal({ errors: [] }),
-        buildProjectStatePayload,
         setSavedOutputDir,
         setMetadata: vi.fn(),
         setOffsetMsInput: vi.fn(),
-        setSourcePath: vi.fn(),
-        setAudioPath: vi.fn(),
-        setOutputDir: vi.fn(),
-        setCoverImagePath: vi.fn(),
+        setSourcePath,
+        setAudioPath,
+        setOutputDir,
+        setCoverImagePath,
         applyError,
       } },
     ]});
     component = runInInjectionContext(injector, () => new ProjectDetailsPageComponent());
   });
 
-  it("creates, hydrates, refreshes, updates the name, and navigates", async () => {
-    createProject.mockResolvedValue({ ok: true, payload: projectPayload });
+  it("reports canonical project creation as unavailable without invoking persistence", async () => {
     await component.createProject();
-    expect(hydrate).toHaveBeenCalledWith(projectPayload);
-    expect(refresh).toHaveBeenCalledOnce();
-    expect(component.projectNameInput).toBe("Created Project");
-    expect(navigateByUrl).toHaveBeenCalledWith("/projects/details?mode=new");
-  });
-
-  it("saves the current payload and updates the saved output", async () => {
-    const currentPayload = { projectName: "Demo", outputDir: "/current" };
-    const savedPayload = { ...currentPayload, outputDir: "/normalized" };
-    buildProjectStatePayload.mockReturnValue(currentPayload);
-    saveProject.mockResolvedValue({ ok: true, filePath: "/demo.chdg", payload: savedPayload });
-    await component.saveProject();
-    expect(saveProject).toHaveBeenCalledWith(currentPayload);
-    expect(setSavedOutputDir).toHaveBeenCalledWith("/normalized");
-    expect(refresh).toHaveBeenCalledOnce();
-  });
-
-  it("does not refresh recents when Save As is cancelled", async () => {
-    buildProjectStatePayload.mockReturnValue({ projectName: "Demo" });
-    saveProjectAs.mockResolvedValue({ ok: false, cancelled: true });
-    await component.saveProjectAs();
+    expect(createProject).not.toHaveBeenCalled();
+    expect(hydrate).not.toHaveBeenCalled();
     expect(refresh).not.toHaveBeenCalled();
+    expect(applyError).toHaveBeenCalledWith(
+      PROJECT_DETAILS_UNAVAILABLE_MESSAGE,
+    );
   });
 
-  it("refreshes recents after a successful Save As", async () => {
-    buildProjectStatePayload.mockReturnValue({ projectName: "Demo" });
-    saveProjectAs.mockResolvedValue({ ok: true, filePath: "/saved.chdg", payload: projectPayload });
+  it("displays canonical projectName rather than the composite display name", () => {
+    session.applyHydration({
+      project: {
+        projectId: "project-demo",
+        artist: "Artist",
+        songName: "Song",
+        projectName: "Expert Drums",
+        displayName: "Artist - Song - Expert Drums",
+      },
+      projectName: "Artist - Song - Expert Drums",
+      selectedTracks: [],
+      metadata: {},
+      generationStatus: "not-generated",
+    });
+    component = runInInjectionContext(
+      injector,
+      () => new ProjectDetailsPageComponent(),
+    );
+    expect(component.projectNameInput).toBe("Expert Drums");
+    expect(component.setupDisabled()).toBe(true);
+  });
+
+  it("uses truthful unavailable create-mode labels and disables setup controls", () => {
+    const template = readFileSync(
+      new URL("./project-details-page.component.html", import.meta.url),
+      "utf8",
+    );
+    expect(component.title()).toBe("Project Setup Unavailable");
+    expect(component.primarySaveLabel).toBe("Save Unavailable");
+    expect(component.setupDisabled()).toBe(true);
+    expect(template).not.toContain("Create Project");
+    expect(template).not.toContain("Save Draft");
+    expect(template).not.toContain("Save Changes");
+    expect(template).toContain("New Project Unavailable");
+    expect(template).toContain("Save As Unavailable");
+    expect(template).toContain("[disabled]=\"setupDisabled()\"");
+    expect(template).toContain(
+      "Open an existing .chdg project from Projects",
+    );
+    for (const contradiction of [
+      "Re-select",
+      "Regenerate to",
+      "Choose File",
+      "Choose Folder",
+      "Choose Cover",
+      "Set song information",
+      "Before generation",
+      "Review Source",
+      "adjust settings before proceeding",
+    ]) {
+      expect(template).not.toContain(contradiction);
+    }
+    expect(template).toContain(
+      "Read-only inspection. Editing, replacement, review, and persistence are unavailable.",
+    );
+  });
+
+  it("reports Save as unavailable without building or persisting a provisional payload", async () => {
+    await component.saveProject();
+    expect(saveProject).not.toHaveBeenCalled();
+    expect(setSavedOutputDir).not.toHaveBeenCalled();
+    expect(applyError).toHaveBeenCalledWith(
+      PROJECT_DETAILS_UNAVAILABLE_MESSAGE,
+    );
+  });
+
+  it("reports Save As as unavailable without invoking persistence", async () => {
     await component.saveProjectAs();
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(saveProjectAs).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+    expect(applyError).toHaveBeenCalledWith(
+      PROJECT_DETAILS_UNAVAILABLE_MESSAGE,
+    );
   });
 
-  it("reports picker failures through workflow error state", async () => {
-    pickSource.mockRejectedValue(new Error("picker failed"));
+  it("does not invoke external pickers or replace runtime paths", async () => {
     await component.pickSource();
-    expect(applyError).toHaveBeenCalledWith("picker failed");
+    await component.pickAudio();
+    await component.pickOutput();
+    await component.pickCover();
+    expect(pickSource).not.toHaveBeenCalled();
+    expect(pickAudio).not.toHaveBeenCalled();
+    expect(pickOutput).not.toHaveBeenCalled();
+    expect(pickCover).not.toHaveBeenCalled();
+    expect(setSourcePath).not.toHaveBeenCalled();
+    expect(setAudioPath).not.toHaveBeenCalled();
+    expect(setOutputDir).not.toHaveBeenCalled();
+    expect(setCoverImagePath).not.toHaveBeenCalled();
+    expect(applyError).toHaveBeenCalledWith(
+      PROJECT_DETAILS_UNAVAILABLE_MESSAGE,
+    );
   });
 });

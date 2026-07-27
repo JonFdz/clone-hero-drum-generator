@@ -1,5 +1,5 @@
 import "@angular/compiler";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PreviewPageComponent } from "./preview-page.component";
 
 describe("PreviewPageComponent", () => {
@@ -29,5 +29,19 @@ describe("PreviewPageComponent", () => {
 		expect(c.visualMode()).toBe("chart");
 		expect(c.highwayPreset()).toBe("normal");
 		expect(c.highwayHudEnabled()).toBe(false);
+	});
+
+	it("keeps an applied offset in the preview session until an explicit reload", async () => {
+		const applyOffset = vi.fn().mockResolvedValue(undefined);
+		const load = vi.fn().mockResolvedValue(undefined);
+		const component = new PreviewPageComponent({
+			applyOffset,
+			load,
+		} as never);
+
+		await component.applyOffset();
+
+		expect(applyOffset).toHaveBeenCalledOnce();
+		expect(load).not.toHaveBeenCalled();
 	});
 });

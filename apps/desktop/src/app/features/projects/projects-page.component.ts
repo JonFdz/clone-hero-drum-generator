@@ -1,9 +1,12 @@
 import { CommonModule } from "@angular/common";
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from "@angular/core";
 import { Router } from "@angular/router";
-import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator } from "../project-session/public-api";
-import { createDefaultProjectName } from "../../services/project-name-model";
+import {
+	PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE,
+	ProjectPersistenceService,
+	ProjectSessionStore,
+	ProjectWorkflowHydrator,
+} from "../project-session/public-api";
 import {
 	deriveProjectsLibraryModel,
 	type ProjectsLibraryItem,
@@ -38,7 +41,6 @@ export class ProjectsPageComponent {
 	private readonly session = inject(ProjectSessionStore);
 	private readonly persistence = inject(ProjectPersistenceService);
 	private readonly library = inject(ProjectLibraryService);
-	private readonly generateState = inject(DesktopGenerateStateService);
 	private readonly workflowHydrator = inject(ProjectWorkflowHydrator);
 	private readonly router = inject(Router);
 
@@ -46,6 +48,8 @@ export class ProjectsPageComponent {
 	readonly sourceFilter = signal<ProjectsSourceFilter>("all");
 	readonly sortMode = signal<ProjectsSortMode>("last-opened");
 	readonly projectPendingRemoval = signal<ProjectsLibraryItem | null>(null);
+	readonly persistenceUnavailableMessage =
+		PROJECT_PERSISTENCE_UNAVAILABLE_MESSAGE;
 	readonly libraryLoading = this.library.loading;
 	readonly libraryError = this.library.error;
 
@@ -93,18 +97,6 @@ export class ProjectsPageComponent {
 		await this.library.remove(project.path);
 	}
 
-	async confirmRemoveAndDelete(): Promise<void> {
-		const project = this.projectPendingRemoval();
-		if (!project) return;
-		this.projectPendingRemoval.set(null);
-		const deletedCurrent = this.session.projectFilePath() === project.path;
-		const ok = await this.library.deleteFile(project.path);
-		if (ok && deletedCurrent) {
-			this.session.resetActiveProject();
-			this.generateState.reset();
-		}
-	}
-
 	resetFilters(): void {
 		this.query.set("");
 		this.sourceFilter.set("all");
@@ -120,13 +112,4 @@ export class ProjectsPageComponent {
 		}
 	}
 
-	async newProject(): Promise<void> {
-		const defaultName = createDefaultProjectName();
-		const result = await this.persistence.createProject(defaultName);
-		if (result.ok) {
-			this.workflowHydrator.hydrate(result.payload);
-			await this.library.refresh();
-			await this.router.navigateByUrl("/projects/details?mode=new");
-		}
-	}
 }

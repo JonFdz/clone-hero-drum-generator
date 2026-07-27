@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createBrowserBridge, installBrowserBridge } from "./install-browser-bridge";
 import { resolveBrowserScenario } from "./scenario-registry";
-import { HARNESS_PATHS } from "./fixture-builders";
+import {
+	HARNESS_AUDIO_PREVIEW_SRC,
+	HARNESS_PATHS,
+} from "./fixture-builders";
 
 describe("browser bridge installation", () => {
 	it("installs a complete bridge with deterministic startup responses", async () => {
@@ -113,23 +116,13 @@ describe("browser bridge installation", () => {
 		},
 	);
 
-	it("supports source-review autosave as a documented in-memory no-op", async () => {
-		const scenario = resolveBrowserScenario("source-review-ready");
-		const bridge = createBrowserBridge(scenario);
-		const saved = await bridge.saveProject(scenario.project!);
-		expect(saved).toMatchObject({
-			ok: true,
-			data: { filePath: scenario.project!.projectFilePath },
-		});
-	});
-
-	it("rejects autosave payloads outside the active synthetic project identity", async () => {
+	it("keeps legacy project persistence explicitly unavailable", async () => {
 		const scenario = resolveBrowserScenario("source-review-ready");
 		const bridge = createBrowserBridge(scenario);
 		await expect(
-			bridge.saveProject({ ...scenario.project!, projectName: "Other Project" }),
+			bridge.saveProject(scenario.project!),
 		).rejects.toThrow(
-			'operation "saveProject" rejected input in scenario "source-review-ready": projectName must identify the active synthetic project',
+			'operation "saveProject" is unsupported in scenario "source-review-ready"',
 		);
 		await expect(
 			createBrowserBridge(resolveBrowserScenario("empty")).saveProject({
@@ -140,34 +133,49 @@ describe("browser bridge installation", () => {
 		);
 	});
 
+	it("returns a typed unavailable result for canonical project deletion", async () => {
+		const bridge = createBrowserBridge(resolveBrowserScenario("project-loaded"));
+
+		await expect(
+			bridge.deleteProjectFile(HARNESS_PATHS.PROJECT),
+		).resolves.toEqual({
+			ok: false,
+			error: {
+				code: "CANONICAL_PROJECT_DELETE_NOT_AVAILABLE",
+				message:
+					"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.",
+			},
+			issues: [],
+		});
+	});
+
 	it("validates preview paths before returning static chart and audio data", async () => {
 		const bridge = createBrowserBridge(resolveBrowserScenario("preview-ready"));
 		await expect(
 			bridge.getChartPreviewData({
-				outputDir: HARNESS_PATHS.OUTPUT,
 				chartPath: HARNESS_PATHS.CHART,
 			}),
 		).resolves.toMatchObject({ ok: true, data: { resolution: 480 } });
 		await expect(
 			bridge.getAudioPreviewSource({
-				outputDir: HARNESS_PATHS.OUTPUT,
 				generatedSongOggPath: HARNESS_PATHS.SONG_OGG,
 			}),
 		).resolves.toMatchObject({
-			ok: false,
-			error: { code: "BROWSER_AUDIO_UNAVAILABLE" },
+			ok: true,
+			data: {
+				src: HARNESS_AUDIO_PREVIEW_SRC,
+				sourceKind: "generated",
+			},
 		});
 		await expect(
 			bridge.getChartPreviewData({
-				outputDir: "C:\\Other\\Output",
-				chartPath: HARNESS_PATHS.CHART,
+				chartPath: "C:\\Other\\notes.chart",
 			}),
 		).rejects.toThrow(
 			'operation "getChartPreviewData" rejected input in scenario "preview-ready"',
 		);
 		await expect(
 			bridge.getAudioPreviewSource({
-				outputDir: HARNESS_PATHS.OUTPUT,
 				generatedSongOggPath: "C:\\Other\\song.ogg",
 			}),
 		).rejects.toThrow(

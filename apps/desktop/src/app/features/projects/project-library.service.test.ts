@@ -57,24 +57,18 @@ describe("ProjectLibraryService", () => {
 		expect(bridge.readRecentProjects).toHaveBeenCalledTimes(2);
 	});
 
-	it("deleteFile returns false when the bridge fails and keeps recents", async () => {
-		const bridge = makeBridge({
-			deleteProjectFile: vi.fn().mockResolvedValue({ ok: false, error: { message: "no" } }),
-		});
+	it("deleteFile remains unavailable without calling the physical-delete bridge", async () => {
+		const bridge = makeBridge();
 		const library = new ProjectLibraryService(bridge as unknown as DesktopBridgeService);
+		library.recentProjects.set([
+			{ path: "/a.json", name: "A", lastOpenedAt: "" },
+		]);
 
 		const ok = await library.deleteFile("/a.json");
 
 		expect(ok).toBe(false);
-	});
-
-	it("deleteFile returns true and refreshes on success", async () => {
-		const bridge = makeBridge();
-		const library = new ProjectLibraryService(bridge as unknown as DesktopBridgeService);
-
-		const ok = await library.deleteFile("/a.json");
-
-		expect(ok).toBe(true);
-		expect(bridge.deleteProjectFile).toHaveBeenCalledWith("/a.json");
+		expect(bridge.deleteProjectFile).not.toHaveBeenCalled();
+		expect(library.recentProjects()).toHaveLength(1);
+		expect(library.error()).toBe(ProjectLibraryService.deleteUnavailableMessage);
 	});
 });

@@ -1,11 +1,14 @@
 import { Injectable, inject, signal } from "@angular/core";
-import type {
-	GeneratePackageResult,
-	ValidationSummary,
-} from "@chdg/project/browser";
+import type { ValidationSummary } from "@chdg/project/browser";
 import { DesktopBridgeService } from "../../services/desktop-bridge.service";
-import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
-import { DesktopProjectStateService } from "../../services/desktop-project-state.service";
+import {
+	DesktopGenerateStateService,
+	type DesktopGenerateState,
+} from "../../services/desktop-generate-state.service";
+import {
+	DesktopProjectStateService,
+	type DesktopProjectState,
+} from "../../services/desktop-project-state.service";
 import { DesktopValidationService } from "../../services/desktop-validation.service";
 
 export type GenerationReadiness = {
@@ -15,12 +18,26 @@ export type GenerationReadiness = {
 	label: string;
 };
 
-export type GenerationOutcome =
-	| { ok: true; result: GeneratePackageResult }
-	| { ok: false; error: string }
-	| { ok: false; needsOverwriteConfirmation: true; message: string };
+export type GenerationOutcome = { ok: false; error: string };
 
 export type OutputFolderOutcome = { ok: true } | { ok: false; error: string };
+
+export const GENERATION_UNAVAILABLE_MESSAGE =
+	"Managed package generation is not available in this legacy workflow.";
+
+export function canOpenCanonicalPreview(
+	state: Pick<DesktopGenerateState, "outputFiles">,
+	project: Pick<DesktopProjectState, "outputStatus" | "missingPaths">,
+): boolean {
+	if (project.outputStatus !== "generated") return false;
+	if (!state.outputFiles?.chart || !state.outputFiles.songOgg) return false;
+	return !project.missingPaths.some(
+		(warning) =>
+			warning.kind === "outputDir" ||
+			warning.kind === "outputChartPath" ||
+			warning.kind === "outputAudioPath",
+	);
+}
 
 /**
  * Generation orchestration service.
@@ -31,8 +48,8 @@ export type OutputFolderOutcome = { ok: true } | { ok: false; error: string };
 export class GenerationService {
 	private readonly bridge = inject(DesktopBridgeService);
 	private readonly generateState = inject(DesktopGenerateStateService);
-	private readonly validationService = inject(DesktopValidationService);
 	private readonly projectState = inject(DesktopProjectStateService);
+	private readonly validationService = inject(DesktopValidationService);
 
 	readonly autosaveWarning = signal<string | null>(null);
 
@@ -46,63 +63,26 @@ export class GenerationService {
 
 	readiness(): GenerationReadiness {
 		const state = this.generateState.state();
-		const summary = this.validationService.validateNow();
 		return {
-			canStart: state.status !== "generating" && summary.canGenerate,
+			canStart: false,
 			canOpenOutput: Boolean(
 				state.generationResult?.outputDir ?? state.outputDir,
 			),
-			canOpenPreview: Boolean(state.generationResult),
-			label: state.generationResult ? "Regenerate" : "Start Generate",
+			canOpenPreview: canOpenCanonicalPreview(
+				state,
+				this.projectState.state(),
+			),
+			label: "Generation Unavailable",
 		};
 	}
 
-	async generate(overwriteKnownFiles: boolean): Promise<GenerationOutcome> {
-		this.autosaveWarning.set(null);
-		const summary = this.validateNow();
-		if (!summary.canGenerate) {
-			return {
-				ok: false,
-				error: summary.items
-					.filter((item) => item.blocking)
-					.map((item) => item.message)
-					.join(" "),
-			};
-		}
-
-		const input = this.generateState.buildGenerateInput(overwriteKnownFiles);
-		if (!input) {
-			return { ok: false, error: "Generation input is incomplete." };
-		}
-
-		this.generateState.startGenerating();
-		try {
-			const envelope = await this.bridge.generatePackage(input);
-			if (
-				!envelope.ok &&
-				envelope.error.code === "OVERWRITE_CONFIRMATION_REQUIRED" &&
-				!overwriteKnownFiles
-			) {
-				return {
-					ok: false,
-					needsOverwriteConfirmation: true,
-					message: envelope.error.message,
-				};
-			}
-			this.generateState.applyGeneration(envelope);
-			if (envelope.ok) {
-				await this.autosaveGenerationResult();
-			}
-			if (envelope.ok) {
-				return { ok: true, result: envelope.data };
-			}
-			return { ok: false, error: envelope.error.message };
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : "Generation failed.";
-			this.generateState.applyError(message);
-			return { ok: false, error: message };
-		}
+	generate(overwriteKnownFiles: boolean): Promise<GenerationOutcome> {
+		void overwriteKnownFiles;
+		this.autosaveWarning.set(GENERATION_UNAVAILABLE_MESSAGE);
+		return Promise.resolve({
+			ok: false,
+			error: GENERATION_UNAVAILABLE_MESSAGE,
+		});
 	}
 
 	async openOutputFolder(): Promise<OutputFolderOutcome> {
@@ -125,19 +105,4 @@ export class GenerationService {
 		}
 	}
 
-	private async autosaveGenerationResult(): Promise<void> {
-		const project = this.projectState.state();
-		if (!project.projectFilePath) return;
-
-		const payload = this.generateState.buildProjectStatePayload(
-			project.projectName,
-			project.projectFilePath,
-		);
-		const saved = await this.projectState.saveProject(payload);
-		if (!saved) {
-			this.autosaveWarning.set(
-				"Generation completed, but CHDG could not autosave the project file. Use Save to persist the generated output status.",
-			);
-		}
-	}
 }

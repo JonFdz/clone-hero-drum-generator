@@ -21,6 +21,12 @@ describe("GeneratePageComponent", () => {
 	const navigateByUrl = vi.fn();
 	const generateFn = vi.fn();
 	const openOutputFolder = vi.fn();
+	const projectState = signal({
+		outputStatus: "not-generated" as string,
+		projectFilePath: undefined as string | undefined,
+		projectName: "Test",
+		missingPaths: [] as Array<{ kind: string; message: string }>,
+	});
 
 	const workflowState = signal({
 		status: "idle" as string,
@@ -34,6 +40,9 @@ describe("GeneratePageComponent", () => {
 		selectedTracks: [] as number[],
 		metadata: {} as Record<string, unknown>,
 		offsetMs: 0 as number | undefined,
+		outputFiles: undefined as
+			| { chart?: string; songOgg?: string }
+			| undefined,
 	});
 
 	let component: GeneratePageComponent;
@@ -52,6 +61,13 @@ describe("GeneratePageComponent", () => {
 			selectedTracks: [],
 			metadata: {},
 			offsetMs: 0,
+			outputFiles: undefined,
+		});
+		projectState.set({
+			outputStatus: "not-generated",
+			projectFilePath: undefined,
+			projectName: "Test",
+			missingPaths: [],
 		});
 
 		const injector = Injector.create({
@@ -65,17 +81,12 @@ describe("GeneratePageComponent", () => {
 						applyGeneration: vi.fn(),
 						startGenerating: vi.fn(),
 						buildGenerateInput: vi.fn(),
-						buildProjectStatePayload: vi.fn(),
 					},
 				},
 				{
 					provide: DesktopProjectStateService,
 					useValue: {
-						state: signal({
-							outputStatus: "not-generated",
-							projectFilePath: undefined,
-							projectName: "Test",
-						}),
+						state: projectState,
 						saveProject: vi.fn(),
 					},
 				},
@@ -102,34 +113,58 @@ describe("GeneratePageComponent", () => {
 		);
 	});
 
-	it("starts with overwrite dialog closed", () => {
-		expect(component.showOverwriteDialog()).toBe(false);
+	it("reports managed generation as unavailable", () => {
+		expect(component.statusLabel()).toBe("Generation unavailable");
+		expect(component.reportMessage()).toContain(
+			"Managed package generation is unavailable",
+		);
+		expect(component.generateActionLabel()).toBe("Generation Unavailable");
 	});
 
-	it("computes status label as ready when no errors and can generate", () => {
-		// With empty summary (canGenerate: false, errorCount: 0), should be "Ready to generate"
-		expect(component.statusLabel()).toBe("Ready to generate");
-	});
-
-	it("computes status tone as success when idle with no errors", () => {
-		expect(component.statusTone()).toBe("success");
+	it("uses warning tone for the dormant generation route", () => {
+		expect(component.statusTone()).toBe("warning");
 	});
 
 	it("cannot start generation when summary cannot generate", () => {
 		expect(component.canStartGeneration()).toBe(false);
 	});
 
-	it("cannot open preview when no generation result", () => {
+	it("cannot open Preview without current canonical managed output", () => {
 		expect(component.canOpenPreview()).toBe(false);
 	});
 
-	it("openPreview navigates to /preview when canOpenPreview is true", async () => {
+	it("opens Preview for a current canonical project with both managed files", async () => {
 		workflowState.set({
 			...workflowState(),
-			generationResult: { outputDir: "/tmp" },
+			outputFiles: {
+				chart: "/tmp/notes.chart",
+				songOgg: "/tmp/song.ogg",
+			},
 		});
+		projectState.update((state) => ({
+			...state,
+			outputStatus: "generated",
+		}));
 		await component.openPreview();
 		expect(navigateByUrl).toHaveBeenCalledWith("/preview");
+	});
+
+	it.each([
+		{ chart: "/tmp/notes.chart" },
+		{ songOgg: "/tmp/song.ogg" },
+	])("does not open Preview with an incomplete managed manifest", async (outputFiles) => {
+		workflowState.set({
+			...workflowState(),
+			outputFiles,
+		});
+		projectState.update((state) => ({
+			...state,
+			outputStatus: "generated",
+		}));
+
+		await component.openPreview();
+
+		expect(navigateByUrl).not.toHaveBeenCalled();
 	});
 
 	it("openPreview does not navigate when canOpenPreview is false", async () => {
@@ -137,35 +172,13 @@ describe("GeneratePageComponent", () => {
 		expect(navigateByUrl).not.toHaveBeenCalled();
 	});
 
-	it("generate calls generationService.generate and closes dialog on success", async () => {
-		generateFn.mockResolvedValue({ ok: true, result: {} });
-		await component.generate();
-		expect(generateFn).toHaveBeenCalledWith(false);
-		expect(component.showOverwriteDialog()).toBe(false);
-	});
-
-	it("generate opens overwrite dialog when needsOverwriteConfirmation", async () => {
+	it("generate delegates only to the unavailable service boundary", async () => {
 		generateFn.mockResolvedValue({
 			ok: false,
-			needsOverwriteConfirmation: true,
-			message: "Files exist",
+			error: "Managed package generation is not available.",
 		});
 		await component.generate();
-		expect(component.showOverwriteDialog()).toBe(true);
-	});
-
-	it("confirmOverwrite calls generate with overwrite=true and closes dialog", async () => {
-		generateFn.mockResolvedValue({ ok: true, result: {} });
-		component.showOverwriteDialog.set(true);
-		await component.confirmOverwrite();
-		expect(generateFn).toHaveBeenCalledWith(true);
-		expect(component.showOverwriteDialog()).toBe(false);
-	});
-
-	it("cancelOverwrite closes the dialog without generating", () => {
-		component.showOverwriteDialog.set(true);
-		component.cancelOverwrite();
-		expect(component.showOverwriteDialog()).toBe(false);
+		expect(generateFn).toHaveBeenCalledWith(false);
 	});
 
 	it("generate applies error when outcome has error", async () => {
@@ -182,7 +195,6 @@ describe("GeneratePageComponent", () => {
 						applyGeneration: vi.fn(),
 						startGenerating: vi.fn(),
 						buildGenerateInput: vi.fn(),
-						buildProjectStatePayload: vi.fn(),
 					},
 				},
 				{
