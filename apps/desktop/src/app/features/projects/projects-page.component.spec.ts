@@ -3,7 +3,6 @@ import { signal } from "@angular/core";
 import { Injector, runInInjectionContext } from "@angular/core";
 import { Router } from "@angular/router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DesktopGenerateStateService } from "../../services/desktop-generate-state.service";
 import { ProjectPersistenceService, ProjectSessionStore, ProjectWorkflowHydrator } from "../project-session/public-api";
 import { ProjectLibraryService } from "./project-library.service";
 import { ProjectsPageComponent } from "./projects-page.component";
@@ -28,7 +27,7 @@ describe("ProjectsPageComponent", () => {
   const openProject = vi.fn();
   const openProjectFromPicker = vi.fn();
   const deleteFile = vi.fn();
-  const resetWorkflow = vi.fn();
+  const remove = vi.fn();
   const applyError = vi.fn();
   const hydrate = vi.fn();
   let component: ProjectsPageComponent;
@@ -40,10 +39,9 @@ describe("ProjectsPageComponent", () => {
     const injector = Injector.create({ providers: [
       { provide: ProjectSessionStore, useValue: session },
       { provide: Router, useValue: { navigateByUrl } },
-      { provide: ProjectLibraryService, useValue: { recentProjects: signal([]), loading: signal(false), error: signal(null), refresh, remove: vi.fn(), deleteFile } },
+      { provide: ProjectLibraryService, useValue: { recentProjects: signal([]), loading: signal(false), error: signal(null), refresh, remove, deleteFile } },
       { provide: ProjectPersistenceService, useValue: { openProject, openProjectFromPicker } },
       { provide: ProjectWorkflowHydrator, useValue: { hydrate } },
-      { provide: DesktopGenerateStateService, useValue: { reset: resetWorkflow, applyError } },
     ]});
     component = runInInjectionContext(injector, () => new ProjectsPageComponent());
   });
@@ -69,21 +67,12 @@ describe("ProjectsPageComponent", () => {
     expect(applyError).not.toHaveBeenCalled();
   });
 
-  it("resets the active session and workflow after deleting the active project", async () => {
+  it("removes a project from recents without resetting the active session", async () => {
     session.setProjectFilePath("/active.chdg");
     component.projectPendingRemoval.set({ path: "/active.chdg", name: "Active" } as never);
-    deleteFile.mockResolvedValue(true);
-    await component.confirmRemoveAndDelete();
-    expect(session.projectFilePath()).toBeUndefined();
-    expect(resetWorkflow).toHaveBeenCalledOnce();
-  });
-
-  it("keeps the active session and workflow when deletion fails", async () => {
-    session.setProjectFilePath("/active.chdg");
-    component.projectPendingRemoval.set({ path: "/active.chdg", name: "Active" } as never);
-    deleteFile.mockResolvedValue(false);
-    await component.confirmRemoveAndDelete();
+    await component.confirmRemoveFromRecents();
+    expect(remove).toHaveBeenCalledWith("/active.chdg");
     expect(session.projectFilePath()).toBe("/active.chdg");
-    expect(resetWorkflow).not.toHaveBeenCalled();
+    expect(deleteFile).not.toHaveBeenCalled();
   });
 });

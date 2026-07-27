@@ -28,6 +28,18 @@ function unsupported<T>(scenario: BrowserHarnessScenario, operation: string): Pr
 	);
 }
 
+function canonicalProjectDeleteUnavailable() {
+	return Promise.resolve({
+		ok: false as const,
+		error: {
+			code: "CANONICAL_PROJECT_DELETE_NOT_AVAILABLE",
+			message:
+				"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.",
+		},
+		issues: [],
+	});
+}
+
 function invalidInput(
 	scenario: BrowserHarnessScenario,
 	operation: string,
@@ -170,7 +182,7 @@ export function createBrowserBridge(
 		openProject: () => unsupported(scenario, "openProject"),
 		readRecentProjects: async () => successEnvelope(recents),
 		removeRecentProject: () => unsupported(scenario, "removeRecentProject"),
-		deleteProjectFile: () => unsupported(scenario, "deleteProjectFile"),
+		deleteProjectFile: () => canonicalProjectDeleteUnavailable(),
 		getCoverImagePreviewUrl: () =>
 			unsupported(scenario, "getCoverImagePreviewUrl"),
 		readSettings: async () => successEnvelope(settings),

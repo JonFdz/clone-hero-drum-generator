@@ -133,6 +133,22 @@ describe("browser bridge installation", () => {
 		);
 	});
 
+	it("returns a typed unavailable result for canonical project deletion", async () => {
+		const bridge = createBrowserBridge(resolveBrowserScenario("project-loaded"));
+
+		await expect(
+			bridge.deleteProjectFile(HARNESS_PATHS.PROJECT),
+		).resolves.toEqual({
+			ok: false,
+			error: {
+				code: "CANONICAL_PROJECT_DELETE_NOT_AVAILABLE",
+				message:
+					"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.",
+			},
+			issues: [],
+		});
+	});
+
 	it("validates preview paths before returning static chart and audio data", async () => {
 		const bridge = createBrowserBridge(resolveBrowserScenario("preview-ready"));
 		await expect(

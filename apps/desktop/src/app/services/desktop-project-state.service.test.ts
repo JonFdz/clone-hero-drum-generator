@@ -67,18 +67,19 @@ describe("DesktopProjectStateService facade", () => {
 		expect(refreshSpy).toHaveBeenCalled();
 	});
 
-	it("resets the active session when deleting the currently open project file", async () => {
+	it("keeps the active session when forbidden physical deletion is attempted", async () => {
 		const { session, library, settings } = makeDeps();
 		const persistence = {} as unknown as import("../features/project-session/project-persistence.service").ProjectPersistenceService;
 		const facade = new DesktopProjectStateService(session, library, settings, persistence);
 		session.applyHydration({ ...samplePayload, generationStatus: "not-generated" });
 		expect(session.projectFilePath()).toBe("/projects/demo.chdg.json");
-		vi.spyOn(library, "deleteFile").mockResolvedValue(true);
+		vi.spyOn(library, "deleteFile").mockResolvedValue(false);
 
-		await facade.deleteProjectFile("/projects/demo.chdg.json");
+		const result = await facade.deleteProjectFile("/projects/demo.chdg.json");
 
-		expect(session.projectFilePath()).toBeUndefined();
-		expect(session.projectName()).toBe("Untitled");
+		expect(result).toBe(false);
+		expect(session.projectFilePath()).toBe("/projects/demo.chdg.json");
+		expect(session.projectName()).toBe("Demo");
 	});
 
 	it("composes state from the session, library, and settings boundaries", () => {

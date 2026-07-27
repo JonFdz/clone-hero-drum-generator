@@ -1,10 +1,12 @@
-import { stat, unlink } from "node:fs/promises";
-import path from "node:path";
-import type { RecentProject } from "@chdg/project";
+export const CANONICAL_PROJECT_DELETE_NOT_AVAILABLE =
+	"CANONICAL_PROJECT_DELETE_NOT_AVAILABLE";
+
+export const CANONICAL_PROJECT_DELETE_NOT_AVAILABLE_MESSAGE =
+	"Whole-project deletion requires a dedicated canonical filesystem contract and is not available in this legacy workflow.";
 
 export class ProjectFileDeletionError extends Error {
 	constructor(
-		readonly code: string,
+		readonly code: typeof CANONICAL_PROJECT_DELETE_NOT_AVAILABLE,
 		message: string,
 	) {
 		super(message);
@@ -12,66 +14,16 @@ export class ProjectFileDeletionError extends Error {
 	}
 }
 
-export type DeletableProjectFile = {
-	filePath: string;
-	exists: boolean;
-};
-
-export async function resolveDeletableProjectFilePath(
-	filePath: string,
-	allowedProjectFiles: ReadonlySet<string>,
-	readRecentProjects: () => Promise<RecentProject[]>,
-): Promise<DeletableProjectFile> {
-	const targetPath = path.resolve(filePath);
-	if (path.extname(targetPath).toLowerCase() !== ".chdg") {
-		throw new ProjectFileDeletionError(
-			"PROJECT_DELETE_NOT_CHDG",
-			"Only .chdg project files can be deleted.",
-		);
-	}
-
-	const allowed = new Set(
-		[...allowedProjectFiles].map((candidate) => path.resolve(candidate)),
-	);
-	const recents = await readRecentProjects();
-	for (const recent of recents) {
-		allowed.add(path.resolve(recent.path));
-	}
-	if (!allowed.has(targetPath)) {
-		throw new ProjectFileDeletionError(
-			"PROJECT_DELETE_NOT_ALLOWED",
-			"Project file was not selected in this desktop session or found in Electron-owned recents.",
-		);
-	}
-
-	let fileStat;
-	try {
-		fileStat = await stat(targetPath);
-	} catch (error) {
-		if (isMissingFileError(error)) {
-			return { filePath: targetPath, exists: false };
-		}
-		throw error;
-	}
-	if (!fileStat.isFile()) {
-		throw new ProjectFileDeletionError(
-			"PROJECT_DELETE_NOT_FILE",
-			"Only .chdg files can be deleted; unsafe directories are never removed.",
-		);
-	}
-
-	return { filePath: targetPath, exists: true };
-}
-
-export async function deleteProjectFilePath(filePath: string): Promise<void> {
-	await unlink(filePath);
-}
-
-function isMissingFileError(error: unknown): boolean {
-	return (
-		typeof error === "object" &&
-		error !== null &&
-		"code" in error &&
-		(error as { code?: unknown }).code === "ENOENT"
+/**
+ * Retained only for the legacy IPC compatibility surface.
+ *
+ * A canonical project is the complete self-contained folder, so deleting only
+ * project.chdg is unsafe. Physical deletion remains unavailable until a
+ * dedicated whole-project filesystem contract owns it.
+ */
+export async function deleteProjectFilePath(_filePath: string): Promise<never> {
+	throw new ProjectFileDeletionError(
+		CANONICAL_PROJECT_DELETE_NOT_AVAILABLE,
+		CANONICAL_PROJECT_DELETE_NOT_AVAILABLE_MESSAGE,
 	);
 }

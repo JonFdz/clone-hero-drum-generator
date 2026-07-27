@@ -98,11 +98,7 @@ export class DesktopProjectStateService {
 	}
 
 	async deleteProjectFile(projectPath: string): Promise<boolean> {
-		const ok = await this.library.deleteFile(projectPath);
-		if (ok && this.session.projectFilePath() === projectPath) {
-			this.session.resetActiveProject();
-		}
-		return ok;
+		return this.library.deleteFile(projectPath);
 	}
 
 	async saveSettings(settings: DesktopSettings): Promise<void> {

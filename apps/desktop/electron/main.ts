@@ -38,7 +38,6 @@ import {
 } from "./settingsService.js";
 import {
 	deleteProjectFilePath,
-	resolveDeletableProjectFilePath,
 } from "./projectFileDeletion.js";
 import {
 	readMappingProfiles,
@@ -445,15 +444,7 @@ app.whenReady().then(() => {
 					projectPath,
 					"Project path is required.",
 				);
-				const deletable = await resolveDeletableProjectFilePath(
-					target,
-					allowedProjectFiles,
-					readRecentProjects,
-				);
-				if (deletable.exists) {
-					await deleteProjectFilePath(deletable.filePath);
-				}
-				await removeRecentProject(deletable.filePath);
+				await deleteProjectFilePath(target);
 			});
 		},
 	);
