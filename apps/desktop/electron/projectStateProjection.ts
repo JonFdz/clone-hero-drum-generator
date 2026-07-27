@@ -129,21 +129,25 @@ function identityMetadata(
 function managedOutputFiles(
 	project: ChdgProjectFile,
 ): ProjectStatePayload["outputFiles"] {
+	if (project.export.status !== "current") return undefined;
 	const targetDirectory = project.export.targetDirectory;
 	const managed = project.export.managedFiles;
-	if (!targetDirectory || !managed) return undefined;
-	const files: NonNullable<ProjectStatePayload["outputFiles"]> = {};
-	if (managed[MANAGED_EXPORT_FILE.CHART]) {
-		files.chart = path.join(targetDirectory, MANAGED_EXPORT_FILE.CHART);
+	if (
+		!targetDirectory ||
+		!managed?.[MANAGED_EXPORT_FILE.CHART] ||
+		!managed[MANAGED_EXPORT_FILE.AUDIO]
+	) {
+		return undefined;
 	}
+	const files: NonNullable<ProjectStatePayload["outputFiles"]> = {
+		chart: path.join(targetDirectory, MANAGED_EXPORT_FILE.CHART),
+		songOgg: path.join(targetDirectory, MANAGED_EXPORT_FILE.AUDIO),
+	};
 	if (managed[MANAGED_EXPORT_FILE.METADATA]) {
 		files.songIni = path.join(targetDirectory, MANAGED_EXPORT_FILE.METADATA);
-	}
-	if (managed[MANAGED_EXPORT_FILE.AUDIO]) {
-		files.songOgg = path.join(targetDirectory, MANAGED_EXPORT_FILE.AUDIO);
 	}
 	if (managed[MANAGED_EXPORT_FILE.COVER]) {
 		files.albumJpg = path.join(targetDirectory, MANAGED_EXPORT_FILE.COVER);
 	}
-	return Object.keys(files).length > 0 ? files : undefined;
+	return files;
 }

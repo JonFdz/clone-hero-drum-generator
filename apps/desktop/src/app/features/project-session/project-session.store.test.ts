@@ -37,6 +37,36 @@ describe("ProjectSessionStore", () => {
 		expect(store.hasProject()).toBe(true);
 	});
 
+	it.each([
+		"generated",
+		"needs-regenerate",
+		"failed",
+		"not-generated",
+	] as const)(
+		"preserves canonical export status %s independently of Preview files",
+		(generationStatus) => {
+			const store = new ProjectSessionStore();
+
+			store.applyHydration({
+				project: {
+					projectId: "project-demo",
+					artist: "Artist",
+					songName: "Demo",
+					projectName: "Expert Drums",
+					displayName: "Artist - Demo - Expert Drums",
+				},
+				projectName: "Demo",
+				projectFilePath: "/p/project.chdg",
+				generationStatus,
+				selectedTracks: [],
+				metadata: {},
+				outputFiles: undefined,
+			});
+
+			expect(store.outputStatus()).toBe(generationStatus);
+		},
+	);
+
 	it("markNeedsRegenerate transitions generated -> needs-regenerate and marks dirty", () => {
 		const store = new ProjectSessionStore();
 		store.applyHydration({

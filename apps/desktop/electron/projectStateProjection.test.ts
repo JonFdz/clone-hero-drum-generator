@@ -86,4 +86,115 @@ describe("projectFileToDesktopState", () => {
 		expect(payload).not.toHaveProperty("analysis");
 		expect(payload).not.toHaveProperty("mappingOverrides");
 	});
+
+	it.each([
+		{
+			name: "current with both required managed files",
+			status: "current",
+			managedFiles: managedFiles("notes.chart", "song.ogg"),
+			expectedStatus: "generated",
+			exposesPreview: true,
+		},
+		{
+			name: "current without chart",
+			status: "current",
+			managedFiles: managedFiles("song.ogg"),
+			expectedStatus: "generated",
+			exposesPreview: false,
+		},
+		{
+			name: "current without audio",
+			status: "current",
+			managedFiles: managedFiles("notes.chart"),
+			expectedStatus: "generated",
+			exposesPreview: false,
+		},
+		{
+			name: "outdated with retained managed files",
+			status: "outdated",
+			managedFiles: managedFiles("notes.chart", "song.ogg"),
+			expectedStatus: "needs-regenerate",
+			exposesPreview: false,
+		},
+		{
+			name: "failed with retained managed files",
+			status: "failed",
+			managedFiles: managedFiles("notes.chart", "song.ogg"),
+			expectedStatus: "failed",
+			exposesPreview: false,
+		},
+		{
+			name: "never exported",
+			status: "never-exported",
+			managedFiles: undefined,
+			expectedStatus: "not-generated",
+			exposesPreview: false,
+		},
+	] as const)(
+		"keeps canonical status while gating Preview for $name",
+		({ status, managedFiles: files, expectedStatus, exposesPreview }) => {
+			const project = projectionProject({
+				status,
+				targetDirectory: "/clone-hero/Artist - Song",
+				managedFiles: files,
+			});
+
+			const payload = projectFileToDesktopState(
+				path.join("/projects", "demo", "project.chdg"),
+				project,
+			);
+
+			expect(payload.generationStatus).toBe(expectedStatus);
+			if (exposesPreview) {
+				expect(payload.outputFiles).toEqual({
+					chart: path.join("/clone-hero/Artist - Song", "notes.chart"),
+					songOgg: path.join("/clone-hero/Artist - Song", "song.ogg"),
+				});
+			} else {
+				expect(payload.outputFiles).toBeUndefined();
+			}
+		},
+	);
 });
+
+function managedFiles(...names: Array<"notes.chart" | "song.ogg">) {
+	return Object.fromEntries(
+		names.map((name) => [
+			name,
+			{
+				sha256: "a".repeat(64),
+				sizeBytes: 100,
+				writtenAt: "2026-07-26T10:30:00.000Z",
+			},
+		]),
+	);
+}
+
+function projectionProject(
+	exportState: ChdgProjectFile["export"],
+): ChdgProjectFile {
+	return {
+		project: {
+			projectId: "project-demo",
+			artist: "Artist",
+			songName: "Song",
+			projectName: "Expert Drums",
+		},
+		assets: {
+			source: {
+				relativePath: "assets/source.mid",
+				sourceKind: "midi",
+			},
+			audio: { relativePath: "assets/song.ogg" },
+		},
+		import: { selectedTrackIds: [] },
+		sourceDocument: {
+			resolution: 960,
+			tempos: [],
+			timeSignatures: [],
+			sections: [],
+		},
+		editor: { offsetMs: 0 },
+		export: exportState,
+	} as ChdgProjectFile;
+}
