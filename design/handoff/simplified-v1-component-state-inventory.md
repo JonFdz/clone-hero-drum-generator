@@ -81,4 +81,60 @@ Mapping changes never overwrite individual note corrections. Export changes
 only CHDG-managed files and never leaves a partial managed update.
 
 Export success distinguishes updated, unchanged, and removed managed files and
-separately confirms preservation of unmanaged files.
+separately confirms preservation of unmanaged files. The D2 removal example is
+optional managed `album.jpg` after the project cover was removed and ownership
+was proven.
+
+## D2 Phase A reusable realization
+
+`12 / SIMPLIFIED V1 / D2 / COMPONENTS AND STATES` (`z5uYl`) adds six
+production-scale reusable components without replacing the D1 skeletons:
+
+| Component | Pencil ID |
+|---|---|
+| Application Header / 1440 | `zKiov` |
+| Active Project Header / 1440 | `mQo0l` |
+| Mapping Row / Default | `z8PsO` |
+| Progress Step / Active | `EWkJp` |
+| Contextual Surface / Right | `UKZeo` |
+| Compact Warning / Attention | `NXTj4` |
+
+`EWkJp` is connected to the running creation frame and `UKZeo` is connected to
+the Project Details contextual frame. The historical Highway (`Xab8q`) is not
+reusable, so Editor frames use a bounded copied/refined visual derivation. D2
+also reuses the approved `v1.*` tokens and D1 ownership model.
+
+The D2 instances demonstrate:
+
+- active Home/Projects/Settings selection and neutral creation navigation;
+- active Preview or Mappings project tabs;
+- Export versus Update Song;
+- mapping default/override/attention states;
+- pending/current/completed/failed progress;
+- explicitly non-concurrent linked progress/failure review variants;
+- contextual Project Details, Edit Note, Export, and Save a Copy;
+- compact warning, validation, success, failure, and confirmation treatments.
+
+A representative focus-visible treatment is present in `dkxQL`. Focus order
+and restoration are a **Design proposal**: application navigation → task
+Back/Cancel → content → dominant action; Editor header → transport →
+waveform/Highway → diagnostics → contextual invoker; contextual surfaces trap
+and restore focus. Exact shortcuts remain **Unresolved**.
+
+## Four-anchor reuse and additions
+
+The visual-direction remediation adds no new reusable Pencil component and does
+not replace sections 09 or 12. It exercises the existing D2 component strategy
+in four full-size anchors:
+
+| Anchor | Reuse / refinement |
+|---|---|
+| `DQOkV` Projects | Connected `zKiov` application header; richer project rows, cover identity, status language, and library metrics are local visual refinements. |
+| `qOC3b` Settings | Connected `zKiov` application header; blocking readiness, impact, and recovery composition are local visual refinements. |
+| `FSmVJ` Details | Connected `zKiov` application header; production-density file/metadata fields and derived-name preview reuse approved field/action language. |
+| `JMKSM` Editor | Connected `mQo0l` active-project header; detailed waveform and perspective Highway are bounded local refinements because the historical Highway is not reusable. |
+
+The local refinements are **Design proposals** awaiting maintainer visual
+review. Progress evidence, dependency/path results, and filesystem diagnostics
+remain **Backend-dependent states**. No component work was propagated to the
+remaining 39 structural frames, and no `1024 × 768` adaptation was started.

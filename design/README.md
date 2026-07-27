@@ -158,6 +158,54 @@ claim that every listed state has a full-size frame at both breakpoints. D2 may
 add the remaining production-scale state frames while preserving D1 ownership
 and navigation.
 
+## D2 Phase A checkpoint
+
+Issue #98 Phase A adds two non-destructive Pencil sections:
+
+```text
+11 / SIMPLIFIED V1 / D2 / 1440 FLOW
+12 / SIMPLIFIED V1 / D2 / COMPONENTS AND STATES
+```
+
+The flow section contains the structurally complete inventory of 43 full
+`1440 × 900` frames: 27 route-state frames and 16 contextual-surface frames.
+The first visual direction was rejected during maintainer review, so those 43
+frames must not yet be treated as the approved high-fidelity direction.
+
+A separate, non-destructive remediation section now contains four production
+anchors:
+
+```text
+13 / SIMPLIFIED V1 / D2 / VISUAL DIRECTION REVIEW
+```
+
+Review:
+
+- `design/handoff/simplified-v1-d2-1440-frame-inventory.md`
+- `design/handoff/simplified-v1-d2-1440-route-state-map.md`
+- `design/handoff/simplified-v1-d2-1440-validation.md`
+- `design/decisions/simplified-v1-d2-1440-visual-decisions.md`
+- `design/handoff/visual-direction-review/simplified-v1-d2-four-anchor-comparison.md`
+
+Review remediation adds explicit unavailable-action reasons, Back/Cancel and
+progress-navigation treatment, material mapping attention/override rows,
+transactionally coherent lifecycle failures, export destination/conflict/result
+detail, authoritative header save failure, connected progress/contextual
+component instances, and a representative visible keyboard-focus treatment.
+The historical Highway is a bounded copied/refined visual derivation because
+its source node is not a reusable Pencil component.
+
+Checkpoint status:
+
+- **The structural 1440 × 900 inventory is complete.**
+- **The first visual direction was rejected.**
+- **Four-anchor visual remediation is complete and awaiting maintainer visual review.**
+- **Propagation to the remaining 39 frames has not started.**
+- **1024 × 768 final adaptation not started.**
+- **Issue #98 remains incomplete.**
+- **PR #116 must remain draft.**
+- **Maintainer approval of the four anchors is required before propagation or Phase B.**
+
 ## Working rules
 
 - All repository artifacts are English-first.

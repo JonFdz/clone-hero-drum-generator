@@ -5,6 +5,14 @@ implementation-facing records. Pencil remains the visual source of truth.
 
 ## Review order
 
+For the active Simplified V1 D2 visual checkpoint, start with:
+
+1. [`visual-direction-review/simplified-v1-d2-four-anchor-comparison.md`](visual-direction-review/simplified-v1-d2-four-anchor-comparison.md)
+2. [`simplified-v1-d2-1440-validation.md`](simplified-v1-d2-1440-validation.md)
+3. [`simplified-v1-d2-1440-frame-inventory.md`](simplified-v1-d2-1440-frame-inventory.md)
+
+The historical Design V1 handoff order remains:
+
 1. [`../decisions/design-v1-rationale.md`](../decisions/design-v1-rationale.md)
 2. [`state-matrix.md`](state-matrix.md)
 3. [`screen-scenario-map.md`](screen-scenario-map.md)
